@@ -667,6 +667,72 @@ export const appRouter = router({
 
         return { success: true };
       }),
+
+    renewClient: protectedProcedure
+      .input(z.object({ clientId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.resellerId, ctx.user.id))).limit(1);
+        if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
+        const client = clientRes[0];
+
+        // Determinar o tipo da key atual do cliente (basic ou advanced)
+        let keyType = "advanced";
+        if (client.keyId) {
+          const oldKeyRes = await db.select().from(keys).where(eq(keys.id, client.keyId)).limit(1);
+          if (oldKeyRes.length > 0) {
+            keyType = oldKeyRes[0].type || "advanced";
+            // Marcar key antiga como não usada ou liberar
+            await db.update(keys).set({ isUsed: false }).where(eq(keys.id, client.keyId));
+          }
+        }
+
+        // Verificar créditos do revendedor
+        const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        const reseller = resRes[0];
+
+        if (keyType === "basic") {
+          if ((reseller.creditsBasic || 0) < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic para renovação." });
+          }
+        } else {
+          if ((reseller.creditsAdvanced || 0) < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced para renovação." });
+          }
+        }
+
+        // Buscar nova key disponível do mesmo tipo
+        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, keyType as any))).limit(1);
+        if (availableKey.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${keyType === "basic" ? "Basic" : "Advanced"} disponíveis para renovação.` });
+        }
+        const newKey = availableKey[0];
+
+        // Atualizar cliente com a nova key
+        await db.update(users).set({ keyId: newKey.id }).where(eq(users.id, client.id));
+        await db.update(keys).set({ isUsed: true }).where(eq(keys.id, newKey.id));
+
+        // Descontar crédito do revendedor
+        if (keyType === "basic") {
+          await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
+        } else {
+          await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
+        }
+
+        // Deletar sessões ativas do cliente para forçar novo login/atualização
+        await db.delete(sessions).where(eq(sessions.userId, client.id));
+
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "RESELLER_RENEW_CLIENT",
+          details: `Revendedor ${reseller.openId} renovou o cliente ${client.openId} (${keyType}) com nova Key ${newKey.keyValue}.`,
+        });
+
+        return { success: true, newKeyValue: newKey.keyValue };
+      }),
   }),
 
   clientPanel: router({
@@ -679,19 +745,24 @@ export const appRouter = router({
       const client = clientRes[0];
 
       let keyValue: string | null = null;
+      let keyType = "advanced";
       if (client.keyId) {
         const kRes = await db.select().from(keys).where(eq(keys.id, client.keyId)).limit(1);
-        if (kRes.length > 0) keyValue = kRes[0].keyValue;
+        if (kRes.length > 0) {
+          keyValue = kRes[0].keyValue;
+          keyType = kRes[0].type || "advanced";
+        }
       }
 
-      const allDownloads = await db.select().from(downloads).orderBy(desc(downloads.id));
-      const allTutorials = await db.select().from(tutorials).orderBy(desc(tutorials.id));
+      const filteredDownloads = await db.select().from(downloads).where(eq(downloads.type, keyType as any)).orderBy(desc(downloads.id));
+      const filteredTutorials = await db.select().from(tutorials).where(eq(tutorials.type, keyType as any)).orderBy(desc(tutorials.id));
 
       return {
         username: client.openId,
         keyValue,
-        downloads: allDownloads,
-        tutorials: allTutorials,
+        keyType,
+        downloads: filteredDownloads,
+        tutorials: filteredTutorials,
       };
     }),
   }),

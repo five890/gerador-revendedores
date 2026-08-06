@@ -833,6 +833,14 @@ function ResellerDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
+  const renewClientMutation = trpc.reseller.renewClient.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Cliente renovado com sucesso! Nova Key atribuída: ${res.newKeyValue}`);
+      refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -913,6 +921,11 @@ function ResellerDashboard() {
                   <TableCell className="font-mono text-white">#{c.id}</TableCell>
                   <TableCell className="font-bold text-white">{c.username}</TableCell>
                   <TableCell className="text-right space-x-1">
+                    <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => {
+                      if (confirm("Deseja renovar este cliente? Isso consumirá 1 crédito correspondente e gerará uma nova Key de acesso para ele.")) {
+                        renewClientMutation.mutate({ clientId: c.id });
+                      }
+                    }}>Renovar</Button>
                     <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
                       const p = prompt("Nova senha:");
                       if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });

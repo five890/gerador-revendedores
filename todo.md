@@ -32,4 +32,5 @@
 - [x] Ajustar textos para cor branca em toda a interface
 - [x] Adicionar rotas e interface para tutoriais por link
 - [x] Ocultar Key do painel do Revendedor ao criar cliente (apenas usuário e senha)
-- [ ] Incluir link de ativação no texto copiado pelo revendedor
+- [x] Incluir link de ativação no texto copiado pelo revendedor
+- [ ] Substituir texto 'Key Vinculada' por 'Link de ativação: https://shelbypainel-production.up.railway.app' no painel do cliente

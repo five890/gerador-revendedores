@@ -837,14 +837,14 @@ function ClientDashboard() {
               <strong className="text-lg text-white font-mono">{data?.username}</strong>
             </div>
             <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
-              <span className="text-xs text-white font-bold block mb-1">SUA KEY DE ACESSO</span>
+              <span className="text-xs text-white font-bold block mb-1">LINK DE ATIVAÇÃO</span>
               <div className="flex items-center justify-between">
-                <span className="text-amber-400 font-mono font-bold text-sm">{data?.keyValue}</span>
-                <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
-                  navigator.clipboard.writeText(data?.keyValue || "");
+                <span className="text-blue-400 font-mono font-bold text-xs truncate mr-2">https://shelbypainel-production.up.railway.app</span>
+                <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800 shrink-0" onClick={() => {
+                  navigator.clipboard.writeText("https://shelbypainel-production.up.railway.app");
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
-                  toast.success("Key copiada!");
+                  toast.success("Link copiado!");
                 }}>
                   <Copy className="w-3 h-3 mr-1" /> {copied ? "Copiado" : "Copiar"}
                 </Button>

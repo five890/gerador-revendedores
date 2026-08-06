@@ -27,3 +27,4 @@
 - [x] Listar variáveis de ambiente para deploy no Railway
 - [x] Implementar auto-criação de tabelas e auto-sync de colunas ao iniciar o servidor (Railway/Produção)
 - [x] Fazer push das alterações de auto-sync para o GitHub (Railway)
+- [x] Adicionar trava de zoom no viewport (user-scalable=no) para dispositivos móveis

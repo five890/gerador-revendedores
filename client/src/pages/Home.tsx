@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Key, Download, Users, UserPlus, LogOut, RefreshCcw, Lock, Unlock, Trash2, Plus, Copy, Check, Activity, Edit, FileText, Power } from "lucide-react";
+import { Shield, Key, Download, Users, UserPlus, LogOut, RefreshCcw, Lock, Unlock, Trash2, Plus, Copy, Check, Activity, Edit, FileText, Power, AlertTriangle } from "lucide-react";
 
 export default function Home() {
   const utils = trpc.useUtils();
@@ -18,10 +18,18 @@ export default function Home() {
   const [loginPassword, setLoginPassword] = useState("");
   const [deviceIdentifier] = useState(() => "device_" + Math.random().toString(36).substring(7));
 
-  const [modSetupOpen, setModSetupOpen] = useState(false);
-  const [setupUser, setSetupUser] = useState("");
-  const [setupPass, setSetupPass] = useState("");
-  const [setupSecret, setSetupSecret] = useState("");
+  // Alerta de 5 segundos para clientes
+  const [countdown, setCountdown] = useState(5);
+  const [showAlert, setShowAlert] = useState(true);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowAlert(false);
+    }
+  }, [countdown]);
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
@@ -40,14 +48,6 @@ export default function Home() {
     },
   });
 
-  const setupModMutation = trpc.auth.registerModerator.useMutation({
-    onSuccess: () => {
-      toast.success("Moderador criado! Faça login.");
-      setModSetupOpen(false);
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   if (userLoading) {
     return (
       <div className="min-h-screen bg-[#141414] text-white flex items-center justify-center">
@@ -60,6 +60,27 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-[#141414] text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-red-600/20 blur-[140px] rounded-full pointer-events-none"></div>
+
+        {/* Alerta de aviso para clientes */}
+        {showAlert && (
+          <div className="w-full max-w-md bg-zinc-900 border border-red-600/50 p-4 rounded-xl shadow-2xl mb-4 text-center relative z-10 animate-fade-in">
+          <div className="flex items-center justify-center gap-2 text-red-500 font-bold mb-2">
+            <AlertTriangle className="w-5 h-5" />
+            <span>Aviso Importante ({countdown}s)</span>
+          </div>
+          <p className="text-xs text-neutral-300 mb-3">
+            Aguarde... Se você comprou com revendedores não autorizados da Shelby, denuncie aqui:
+          </p>
+            <a
+              href="https://discord.gg/YYBZxhhm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
+            >
+              Entre Aqui
+            </a>
+          </div>
+        )}
 
         <div className="w-full max-w-md bg-[#000000]/80 border border-white/10 p-8 rounded-2xl shadow-2xl backdrop-blur-xl relative z-10">
           <div className="text-center mb-8">
@@ -101,47 +122,6 @@ export default function Home() {
               {loginMutation.isPending ? "Entrando..." : "Entrar na Plataforma"}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <Dialog open={modSetupOpen} onOpenChange={setModSetupOpen}>
-              <DialogTrigger asChild>
-                <button className="text-xs text-neutral-500 hover:text-neutral-300 underline">Configurar Primeiro Moderador</button>
-              </DialogTrigger>
-              <DialogContent className="bg-[#181818] text-white border-neutral-800">
-                <DialogHeader>
-                  <DialogTitle>Criar Conta de Moderador</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  <Input
-                    className="bg-[#222] border-neutral-700 text-white"
-                    placeholder="Usuário (Ex: murillo)"
-                    value={setupUser}
-                    onChange={(e) => setSetupUser(e.target.value)}
-                  />
-                  <Input
-                    type="password"
-                    className="bg-[#222] border-neutral-700 text-white"
-                    placeholder="Senha"
-                    value={setupPass}
-                    onChange={(e) => setSetupPass(e.target.value)}
-                  />
-                  <Input
-                    type="password"
-                    className="bg-[#222] border-neutral-700 text-white"
-                    placeholder="Chave Secreta (MOD_SETUP_2026)"
-                    value={setupSecret}
-                    onChange={(e) => setSetupSecret(e.target.value)}
-                  />
-                  <Button
-                    className="w-full bg-red-600 hover:bg-red-700"
-                    onClick={() => setupModMutation.mutate({ username: setupUser, password: setupPass, secretKey: setupSecret })}
-                  >
-                    Cadastrar Moderador
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
         </div>
       </div>
     );
@@ -174,7 +154,7 @@ export default function Home() {
 }
 
 function ModeratorDashboard() {
-  const { data: stats } = trpc.moderator.dashboardStats.useQuery();
+  const { data: stats, refetch: refetchStats } = trpc.moderator.dashboardStats.useQuery();
   const { data: resellers, refetch: refetchResellers } = trpc.moderator.listResellers.useQuery();
   const { data: clients, refetch: refetchClients } = trpc.moderator.listClients.useQuery();
   const { data: keysList, refetch: refetchKeys } = trpc.moderator.listKeys.useQuery();
@@ -246,15 +226,16 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
-  const importBatchMutation = trpc.moderator.importKeysBatch.useMutation({
-    onSuccess: (res) => {
+  const batchAddKeysMutation = trpc.moderator.importKeysBatch.useMutation({
+    onSuccess: (res: { success: boolean; added: number }) => {
       toast.success(`${res.added} keys importadas com sucesso!`);
       setBatchKeysText("");
       refetchKeys();
     },
+    onError: (e: any) => toast.error(e.message),
   });
 
-  const toggleKeyStatusMutation = trpc.moderator.toggleKeyStatus.useMutation({
+  const toggleKeyMutation = trpc.moderator.toggleKeyStatus.useMutation({
     onSuccess: () => {
       toast.success("Status da Key alterado!");
       refetchKeys();
@@ -263,7 +244,7 @@ function ModeratorDashboard() {
 
   const deleteKeyMutation = trpc.moderator.deleteKey.useMutation({
     onSuccess: () => {
-      toast.success("Key excluída.");
+      toast.success("Key removida.");
       refetchKeys();
     },
   });
@@ -370,7 +351,6 @@ function ModeratorDashboard() {
                     <TableHead className="text-neutral-400">ID</TableHead>
                     <TableHead className="text-neutral-400">Usuário</TableHead>
                     <TableHead className="text-neutral-400">Créditos</TableHead>
-                    <TableHead className="text-neutral-400">Clientes</TableHead>
                     <TableHead className="text-neutral-400">Status</TableHead>
                     <TableHead className="text-neutral-400 text-right">Ações</TableHead>
                   </TableRow>
@@ -383,17 +363,15 @@ function ModeratorDashboard() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-red-500">{r.credits}</span>
-                          <Button size="icon" variant="outline" className="h-6 w-6 border-neutral-700 bg-transparent" onClick={() => {
-                            const val = prompt(`Adicionar créditos para ${r.username}:`, "5");
-                            if (val) updateCreditsMutation.mutate({ resellerId: r.id, credits: Number(val), action: "add" });
-                          }}>+</Button>
-                          <Button size="icon" variant="outline" className="h-6 w-6 border-neutral-700 bg-transparent" onClick={() => {
-                            const val = prompt(`Remover créditos de ${r.username}:`, "5");
-                            if (val) updateCreditsMutation.mutate({ resellerId: r.id, credits: Number(val), action: "remove" });
-                          }}>-</Button>
+                          <Button size="sm" variant="outline" className="h-7 px-2 border-neutral-700 bg-transparent" onClick={() => {
+                            const val = prompt(`Adicionar/Remover créditos para ${r.username} (Use valor positivo para adicionar ou negativo para remover):`);
+                            if (val) {
+                              const num = Number(val);
+                              updateCreditsMutation.mutate({ resellerId: r.id, credits: Math.abs(num), action: num >= 0 ? "add" : "remove" });
+                            }
+                          }}>± Créditos</Button>
                         </div>
                       </TableCell>
-                      <TableCell>{r.clientCount}</TableCell>
                       <TableCell>
                         <Badge className={r.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
                           {r.isActive ? "Ativo" : "Bloqueado"}
@@ -477,42 +455,37 @@ function ModeratorDashboard() {
           </Card>
         </TabsContent>
 
-        {/* KEYS */}
+        {/* GERENCIAR KEYS */}
         <TabsContent value="keys" className="space-y-4">
-          <div className="flex justify-between items-center flex-wrap gap-2">
-            <h3 className="text-lg font-bold">Gestão de Keys (100% Ocultas para Revendedores)</h3>
-            <Button className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={exportKeys}>
-              <FileText className="w-4 h-4 mr-2" /> Exportar Keys (.txt)
-            </Button>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-[#181818] border-neutral-800 text-white">
-              <CardHeader><CardTitle>Adicionar Key</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Adicionar Key Individual</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="KEY-ABCD-1234" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} />
-                <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal })}>Adicionar Key</Button>
+                <Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Ex: SHELBY-XXXX-YYYY" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} />
+                <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal })}>
+                  Adicionar Key
+                </Button>
               </CardContent>
             </Card>
 
             <Card className="bg-[#181818] border-neutral-800 text-white">
-              <CardHeader><CardTitle>Importar em Lote (uma por linha)</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Importar Keys em Lote (.txt)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <textarea
-                  className="w-full h-24 bg-[#222] border border-neutral-700 rounded p-2 text-white font-mono text-xs"
-                  placeholder="KEY-1&#10;KEY-2"
-                  value={batchKeysText}
-                  onChange={(e) => setBatchKeysText(e.target.value)}
-                />
-                <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => importBatchMutation.mutate({ keysList: batchKeysText.split("\n") })}>
-                  Importar Lote
+                <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
+                <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n") })}>
+                  Importar em Lote
                 </Button>
               </CardContent>
             </Card>
           </div>
 
           <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Todas as Keys do Sistema</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Todas as Keys do Sistema</CardTitle>
+              <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={exportKeys}>
+                Exportar Keys (.txt)
+              </Button>
+            </CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
@@ -520,15 +493,15 @@ function ModeratorDashboard() {
                     <TableHead className="text-neutral-400">ID</TableHead>
                     <TableHead className="text-neutral-400">Key Value</TableHead>
                     <TableHead className="text-neutral-400">Status Uso</TableHead>
-                    <TableHead className="text-neutral-400">Ativação</TableHead>
-                    <TableHead className="text-neutral-400 text-right">Ação</TableHead>
+                    <TableHead className="text-neutral-400">Estado Ativação</TableHead>
+                    <TableHead className="text-neutral-400 text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {keysList?.map((k) => (
                     <TableRow key={k.id} className="border-neutral-800">
                       <TableCell className="font-mono">#{k.id}</TableCell>
-                      <TableCell className="font-mono font-bold text-amber-400">{k.keyValue}</TableCell>
+                      <TableCell className="font-mono text-amber-400 font-bold">{k.keyValue}</TableCell>
                       <TableCell>
                         <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
                           {k.isUsed ? "Usada" : "Disponível"}
@@ -536,11 +509,11 @@ function ModeratorDashboard() {
                       </TableCell>
                       <TableCell>
                         <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
-                          {k.isActive ? "Ativa" : "Inativa"}
+                          {k.isActive ? "Ativa" : "Desativada"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => toggleKeyStatusMutation.mutate({ keyId: k.id })}>
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
                           <Power className="w-3 h-3" />
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
@@ -743,8 +716,7 @@ function ResellerDashboard() {
               <TableRow className="border-neutral-800">
                 <TableHead className="text-neutral-400">ID</TableHead>
                 <TableHead className="text-neutral-400">Usuário</TableHead>
-                <TableHead className="text-neutral-400">Status</TableHead>
-                <TableHead className="text-neutral-400 text-right">Ações</TableHead>
+                <TableHead className="text-neutral-400">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -752,18 +724,13 @@ function ResellerDashboard() {
                 <TableRow key={c.id} className="border-neutral-800">
                   <TableCell className="font-mono">#{c.id}</TableCell>
                   <TableCell className="font-bold">{c.username}</TableCell>
-                  <TableCell>
-                    <Badge className={c.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
-                      {c.isActive ? "Ativo" : "Bloqueado"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
+                  <TableCell className="space-x-2">
                     <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => {
                       const p = prompt("Nova senha:");
                       if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });
-                    }}>Alterar Senha</Button>
+                    }}>Senha</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
-                      if (confirm("Remover cliente?")) deleteClientMutation.mutate({ clientId: c.id });
+                      if (confirm("Excluir cliente?")) deleteClientMutation.mutate({ clientId: c.id });
                     }}>
                       <Trash2 className="w-3 h-3" />
                     </Button>

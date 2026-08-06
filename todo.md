@@ -18,3 +18,4 @@
 - [x] Auto-seed do moderador murillo / 300530 na inicialização do banco
 - [x] Renomear plataforma para Shelby Panel
 - [x] Otimizar layout e responsividade para dispositivos móveis (Mobile-first)
+- [x] Adicionar aviso de 5 segundos com link do Discord para clientes no login e remover botão de setup de moderador

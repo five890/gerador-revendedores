@@ -34,4 +34,5 @@
 - [x] Ocultar Key do painel do Revendedor ao criar cliente (apenas usuário e senha)
 - [x] Incluir link de ativação no texto copiado pelo revendedor
 - [x] Substituir texto 'Key Vinculada' por 'Link de ativação: https://shelbypainel-production.up.railway.app' no painel do cliente
-- [ ] Corrigir tag viewport em client/index.html para travar zoom em celulares
+- [x] Corrigir tag viewport em client/index.html para travar zoom em celulares
+- [ ] Substituir card de Link de Ativação por botão do Discord no painel do cliente

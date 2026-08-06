@@ -836,19 +836,16 @@ function ClientDashboard() {
               <span className="text-xs text-white font-bold block mb-1">SEU USUÁRIO</span>
               <strong className="text-lg text-white font-mono">{data?.username}</strong>
             </div>
-            <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
-              <span className="text-xs text-white font-bold block mb-1">LINK DE ATIVAÇÃO</span>
-              <div className="flex items-center justify-between">
-                <span className="text-blue-400 font-mono font-bold text-xs truncate mr-2">https://shelbypainel-production.up.railway.app</span>
-                <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800 shrink-0" onClick={() => {
-                  navigator.clipboard.writeText("https://shelbypainel-production.up.railway.app");
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                  toast.success("Link copiado!");
-                }}>
-                  <Copy className="w-3 h-3 mr-1" /> {copied ? "Copiado" : "Copiar"}
-                </Button>
-              </div>
+            <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800 flex flex-col justify-between">
+              <span className="text-xs text-white font-bold block mb-1">SUPORTE E COMUNIDADE</span>
+              <a
+                href="https://discord.gg/YYBZxhhm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-bold px-4 py-2 rounded-lg transition"
+              >
+                Entrar no Discord
+              </a>
             </div>
           </div>
         </CardContent>

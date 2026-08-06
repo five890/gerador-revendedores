@@ -1,5 +1,5 @@
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "netflix-saas-super-secret-key-2026";
 

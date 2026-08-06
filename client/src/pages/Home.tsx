@@ -1,22 +1,23 @@
-import { useState, useEffect } from "react";
-import { trpc } from "@/lib/trpc";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Shield, Key, Download, Users, UserPlus, LogOut, RefreshCcw, Lock, Unlock, Trash2, Plus, Copy, Check, Activity, Edit, FileText, Power, AlertTriangle } from "lucide-react";
+import { Lock, Unlock, RefreshCcw, Trash2, Power, UserPlus, Copy, Download as DownloadIcon, Edit, LogOut, Shield, Users, KeyRound, FileDown, BookOpen, AlertTriangle, Video } from "lucide-react";
 
 export default function Home() {
   const utils = trpc.useUtils();
-  const { data: user, isLoading: userLoading } = trpc.auth.me.useQuery();
+  const { data: user, isLoading: authLoading } = trpc.auth.me.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [deviceIdentifier] = useState(() => "device_" + Math.random().toString(36).substring(7));
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
@@ -35,57 +36,57 @@ export default function Home() {
     },
   });
 
-  if (userLoading) {
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) {
+      toast.error("Preencha usuário e senha.");
+      return;
+    }
+    const deviceIdentifier = localStorage.getItem("device_id") || Math.random().toString(36).substring(2);
+    localStorage.setItem("device_id", deviceIdentifier);
+
+    loginMutation.mutate({ username, password, deviceIdentifier });
+  };
+
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#141414] text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-red-600"></div>
+      <div className="min-h-screen bg-[#0b0b0b] text-white flex items-center justify-center font-sans">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-red-600"></div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#141414] text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-red-600/20 blur-[140px] rounded-full pointer-events-none"></div>
-
-        <div className="w-full max-w-md bg-[#000000]/80 border border-white/10 p-8 rounded-2xl shadow-2xl backdrop-blur-xl relative z-10">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-black tracking-wider text-red-600 uppercase">Shelby Panel</h1>
-            <p className="text-sm text-neutral-400 mt-2">Painel de Acesso & Distribuição</p>
+      <div className="min-h-screen bg-[#0b0b0b] text-white flex flex-col items-center justify-center px-4 font-sans">
+        <div className="w-full max-w-md bg-[#141414] border border-neutral-800 rounded-xl p-8 shadow-2xl space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-black text-red-600 tracking-wider">SHELBY PANEL</h1>
+            <p className="text-xs text-neutral-400">Painel de Acesso & Distribuição</p>
           </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              loginMutation.mutate({ username: loginUsername, password: loginPassword, deviceIdentifier });
-            }}
-            className="space-y-4"
-          >
-            <div>
-              <label className="text-xs uppercase tracking-wider text-neutral-400 font-semibold mb-1 block">Usuário</label>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-white font-semibold">Usuário</label>
               <Input
-                className="bg-[#1f1f1f] border-neutral-800 text-white focus:border-red-600"
+                className="bg-[#222] border-neutral-700 text-white placeholder:text-neutral-500"
                 placeholder="Ex: seu login"
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
-
-            <div>
-              <label className="text-xs uppercase tracking-wider text-neutral-400 font-semibold mb-1 block">Senha</label>
+            <div className="space-y-1">
+              <label className="text-xs text-white font-semibold">Senha</label>
               <Input
                 type="password"
-                className="bg-[#1f1f1f] border-neutral-800 text-white focus:border-red-600"
+                className="bg-[#222] border-neutral-700 text-white placeholder:text-neutral-500"
                 placeholder="••••••"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-
-            <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 mt-2" disabled={loginMutation.isPending}>
-              {loginMutation.isPending ? "Entrando..." : "Entrar na Plataforma"}
+            <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2">
+              Entrar na Plataforma
             </Button>
           </form>
         </div>
@@ -94,23 +95,23 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141414] text-white flex flex-col">
-      <header className="border-b border-white/10 bg-[#000000]/60 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-black text-red-600 tracking-wider">SHELBY PANEL</h1>
-          <Badge variant="outline" className="border-red-600 text-red-500 uppercase text-xs font-bold">
+    <div className="min-h-screen bg-[#0b0b0b] text-white font-sans flex flex-col">
+      <header className="border-b border-neutral-800 bg-[#111] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <span className="text-xl font-black text-red-600 tracking-wider">SHELBY PANEL</span>
+          <Badge className="bg-neutral-800 text-white border-neutral-700 uppercase text-[10px]">
             {user.role}
           </Badge>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-neutral-300 font-medium">Logado como: <strong className="text-white">{user.username}</strong></span>
-          <Button variant="ghost" size="sm" onClick={() => logoutMutation.mutate()} className="text-red-500 hover:text-red-400 hover:bg-red-950/30">
-            <LogOut className="w-4 h-4 mr-2" /> Sair
+          <span className="text-sm text-neutral-300 font-medium hidden sm:inline">Olá, <strong className="text-white">{user.username}</strong></span>
+          <Button variant="outline" size="sm" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => logoutMutation.mutate()}>
+            <LogOut className="w-4 h-4 mr-1" /> Sair
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full">
         {user.role === "moderator" && <ModeratorDashboard />}
         {user.role === "reseller" && <ResellerDashboard />}
         {user.role === "client" && <ClientDashboard />}
@@ -120,12 +121,15 @@ export default function Home() {
 }
 
 function ModeratorDashboard() {
-  const { data: stats, refetch: refetchStats } = trpc.moderator.dashboardStats.useQuery();
+  const { data: stats } = trpc.moderator.dashboardStats.useQuery();
   const { data: resellers, refetch: refetchResellers } = trpc.moderator.listResellers.useQuery();
   const { data: clients, refetch: refetchClients } = trpc.moderator.listClients.useQuery();
   const { data: keysList, refetch: refetchKeys } = trpc.moderator.listKeys.useQuery();
   const { data: downloadsList, refetch: refetchDownloads } = trpc.moderator.listDownloads.useQuery();
+  const { data: tutorialsList, refetch: refetchTutorials } = trpc.moderator.listTutorials.useQuery();
   const { data: logsList } = trpc.moderator.listLogs.useQuery();
+
+  const utils = trpc.useUtils();
 
   const [newResellerUser, setNewResellerUser] = useState("");
   const [newResellerPass, setNewResellerPass] = useState("");
@@ -136,10 +140,13 @@ function ModeratorDashboard() {
 
   const [dlTitle, setDlTitle] = useState("");
   const [dlDesc, setDlDesc] = useState("");
-  const [dlVersion, setDlVersion] = useState("1.0.0");
+  const [dlVersion, setDlVersion] = useState("1.0");
   const [dlUrl, setDlUrl] = useState("");
-
   const [editingDownload, setEditingDownload] = useState<any | null>(null);
+
+  const [tutTitle, setTutTitle] = useState("");
+  const [tutDesc, setTutDesc] = useState("");
+  const [tutUrl, setTutUrl] = useState("");
 
   const createResellerMutation = trpc.moderator.createReseller.useMutation({
     onSuccess: () => {
@@ -172,12 +179,12 @@ function ModeratorDashboard() {
   });
 
   const resetPasswordMutation = trpc.moderator.resetUserPassword.useMutation({
-    onSuccess: () => toast.success("Senha resetada!"),
+    onSuccess: () => toast.success("Senha alterada com sucesso!"),
   });
 
   const deleteUserMutation = trpc.moderator.deleteUser.useMutation({
     onSuccess: () => {
-      toast.success("Usuário excluído.");
+      toast.success("Usuário excluído!");
       refetchResellers();
       refetchClients();
     },
@@ -193,7 +200,7 @@ function ModeratorDashboard() {
   });
 
   const batchAddKeysMutation = trpc.moderator.importKeysBatch.useMutation({
-    onSuccess: (res: { success: boolean; added: number }) => {
+    onSuccess: (res) => {
       toast.success(`${res.added} keys importadas com sucesso!`);
       setBatchKeysText("");
       refetchKeys();
@@ -203,14 +210,14 @@ function ModeratorDashboard() {
 
   const toggleKeyMutation = trpc.moderator.toggleKeyStatus.useMutation({
     onSuccess: () => {
-      toast.success("Status da Key alterado!");
+      toast.success("Status da key alterado!");
       refetchKeys();
     },
   });
 
   const deleteKeyMutation = trpc.moderator.deleteKey.useMutation({
     onSuccess: () => {
-      toast.success("Key removida.");
+      toast.success("Key excluída!");
       refetchKeys();
     },
   });
@@ -232,125 +239,154 @@ function ModeratorDashboard() {
       setEditingDownload(null);
       refetchDownloads();
     },
+    onError: (e) => toast.error(e.message),
   });
 
   const deleteDownloadMutation = trpc.moderator.deleteDownload.useMutation({
     onSuccess: () => {
-      toast.success("Download removido.");
+      toast.success("Download excluído!");
       refetchDownloads();
+    },
+  });
+
+  const addTutorialMutation = trpc.moderator.addTutorial.useMutation({
+    onSuccess: () => {
+      toast.success("Tutorial cadastrado!");
+      setTutTitle("");
+      setTutDesc("");
+      setTutUrl("");
+      refetchTutorials();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteTutorialMutation = trpc.moderator.deleteTutorial.useMutation({
+    onSuccess: () => {
+      toast.success("Tutorial excluído!");
+      refetchTutorials();
     },
   });
 
   const exportKeys = () => {
     if (!keysList) return;
-    const textData = keysList.map(k => `${k.keyValue} | ${k.isUsed ? 'Usada' : 'Disponível'} | ${k.isActive ? 'Ativa' : 'Inativa'}`).join('\n');
-    const blob = new Blob([textData], { type: 'text/plain;charset=utf-8' });
+    const text = keysList.map((k) => k.keyValue).join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'keys_export.txt';
+    a.download = "keys_shelby.txt";
     a.click();
-    toast.success("Keys exportadas com sucesso!");
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-[#1f1f1f] border-neutral-800 text-white">
+      {/* STATS */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="bg-[#141414] border-neutral-800 text-white">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Total Clientes</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold">{stats?.totalClients || 0}</div></CardContent>
+          <CardContent><div className="text-3xl font-black text-white">{stats?.totalClients || 0}</div></CardContent>
         </Card>
-        <Card className="bg-[#1f1f1f] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Total Revendedores</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold">{stats?.totalResellers || 0}</div></CardContent>
+        <Card className="bg-[#141414] border-neutral-800 text-white">
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Revendedores</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-black text-white">{stats?.totalResellers || 0}</div></CardContent>
         </Card>
-        <Card className="bg-[#1f1f1f] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Keys Usadas / Totais</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold">{stats?.usedKeys || 0} / {stats?.totalKeys || 0}</div></CardContent>
+        <Card className="bg-[#141414] border-neutral-800 text-white">
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Keys Cadastradas</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-black text-amber-400">{stats?.totalKeys || 0}</div></CardContent>
         </Card>
-        <Card className="bg-[#1f1f1f] border-neutral-800 text-white">
+        <Card className="bg-[#141414] border-neutral-800 text-white">
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Keys Usadas</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-black text-emerald-400">{stats?.usedKeys || 0}</div></CardContent>
+        </Card>
+        <Card className="bg-[#141414] border-neutral-800 text-white col-span-2 md:col-span-1">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Sessões Ativas</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-emerald-500">{stats?.activeSessions || 0}</div></CardContent>
+          <CardContent><div className="text-3xl font-black text-red-500">{stats?.activeSessions || 0}</div></CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="resellers" className="space-y-4">
-        <TabsList className="bg-[#1a1a1a] border border-neutral-800 p-1 flex-wrap h-auto gap-1">
-          <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Revendedores</TabsTrigger>
-          <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Clientes</TabsTrigger>
-          <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Gerenciar Keys</TabsTrigger>
-          <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Downloads</TabsTrigger>
-          <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Logs de Auditoria</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2">
+          <TabsList className="bg-[#141414] border border-neutral-800 p-1 flex w-max sm:w-full">
+            <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Revendedores</TabsTrigger>
+            <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Clientes</TabsTrigger>
+            <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Keys</TabsTrigger>
+            <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
+            <TabsTrigger value="tutorials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Tutoriais</TabsTrigger>
+            <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs de Auditoria</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* REVENDEDORES */}
         <TabsContent value="resellers" className="space-y-4">
-          <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Criar Novo Revendedor</CardTitle></CardHeader>
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Criar Novo Revendedor</CardTitle></CardHeader>
             <CardContent>
               <div className="flex gap-4 items-end flex-wrap">
                 <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Usuário</label>
+                  <label className="text-xs text-white font-semibold block mb-1">Usuário</label>
                   <Input className="bg-[#222] border-neutral-700 text-white" value={newResellerUser} onChange={(e) => setNewResellerUser(e.target.value)} placeholder="revendedor1" />
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Senha</label>
+                  <label className="text-xs text-white font-semibold block mb-1">Senha</label>
                   <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newResellerPass} onChange={(e) => setNewResellerPass(e.target.value)} placeholder="senha" />
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Créditos Iniciais</label>
-                  <Input type="number" className="bg-[#222] border-neutral-700 text-white w-28" value={newResellerCredits} onChange={(e) => setNewResellerCredits(Number(e.target.value))} />
+                  <label className="text-xs text-white font-semibold block mb-1">Créditos Iniciais</label>
+                  <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCredits} onChange={(e) => setNewResellerCredits(Number(e.target.value))} />
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, credits: newResellerCredits })}>
-                  <Plus className="w-4 h-4 mr-1" /> Criar Revendedor
+                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, credits: newResellerCredits })}>
+                  <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Lista de Revendedores</CardTitle></CardHeader>
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Lista de Revendedores</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
-                    <TableHead className="text-neutral-400">ID</TableHead>
-                    <TableHead className="text-neutral-400">Usuário</TableHead>
-                    <TableHead className="text-neutral-400">Créditos</TableHead>
-                    <TableHead className="text-neutral-400">Status</TableHead>
-                    <TableHead className="text-neutral-400 text-right">Ações</TableHead>
+                    <TableHead className="text-white font-bold">ID</TableHead>
+                    <TableHead className="text-white font-bold">Usuário</TableHead>
+                    <TableHead className="text-white font-bold">Créditos</TableHead>
+                    <TableHead className="text-white font-bold">Clientes</TableHead>
+                    <TableHead className="text-white font-bold">Status</TableHead>
+                    <TableHead className="text-white font-bold text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {resellers?.map((r) => (
                     <TableRow key={r.id} className="border-neutral-800">
-                      <TableCell className="font-mono">#{r.id}</TableCell>
-                      <TableCell className="font-bold">{r.username}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-red-500">{r.credits}</span>
-                          <Button size="sm" variant="outline" className="h-7 px-2 border-neutral-700 bg-transparent" onClick={() => {
-                            const val = prompt(`Adicionar/Remover créditos para ${r.username} (Use valor positivo para adicionar ou negativo para remover):`);
-                            if (val) {
-                              const num = Number(val);
-                              updateCreditsMutation.mutate({ resellerId: r.id, credits: Math.abs(num), action: num >= 0 ? "add" : "remove" });
+                      <TableCell className="font-mono text-white">#{r.id}</TableCell>
+                      <TableCell className="font-bold text-white">{r.username}</TableCell>
+                      <TableCell className="font-bold text-red-500">
+                        {r.credits}
+                        <Button size="sm" variant="ghost" className="ml-2 text-white hover:text-red-500 p-1 h-auto" onClick={() => {
+                          const action = prompt(`Deseja "adicionar" ou "remover" créditos para ${r.username}? (Digite add ou remove):`);
+                          if (action === "add" || action === "remove") {
+                            const val = prompt(`Quantidade de créditos para ${action}:`);
+                            const num = parseInt(val || "0", 10);
+                            if (!isNaN(num) && num > 0) {
+                              updateCreditsMutation.mutate({ resellerId: r.id, action, credits: num });
                             }
-                          }}>± Créditos</Button>
-                        </div>
+                          }
+                        }}>±</Button>
                       </TableCell>
+                      <TableCell className="text-white">{r.clientCount}</TableCell>
                       <TableCell>
                         <Badge className={r.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
                           {r.isActive ? "Ativo" : "Bloqueado"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => toggleStatusMutation.mutate({ userId: r.id })}>
+                      <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleStatusMutation.mutate({ userId: r.id })}>
                           {r.isActive ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                         </Button>
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => resetSessionMutation.mutate({ userId: r.id })}>
-                          <RefreshCcw className="w-3 h-3" /> Sessão
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => resetSessionMutation.mutate({ userId: r.id })}>
+                          <RefreshCcw className="w-3 h-3" />
                         </Button>
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => {
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
                           const p = prompt("Nova senha:");
                           if (p) resetPasswordMutation.mutate({ userId: r.id, newPassword: p });
                         }}>Senha</Button>
@@ -370,40 +406,40 @@ function ModeratorDashboard() {
 
         {/* CLIENTES */}
         <TabsContent value="clients" className="space-y-4">
-          <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Todos os Clientes do Sistema</CardTitle></CardHeader>
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Todos os Clientes do Sistema</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
-                    <TableHead className="text-neutral-400">ID</TableHead>
-                    <TableHead className="text-neutral-400">Usuário</TableHead>
-                    <TableHead className="text-neutral-400">Key Atribuída</TableHead>
-                    <TableHead className="text-neutral-400">Revendedor</TableHead>
-                    <TableHead className="text-neutral-400">Status</TableHead>
-                    <TableHead className="text-neutral-400 text-right">Ações</TableHead>
+                    <TableHead className="text-white font-bold">ID</TableHead>
+                    <TableHead className="text-white font-bold">Usuário</TableHead>
+                    <TableHead className="text-white font-bold">Key Atribuída</TableHead>
+                    <TableHead className="text-white font-bold">Revendedor</TableHead>
+                    <TableHead className="text-white font-bold">Status</TableHead>
+                    <TableHead className="text-white font-bold text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clients?.map((c) => (
                     <TableRow key={c.id} className="border-neutral-800">
-                      <TableCell className="font-mono">#{c.id}</TableCell>
-                      <TableCell className="font-bold">{c.username}</TableCell>
+                      <TableCell className="font-mono text-white">#{c.id}</TableCell>
+                      <TableCell className="font-bold text-white">{c.username}</TableCell>
                       <TableCell className="font-mono text-xs text-amber-400">{c.keyValue}</TableCell>
-                      <TableCell>{c.resellerName}</TableCell>
+                      <TableCell className="text-white">{c.resellerName}</TableCell>
                       <TableCell>
                         <Badge className={c.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
                           {c.isActive ? "Ativo" : "Bloqueado"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => toggleStatusMutation.mutate({ userId: c.id })}>
+                      <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleStatusMutation.mutate({ userId: c.id })}>
                           {c.isActive ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                         </Button>
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => resetSessionMutation.mutate({ userId: c.id })}>
-                          <RefreshCcw className="w-3 h-3" /> Sessão
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => resetSessionMutation.mutate({ userId: c.id })}>
+                          <RefreshCcw className="w-3 h-3" />
                         </Button>
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => {
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
                           const p = prompt("Nova senha:");
                           if (p) resetPasswordMutation.mutate({ userId: c.id, newPassword: p });
                         }}>Senha</Button>
@@ -424,30 +460,30 @@ function ModeratorDashboard() {
         {/* GERENCIAR KEYS */}
         <TabsContent value="keys" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="bg-[#181818] border-neutral-800 text-white">
-              <CardHeader><CardTitle>Adicionar Key Individual</CardTitle></CardHeader>
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader><CardTitle className="text-white">Adicionar Key Individual</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Ex: SHELBY-XXXX-YYYY" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} />
-                <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal })}>
+                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal })}>
                   Adicionar Key
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#181818] border-neutral-800 text-white">
-              <CardHeader><CardTitle>Importar Keys em Lote (.txt)</CardTitle></CardHeader>
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader><CardTitle className="text-white">Importar Keys em Lote (.txt)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
-                <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n") })}>
+                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n") })}>
                   Importar em Lote
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="bg-[#181818] border-neutral-800 text-white">
+          <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Todas as Keys do Sistema</CardTitle>
+              <CardTitle className="text-white">Todas as Keys do Sistema</CardTitle>
               <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={exportKeys}>
                 Exportar Keys (.txt)
               </Button>
@@ -456,17 +492,17 @@ function ModeratorDashboard() {
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
-                    <TableHead className="text-neutral-400">ID</TableHead>
-                    <TableHead className="text-neutral-400">Key Value</TableHead>
-                    <TableHead className="text-neutral-400">Status Uso</TableHead>
-                    <TableHead className="text-neutral-400">Estado Ativação</TableHead>
-                    <TableHead className="text-neutral-400 text-right">Ações</TableHead>
+                    <TableHead className="text-white font-bold">ID</TableHead>
+                    <TableHead className="text-white font-bold">Key Value</TableHead>
+                    <TableHead className="text-white font-bold">Status Uso</TableHead>
+                    <TableHead className="text-white font-bold">Estado Ativação</TableHead>
+                    <TableHead className="text-white font-bold text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {keysList?.map((k) => (
                     <TableRow key={k.id} className="border-neutral-800">
-                      <TableCell className="font-mono">#{k.id}</TableCell>
+                      <TableCell className="font-mono text-white">#{k.id}</TableCell>
                       <TableCell className="font-mono text-amber-400 font-bold">{k.keyValue}</TableCell>
                       <TableCell>
                         <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
@@ -478,8 +514,8 @@ function ModeratorDashboard() {
                           {k.isActive ? "Ativa" : "Desativada"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
+                      <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
                           <Power className="w-3 h-3" />
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
@@ -496,8 +532,8 @@ function ModeratorDashboard() {
 
         {/* DOWNLOADS */}
         <TabsContent value="downloads" className="space-y-4">
-          <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>{editingDownload ? "Editar Download" : "Cadastrar Novo Download"}</CardTitle></CardHeader>
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">{editingDownload ? "Editar Download" : "Cadastrar Novo Download"}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={editingDownload ? editingDownload.title : dlTitle} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, title: e.target.value}) : setDlTitle(e.target.value)} />
@@ -509,15 +545,15 @@ function ModeratorDashboard() {
               <div className="flex gap-2">
                 {editingDownload ? (
                   <>
-                    <Button className="bg-red-600 hover:bg-red-700 flex-1" onClick={() => updateDownloadMutation.mutate(editingDownload)}>
+                    <Button className="bg-red-600 hover:bg-red-700 text-white flex-1" onClick={() => updateDownloadMutation.mutate(editingDownload)}>
                       Salvar Alterações
                     </Button>
-                    <Button variant="outline" className="border-neutral-700 text-white" onClick={() => setEditingDownload(null)}>
+                    <Button variant="outline" className="border-neutral-700 text-white bg-transparent" onClick={() => setEditingDownload(null)}>
                       Cancelar
                     </Button>
                   </>
                 ) : (
-                  <Button className="bg-red-600 hover:bg-red-700 w-full" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl })}>
+                  <Button className="bg-red-600 hover:bg-red-700 text-white w-full" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl })}>
                     Cadastrar Download
                   </Button>
                 )}
@@ -525,26 +561,26 @@ function ModeratorDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Downloads Cadastrados</CardTitle></CardHeader>
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Downloads Cadastrados</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
-                    <TableHead className="text-neutral-400">Título</TableHead>
-                    <TableHead className="text-neutral-400">Versão</TableHead>
-                    <TableHead className="text-neutral-400">Link</TableHead>
-                    <TableHead className="text-neutral-400 text-right">Ação</TableHead>
+                    <TableHead className="text-white font-bold">Título</TableHead>
+                    <TableHead className="text-white font-bold">Versão</TableHead>
+                    <TableHead className="text-white font-bold">Link</TableHead>
+                    <TableHead className="text-white font-bold text-right">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {downloadsList?.map((d) => (
                     <TableRow key={d.id} className="border-neutral-800">
-                      <TableCell className="font-bold">{d.title}</TableCell>
-                      <TableCell>{d.version}</TableCell>
+                      <TableCell className="font-bold text-white">{d.title}</TableCell>
+                      <TableCell className="text-white">{d.version}</TableCell>
                       <TableCell className="text-blue-400 truncate max-w-xs">{d.fileUrl}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => setEditingDownload(d)}>
+                      <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => setEditingDownload(d)}>
                           <Edit className="w-3 h-3" />
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => deleteDownloadMutation.mutate({ downloadId: d.id })}>
@@ -559,27 +595,70 @@ function ModeratorDashboard() {
           </Card>
         </TabsContent>
 
-        {/* LOGS */}
-        <TabsContent value="logs" className="space-y-4">
-          <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Logs de Auditoria do Sistema</CardTitle></CardHeader>
+        {/* TUTORIAIS */}
+        <TabsContent value="tutorials" className="space-y-4">
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Cadastrar Novo Tutorial (Link)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título do Tutorial (ex: Como configurar o painel)" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} />
+              <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Link do Vídeo/Tutorial (ex: https://youtube.com/... ou link direto)" value={tutUrl} onChange={(e) => setTutUrl(e.target.value)} />
+              <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" placeholder="Descrição ou instruções..." value={tutDesc} onChange={(e) => setTutDesc(e.target.value)} />
+              <Button className="bg-red-600 hover:bg-red-700 text-white w-full" onClick={() => addTutorialMutation.mutate({ title: tutTitle, description: tutDesc, videoUrl: tutUrl })}>
+                Cadastrar Tutorial
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Tutoriais Cadastrados</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
-                    <TableHead className="text-neutral-400">ID</TableHead>
-                    <TableHead className="text-neutral-400">Ação</TableHead>
-                    <TableHead className="text-neutral-400">Detalhes</TableHead>
-                    <TableHead className="text-neutral-400">Data/Hora</TableHead>
+                    <TableHead className="text-white font-bold">Título</TableHead>
+                    <TableHead className="text-white font-bold">Link</TableHead>
+                    <TableHead className="text-white font-bold text-right">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tutorialsList?.map((t) => (
+                    <TableRow key={t.id} className="border-neutral-800">
+                      <TableCell className="font-bold text-white">{t.title}</TableCell>
+                      <TableCell><a href={t.videoUrl} target="_blank" rel="noreferrer" className="text-blue-400 underline truncate max-w-xs block">{t.videoUrl}</a></TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table></div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* LOGS */}
+        <TabsContent value="logs" className="space-y-4">
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Logs de Auditoria do Sistema</CardTitle></CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto"><Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-800">
+                    <TableHead className="text-white font-bold">ID</TableHead>
+                    <TableHead className="text-white font-bold">Ação</TableHead>
+                    <TableHead className="text-white font-bold">Detalhes</TableHead>
+                    <TableHead className="text-white font-bold">Data/Hora</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {logsList?.map((l) => (
                     <TableRow key={l.id} className="border-neutral-800">
-                      <TableCell className="font-mono">#{l.id}</TableCell>
+                      <TableCell className="font-mono text-white">#{l.id}</TableCell>
                       <TableCell><Badge className="bg-neutral-800 text-white font-mono">{l.action}</Badge></TableCell>
-                      <TableCell className="text-neutral-300">{l.details}</TableCell>
-                      <TableCell className="text-xs text-neutral-500">{new Date(l.createdAt).toLocaleString()}</TableCell>
+                      <TableCell className="text-white">{l.details}</TableCell>
+                      <TableCell className="text-xs text-white">{new Date(l.createdAt).toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -625,27 +704,27 @@ function ResellerDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-[#1f1f1f] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Créditos Disponíveis</CardTitle></CardHeader>
+        <Card className="bg-[#141414] border-neutral-800 text-white">
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Disponíveis</CardTitle></CardHeader>
           <CardContent><div className="text-4xl font-black text-red-600">{data?.credits || 0}</div></CardContent>
         </Card>
-        <Card className="bg-[#1f1f1f] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-neutral-400">Total Clientes Criados</CardTitle></CardHeader>
-          <CardContent><div className="text-4xl font-bold">{data?.clientsCount || 0}</div></CardContent>
+        <Card className="bg-[#141414] border-neutral-800 text-white">
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Total Clientes Criados</CardTitle></CardHeader>
+          <CardContent><div className="text-4xl font-bold text-white">{data?.clientsCount || 0}</div></CardContent>
         </Card>
       </div>
 
       {createdCredentials && (
         <Card className="bg-red-950/40 border-red-800 text-white p-4">
-          <CardHeader className="pb-2"><CardTitle className="text-red-400 text-sm">Cliente Criado com Sucesso!</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-white text-sm">Cliente Criado com Sucesso!</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-neutral-300">Copie as credenciais abaixo para enviar ao seu cliente (A Key foi vinculada automaticamente e permanece invisível no sistema para revendedores):</p>
+            <p className="text-xs text-white">Copie as credenciais abaixo para enviar ao seu cliente:</p>
             <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
               <div>Usuário: <strong className="text-white">{createdCredentials.username}</strong></div>
               <div>Senha: <strong className="text-white">{createdCredentials.password}</strong></div>
               <div>Key Vinculada: <strong className="text-amber-400">{createdCredentials.keyValue}</strong></div>
             </div>
-            <Button className="bg-red-600 hover:bg-red-700 mt-2" onClick={() => {
+            <Button className="bg-red-600 hover:bg-red-700 text-white mt-2" onClick={() => {
               navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}\nKey: ${createdCredentials.keyValue}`);
               toast.success("Credenciais copiadas!");
             }}>
@@ -655,43 +734,43 @@ function ResellerDashboard() {
         </Card>
       )}
 
-      <Card className="bg-[#181818] border-neutral-800 text-white">
-        <CardHeader><CardTitle>Criar Novo Cliente (Consome 1 Crédito)</CardTitle></CardHeader>
+      <Card className="bg-[#141414] border-neutral-800 text-white">
+        <CardHeader><CardTitle className="text-white">Criar Novo Cliente (Consome 1 Crédito)</CardTitle></CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end flex-wrap">
             <div>
-              <label className="text-xs text-neutral-400 block mb-1">Usuário do Cliente</label>
+              <label className="text-xs text-white font-semibold block mb-1">Usuário do Cliente</label>
               <Input className="bg-[#222] border-neutral-700 text-white" value={newClientUser} onChange={(e) => setNewClientUser(e.target.value)} placeholder="cliente1" />
             </div>
             <div>
-              <label className="text-xs text-neutral-400 block mb-1">Senha do Cliente</label>
+              <label className="text-xs text-white font-semibold block mb-1">Senha do Cliente</label>
               <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newClientPass} onChange={(e) => setNewClientPass(e.target.value)} placeholder="senha" />
             </div>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass })}>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass })}>
               <UserPlus className="w-4 h-4 mr-1" /> Criar Cliente
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-[#181818] border-neutral-800 text-white">
-        <CardHeader><CardTitle>Seus Clientes</CardTitle></CardHeader>
+      <Card className="bg-[#141414] border-neutral-800 text-white">
+        <CardHeader><CardTitle className="text-white">Seus Clientes</CardTitle></CardHeader>
         <CardContent>
           <div className="overflow-x-auto"><Table>
             <TableHeader>
               <TableRow className="border-neutral-800">
-                <TableHead className="text-neutral-400">ID</TableHead>
-                <TableHead className="text-neutral-400">Usuário</TableHead>
-                <TableHead className="text-neutral-400">Ações</TableHead>
+                <TableHead className="text-white font-bold">ID</TableHead>
+                <TableHead className="text-white font-bold">Usuário</TableHead>
+                <TableHead className="text-white font-bold text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data?.clients?.map((c) => (
                 <TableRow key={c.id} className="border-neutral-800">
-                  <TableCell className="font-mono">#{c.id}</TableCell>
-                  <TableCell className="font-bold">{c.username}</TableCell>
-                  <TableCell className="space-x-2">
-                    <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => {
+                  <TableCell className="font-mono text-white">#{c.id}</TableCell>
+                  <TableCell className="font-bold text-white">{c.username}</TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
                       const p = prompt("Nova senha:");
                       if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });
                     }}>Senha</Button>
@@ -715,7 +794,6 @@ function ClientDashboard() {
   const { data } = trpc.clientPanel.dashboard.useQuery();
   const [copied, setCopied] = useState(false);
 
-  // Alerta de 5 segundos para clientes após o login
   const [countdown, setCountdown] = useState(5);
   const [showAlert, setShowAlert] = useState(true);
 
@@ -729,14 +807,14 @@ function ClientDashboard() {
   }, [countdown]);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto text-white">
       {showAlert && (
-        <Card className="bg-zinc-900 border-red-600/50 text-white p-4 animate-fade-in shadow-xl">
+        <Card className="bg-[#141414] border-red-600/50 text-white p-4 animate-fade-in shadow-xl">
           <div className="flex items-center gap-3 text-red-500 font-bold mb-2">
             <AlertTriangle className="w-6 h-6" />
             <span>Aviso Importante ({countdown}s)</span>
           </div>
-          <p className="text-xs text-neutral-300 mb-3">
+          <p className="text-xs text-white mb-3">
             Aguarde... Se você comprou com revendedores não autorizados da Shelby, denuncie aqui:
           </p>
           <a
@@ -750,58 +828,83 @@ function ClientDashboard() {
         </Card>
       )}
 
-      <Card className="bg-[#181818] border-neutral-800 text-white">
-        <CardHeader>
-          <CardTitle>Suas Credenciais & Key</CardTitle>
-          <CardDescription className="text-neutral-400">Sua Key de acesso atribuída automaticamente pelo sistema.</CardDescription>
-        </CardHeader>
+      <Card className="bg-[#141414] border-neutral-800 text-white">
+        <CardHeader><CardTitle className="text-white">Suas Informações de Acesso</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between bg-[#222] p-4 rounded-xl border border-neutral-800 flex-wrap gap-4">
-            <div>
-              <span className="text-xs text-neutral-400 block uppercase">Usuário</span>
-              <span className="text-lg font-bold">{data?.username}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
+              <span className="text-xs text-white font-bold block mb-1">SEU USUÁRIO</span>
+              <strong className="text-lg text-white font-mono">{data?.username}</strong>
             </div>
-            <div>
-              <span className="text-xs text-neutral-400 block uppercase">Key Atribuída</span>
-              <span className="text-lg font-mono font-bold text-amber-400">{data?.keyValue}</span>
+            <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
+              <span className="text-xs text-white font-bold block mb-1">SUA KEY DE ACESSO</span>
+              <div className="flex items-center justify-between">
+                <span className="text-amber-400 font-mono font-bold text-sm">{data?.keyValue}</span>
+                <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
+                  navigator.clipboard.writeText(data?.keyValue || "");
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                  toast.success("Key copiada!");
+                }}>
+                  <Copy className="w-3 h-3 mr-1" /> {copied ? "Copiado" : "Copiar"}
+                </Button>
+              </div>
             </div>
-            <Button
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => {
-                navigator.clipboard.writeText(`Usuário: ${data?.username} | Key: ${data?.keyValue}`);
-                setCopied(true);
-                toast.success("Credenciais copiadas!");
-                setTimeout(() => setCopied(false), 2000);
-              }}
-            >
-              {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-              {copied ? "Copiado" : "Copiar"}
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-[#181818] border-neutral-800 text-white">
-        <CardHeader>
-          <CardTitle>Downloads Disponíveis</CardTitle>
-          <CardDescription className="text-neutral-400">Softwares e arquivos cadastrados pelo Moderador.</CardDescription>
-        </CardHeader>
+      {/* DOWNLOADS */}
+      <Card className="bg-[#141414] border-neutral-800 text-white">
+        <CardHeader><CardTitle className="text-white flex items-center gap-2"><FileDown className="w-5 h-5 text-red-600" /> Downloads Disponíveis</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data?.downloads?.map((d) => (
-              <div key={d.id} className="bg-[#222] border border-neutral-800 p-4 rounded-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg">{d.title}</h3>
-                    <Badge variant="outline" className="border-neutral-700 text-neutral-300">v{d.version}</Badge>
+          <div className="space-y-3">
+            {data?.downloads?.length === 0 ? (
+              <p className="text-sm text-white">Nenhum download cadastrado no momento.</p>
+            ) : (
+              data?.downloads?.map((d) => (
+                <div key={d.id} className="bg-[#1f1f1f] border border-neutral-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <strong className="text-white font-bold">{d.title}</strong>
+                      <Badge className="bg-neutral-800 text-white border-neutral-700">v{d.version}</Badge>
+                    </div>
+                    {d.description && <p className="text-xs text-white">{d.description}</p>}
                   </div>
-                  <p className="text-sm text-neutral-400 mb-4">{d.description || "Sem descrição."}</p>
+                  <a href={d.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto">
+                      <DownloadIcon className="w-4 h-4 mr-2" /> Baixar
+                    </Button>
+                  </a>
                 </div>
-                <Button className="w-full bg-red-600 hover:bg-red-700 font-bold" onClick={() => window.open(d.fileUrl, "_blank")}>
-                  <Download className="w-4 h-4 mr-2" /> Baixar Arquivo
-                </Button>
-              </div>
-            ))}
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* TUTORIAIS */}
+      <Card className="bg-[#141414] border-neutral-800 text-white">
+        <CardHeader><CardTitle className="text-white flex items-center gap-2"><BookOpen className="w-5 h-5 text-red-600" /> Tutoriais e Vídeos Explicativos</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {data?.tutorials?.length === 0 ? (
+              <p className="text-sm text-white">Nenhum tutorial cadastrado no momento.</p>
+            ) : (
+              data?.tutorials?.map((t) => (
+                <div key={t.id} className="bg-[#1f1f1f] border border-neutral-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <strong className="text-white font-bold text-base">{t.title}</strong>
+                    {t.description && <p className="text-xs text-white">{t.description}</p>}
+                  </div>
+                  <a href={t.videoUrl} target="_blank" rel="noopener noreferrer">
+                    <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto">
+                      <Video className="w-4 h-4 mr-2" /> Assistir / Acessar Tutorial
+                    </Button>
+                  </a>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

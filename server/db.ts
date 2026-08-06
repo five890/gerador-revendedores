@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { users, keys, downloads, sessions, logs, User, InsertUser } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, sessions, logs, User, InsertUser } from "../drizzle/schema";
 import { hashPassword } from "./auth";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -10,7 +10,6 @@ async function ensureTables(dbUrl: string) {
   try {
     const connection = await mysql.createConnection(dbUrl);
     
-    // Create tables if not exist
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -30,7 +29,6 @@ async function ensureTables(dbUrl: string) {
       )
     `);
 
-    // Ensure columns exist on users table if table already existed without them
     const alterQueries = [
       "ALTER TABLE users ADD COLUMN passwordHash VARCHAR(255)",
       "ALTER TABLE users ADD COLUMN credits INT DEFAULT 0",
@@ -41,9 +39,7 @@ async function ensureTables(dbUrl: string) {
     for (const aq of alterQueries) {
       try {
         await connection.query(aq);
-      } catch (e) {
-        // Safe to ignore if column already exists
-      }
+      } catch (e) {}
     }
 
     await connection.query(`
@@ -62,6 +58,15 @@ async function ensureTables(dbUrl: string) {
         description TEXT,
         version VARCHAR(50) NOT NULL,
         fileUrl TEXT NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tutorials (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        videoUrl TEXT NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);

@@ -28,3 +28,6 @@
 - [x] Implementar auto-criação de tabelas e auto-sync de colunas ao iniciar o servidor (Railway/Produção)
 - [x] Fazer push das alterações de auto-sync para o GitHub (Railway)
 - [x] Adicionar trava de zoom no viewport (user-scalable=no) para dispositivos móveis
+- [ ] Adicionar sistema de tutoriais por link (Moderador cadastra, Clientes visualizam)
+- [x] Ajustar textos para cor branca em toda a interface
+- [x] Adicionar rotas e interface para tutoriais por link

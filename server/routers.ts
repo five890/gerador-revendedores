@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { users, keys, downloads, sessions, logs } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, sessions, logs } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
@@ -471,6 +471,39 @@ export const appRouter = router({
       if (!db) return [];
       return await db.select().from(logs).orderBy(desc(logs.id)).limit(100);
     }),
+
+    listTutorials: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) return [];
+      return await db.select().from(tutorials).orderBy(desc(tutorials.id));
+    }),
+
+    addTutorial: protectedProcedure
+      .input(z.object({ title: z.string(), description: z.string().optional(), videoUrl: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        await db.insert(tutorials).values({
+          title: input.title,
+          description: input.description || null,
+          videoUrl: input.videoUrl,
+        });
+        return { success: true };
+      }),
+
+    deleteTutorial: protectedProcedure
+      .input(z.object({ tutorialId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        await db.delete(tutorials).where(eq(tutorials.id, input.tutorialId));
+        return { success: true };
+      }),
   }),
 
   reseller: router({
@@ -592,11 +625,13 @@ export const appRouter = router({
       }
 
       const allDownloads = await db.select().from(downloads).orderBy(desc(downloads.id));
+      const allTutorials = await db.select().from(tutorials).orderBy(desc(tutorials.id));
 
       return {
         username: client.openId,
         keyValue,
         downloads: allDownloads,
+        tutorials: allTutorials,
       };
     }),
   }),

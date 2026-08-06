@@ -34,6 +34,14 @@ export const downloads = mysqlTable("downloads", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const tutorials = mysqlTable("tutorials", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  videoUrl: text("videoUrl").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const sessions = mysqlTable("sessions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
@@ -55,5 +63,6 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Key = typeof keys.$inferSelect;
 export type Download = typeof downloads.$inferSelect;
+export type Tutorial = typeof tutorials.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Log = typeof logs.$inferSelect;

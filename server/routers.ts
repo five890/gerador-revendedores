@@ -419,7 +419,7 @@ export const appRouter = router({
       }),
 
     importKeysBatch: protectedProcedure
-      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced"]) }))
+      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -472,7 +472,7 @@ export const appRouter = router({
     }),
 
     addDownload: protectedProcedure
-      .input(z.object({ title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string(), type: z.enum(["basic", "advanced"]) }))
+      .input(z.object({ title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string(), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -489,7 +489,7 @@ export const appRouter = router({
       }),
 
     updateDownload: protectedProcedure
-      .input(z.object({ id: z.number(), title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string(), type: z.enum(["basic", "advanced"]) }))
+      .input(z.object({ id: z.number(), title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string(), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -550,7 +550,7 @@ export const appRouter = router({
     }),
 
     addTutorial: protectedProcedure
-      .input(z.object({ title: z.string(), description: z.string().optional(), videoUrl: z.string(), type: z.enum(["basic", "advanced"]) }))
+      .input(z.object({ title: z.string(), description: z.string().optional(), videoUrl: z.string(), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();

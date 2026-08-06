@@ -63,7 +63,7 @@ export default function Home() {
 
         <div className="w-full max-w-md bg-[#000000]/80 border border-white/10 p-8 rounded-2xl shadow-2xl backdrop-blur-xl relative z-10">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-black tracking-wider text-red-600 uppercase">Netflix SaaS</h1>
+            <h1 className="text-3xl font-black tracking-wider text-red-600 uppercase">Shelby Panel</h1>
             <p className="text-sm text-neutral-400 mt-2">Painel de Acesso & Distribuição</p>
           </div>
 
@@ -151,7 +151,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#141414] text-white flex flex-col">
       <header className="border-b border-white/10 bg-[#000000]/60 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-black text-red-600 tracking-wider">NETFLIX SAAS PANEL</h1>
+          <h1 className="text-xl font-black text-red-600 tracking-wider">SHELBY PANEL</h1>
           <Badge variant="outline" className="border-red-600 text-red-500 uppercase text-xs font-bold">
             {user.role}
           </Badge>
@@ -328,7 +328,7 @@ function ModeratorDashboard() {
       </div>
 
       <Tabs defaultValue="resellers" className="space-y-4">
-        <TabsList className="bg-[#1a1a1a] border border-neutral-800 p-1 flex-wrap">
+        <TabsList className="bg-[#1a1a1a] border border-neutral-800 p-1 flex-wrap h-auto gap-1">
           <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Revendedores</TabsTrigger>
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Clientes</TabsTrigger>
           <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Gerenciar Keys</TabsTrigger>
@@ -364,7 +364,7 @@ function ModeratorDashboard() {
           <Card className="bg-[#181818] border-neutral-800 text-white">
             <CardHeader><CardTitle>Lista de Revendedores</CardTitle></CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-neutral-400">ID</TableHead>
@@ -419,7 +419,7 @@ function ModeratorDashboard() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -429,7 +429,7 @@ function ModeratorDashboard() {
           <Card className="bg-[#181818] border-neutral-800 text-white">
             <CardHeader><CardTitle>Todos os Clientes do Sistema</CardTitle></CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-neutral-400">ID</TableHead>
@@ -472,7 +472,7 @@ function ModeratorDashboard() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -514,7 +514,7 @@ function ModeratorDashboard() {
           <Card className="bg-[#181818] border-neutral-800 text-white">
             <CardHeader><CardTitle>Todas as Keys do Sistema</CardTitle></CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-neutral-400">ID</TableHead>
@@ -550,7 +550,7 @@ function ModeratorDashboard() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -589,7 +589,7 @@ function ModeratorDashboard() {
           <Card className="bg-[#181818] border-neutral-800 text-white">
             <CardHeader><CardTitle>Downloads Cadastrados</CardTitle></CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-neutral-400">Título</TableHead>
@@ -615,7 +615,7 @@ function ModeratorDashboard() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -625,7 +625,7 @@ function ModeratorDashboard() {
           <Card className="bg-[#181818] border-neutral-800 text-white">
             <CardHeader><CardTitle>Logs de Auditoria do Sistema</CardTitle></CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-neutral-400">ID</TableHead>
@@ -644,7 +644,7 @@ function ModeratorDashboard() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -738,7 +738,7 @@ function ResellerDashboard() {
       <Card className="bg-[#181818] border-neutral-800 text-white">
         <CardHeader><CardTitle>Seus Clientes</CardTitle></CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto"><Table>
             <TableHeader>
               <TableRow className="border-neutral-800">
                 <TableHead className="text-neutral-400">ID</TableHead>
@@ -771,7 +771,7 @@ function ResellerDashboard() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </Table></div>
         </CardContent>
       </Card>
     </div>

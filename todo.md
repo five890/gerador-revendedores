@@ -16,3 +16,5 @@
 - [x] Edição de Downloads cadastrados pelo moderador
 - [x] Visualização e cópia rápida de senha para revendedores ao gerenciar clientes
 - [x] Auto-seed do moderador murillo / 300530 na inicialização do banco
+- [x] Renomear plataforma para Shelby Panel
+- [x] Otimizar layout e responsividade para dispositivos móveis (Mobile-first)

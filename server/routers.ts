@@ -56,7 +56,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Sua conta está bloqueada pelo Moderador." });
         }
 
-        // Restrição de sessão única para Reseller e Client
+        // Restrição de sessão única para Reseller e Client (Moderador isento)
         if (user.role === "reseller" || user.role === "client") {
           const activeSessions = await db.select().from(sessions).where(eq(sessions.userId, user.id));
           if (activeSessions.length > 0) {
@@ -72,7 +72,6 @@ export const appRouter = router({
 
         const token = signJwt({ userId: user.id, username: user.openId, role: user.role });
 
-        // Registrar ou atualizar sessão
         await db.delete(sessions).where(eq(sessions.userId, user.id));
         await db.insert(sessions).values({
           userId: user.id,
@@ -80,7 +79,6 @@ export const appRouter = router({
           deviceIdentifier: input.deviceIdentifier,
         });
 
-        // Registrar log
         await db.insert(logs).values({
           userId: user.id,
           action: "LOGIN",
@@ -229,7 +227,7 @@ export const appRouter = router({
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "UPDATE_CREDITS",
-          details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.credits} créditos do revendedor ${reseller.openId}. Novo saldo: ${newCredits}`,
+          details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.credits} créditos do revendedor ${reseller.openId}. Saldo final: ${newCredits}`,
         });
 
         return { success: true, newCredits };
@@ -286,7 +284,7 @@ export const appRouter = router({
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "TOGGLE_USER_STATUS",
-          details: `Moderador alterou status do usuário ${u.openId} para ${newStatus ? "Ativo" : "Bloqueado"}.`,
+          details: `Moderador alterou status de ${u.openId} para ${newStatus ? "Ativo" : "Bloqueado"}.`,
         });
 
         return { success: true };
@@ -384,12 +382,25 @@ export const appRouter = router({
             try {
               await db.insert(keys).values({ keyValue: trimmed });
               added++;
-            } catch (e) {
-              // Ignorar duplicadas
-            }
+            } catch (e) {}
           }
         }
         return { success: true, added };
+      }),
+
+    toggleKeyStatus: protectedProcedure
+      .input(z.object({ keyId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const kRes = await db.select().from(keys).where(eq(keys.id, input.keyId)).limit(1);
+        if (kRes.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
+        const k = kRes[0];
+
+        await db.update(keys).set({ isActive: !k.isActive }).where(eq(keys.id, input.keyId));
+        return { success: true };
       }),
 
     deleteKey: protectedProcedure
@@ -423,6 +434,23 @@ export const appRouter = router({
           version: input.version,
           fileUrl: input.fileUrl,
         });
+        return { success: true };
+      }),
+
+    updateDownload: protectedProcedure
+      .input(z.object({ id: z.number(), title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        await db.update(downloads).set({
+          title: input.title,
+          description: input.description || null,
+          version: input.version,
+          fileUrl: input.fileUrl,
+        }).where(eq(downloads.id, input.id));
+
         return { success: true };
       }),
 
@@ -474,23 +502,20 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        // Verificar créditos do revendedor
         const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const reseller = resRes[0];
         if (reseller.credits < 1) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes para criar cliente." });
         }
 
-        // Buscar uma Key disponível (Keys NUNCA devem ser visíveis para revendedores, mas vinculadas automaticamente)
-        const availableKey = await db.select().from(keys).where(eq(keys.isUsed, false)).limit(1);
+        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true))).limit(1);
         if (availableKey.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Keys disponíveis no sistema no momento. Contate o Moderador." });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Keys disponíveis ou ativas no sistema." });
         }
         const key = availableKey[0];
 
         const passHash = hashPassword(input.password);
 
-        // Criar cliente
         await db.insert(users).values({
           openId: input.username,
           role: "client",
@@ -501,19 +526,16 @@ export const appRouter = router({
           isActive: true,
         });
 
-        // Marcar Key como usada
         await db.update(keys).set({ isUsed: true }).where(eq(keys.id, key.id));
-
-        // Descontar 1 crédito do revendedor
         await db.update(users).set({ credits: reseller.credits - 1 }).where(eq(users.id, reseller.id));
 
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESELLER_CREATE_CLIENT",
-          details: `Revendedor ${reseller.openId} criou o cliente ${input.username} consumindo 1 crédito.`,
+          details: `Revendedor ${reseller.openId} criou o cliente ${input.username} com a Key ${key.keyValue}.`,
         });
 
-        return { success: true };
+        return { success: true, createdUsername: input.username, createdPassword: input.password, keyValue: key.keyValue };
       }),
 
     editClientPassword: protectedProcedure
@@ -524,7 +546,7 @@ export const appRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
         const clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.resellerId, ctx.user.id))).limit(1);
-        if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado ou não pertence a você." });
+        if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
 
         const passHash = hashPassword(input.newPassword);
         await db.update(users).set({ passwordHash: passHash as any }).where(eq(users.id, input.clientId));
@@ -540,7 +562,7 @@ export const appRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
         const clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.resellerId, ctx.user.id))).limit(1);
-        if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado ou não pertence a você." });
+        if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
 
         const client = clientRes[0];
         if (client.keyId) {

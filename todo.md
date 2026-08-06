@@ -12,3 +12,6 @@
 - [x] Escrever testes unitários em Vitest para autenticação e regras de negócio
 - [x] Salvar checkpoint do projeto
 - [x] Criar conta padrão de moderador (murillo / 300530)
+- [x] Exportação de Keys e ativação/desativação individual
+- [x] Edição de Downloads cadastrados pelo moderador
+- [x] Visualização e cópia rápida de senha para revendedores ao gerenciar clientes

@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Key, Download, Users, UserPlus, LogOut, RefreshCcw, Lock, Unlock, Trash2, Plus, Copy, Check, Activity } from "lucide-react";
+import { Shield, Key, Download, Users, UserPlus, LogOut, RefreshCcw, Lock, Unlock, Trash2, Plus, Copy, Check, Activity, Edit, FileText, Power } from "lucide-react";
 
 export default function Home() {
   const utils = trpc.useUtils();
@@ -18,7 +18,6 @@ export default function Home() {
   const [loginPassword, setLoginPassword] = useState("");
   const [deviceIdentifier] = useState(() => "device_" + Math.random().toString(36).substring(7));
 
-  // Setup moderator state
   const [modSetupOpen, setModSetupOpen] = useState(false);
   const [setupUser, setSetupUser] = useState("");
   const [setupPass, setSetupPass] = useState("");
@@ -43,7 +42,7 @@ export default function Home() {
 
   const setupModMutation = trpc.auth.registerModerator.useMutation({
     onSuccess: () => {
-      toast.success("Moderador criado com sucesso! Faça login.");
+      toast.success("Moderador criado! Faça login.");
       setModSetupOpen(false);
     },
     onError: (err) => toast.error(err.message),
@@ -65,7 +64,7 @@ export default function Home() {
         <div className="w-full max-w-md bg-[#000000]/80 border border-white/10 p-8 rounded-2xl shadow-2xl backdrop-blur-xl relative z-10">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-black tracking-wider text-red-600 uppercase">Netflix SaaS</h1>
-            <p className="text-sm text-neutral-400 mt-2">Plataforma Exclusiva de Acesso & Conteúdo</p>
+            <p className="text-sm text-neutral-400 mt-2">Painel de Acesso & Distribuição</p>
           </div>
 
           <form
@@ -79,7 +78,7 @@ export default function Home() {
               <label className="text-xs uppercase tracking-wider text-neutral-400 font-semibold mb-1 block">Usuário</label>
               <Input
                 className="bg-[#1f1f1f] border-neutral-800 text-white focus:border-red-600"
-                placeholder="Seu usuário"
+                placeholder="Ex: murillo"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 required
@@ -91,7 +90,7 @@ export default function Home() {
               <Input
                 type="password"
                 className="bg-[#1f1f1f] border-neutral-800 text-white focus:border-red-600"
-                placeholder="Sua senha"
+                placeholder="••••••"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 required
@@ -115,7 +114,7 @@ export default function Home() {
                 <div className="space-y-4 pt-2">
                   <Input
                     className="bg-[#222] border-neutral-700 text-white"
-                    placeholder="Usuário Moderador"
+                    placeholder="Usuário (Ex: murillo)"
                     value={setupUser}
                     onChange={(e) => setSetupUser(e.target.value)}
                   />
@@ -158,7 +157,7 @@ export default function Home() {
           </Badge>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-neutral-300 font-medium">Olá, <strong className="text-white">{user.username}</strong></span>
+          <span className="text-sm text-neutral-300 font-medium">Logado como: <strong className="text-white">{user.username}</strong></span>
           <Button variant="ghost" size="sm" onClick={() => logoutMutation.mutate()} className="text-red-500 hover:text-red-400 hover:bg-red-950/30">
             <LogOut className="w-4 h-4 mr-2" /> Sair
           </Button>
@@ -194,6 +193,8 @@ function ModeratorDashboard() {
   const [dlVersion, setDlVersion] = useState("1.0.0");
   const [dlUrl, setDlUrl] = useState("");
 
+  const [editingDownload, setEditingDownload] = useState<any | null>(null);
+
   const createResellerMutation = trpc.moderator.createReseller.useMutation({
     onSuccess: () => {
       toast.success("Revendedor criado com sucesso!");
@@ -221,11 +222,11 @@ function ModeratorDashboard() {
   });
 
   const resetSessionMutation = trpc.moderator.resetUserSession.useMutation({
-    onSuccess: () => toast.success("Sessão resetada com sucesso!"),
+    onSuccess: () => toast.success("Sessão resetada!"),
   });
 
   const resetPasswordMutation = trpc.moderator.resetUserPassword.useMutation({
-    onSuccess: () => toast.success("Senha resetada com sucesso!"),
+    onSuccess: () => toast.success("Senha resetada!"),
   });
 
   const deleteUserMutation = trpc.moderator.deleteUser.useMutation({
@@ -253,6 +254,13 @@ function ModeratorDashboard() {
     },
   });
 
+  const toggleKeyStatusMutation = trpc.moderator.toggleKeyStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Status da Key alterado!");
+      refetchKeys();
+    },
+  });
+
   const deleteKeyMutation = trpc.moderator.deleteKey.useMutation({
     onSuccess: () => {
       toast.success("Key excluída.");
@@ -271,12 +279,32 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
+  const updateDownloadMutation = trpc.moderator.updateDownload.useMutation({
+    onSuccess: () => {
+      toast.success("Download atualizado!");
+      setEditingDownload(null);
+      refetchDownloads();
+    },
+  });
+
   const deleteDownloadMutation = trpc.moderator.deleteDownload.useMutation({
     onSuccess: () => {
       toast.success("Download removido.");
       refetchDownloads();
     },
   });
+
+  const exportKeys = () => {
+    if (!keysList) return;
+    const textData = keysList.map(k => `${k.keyValue} | ${k.isUsed ? 'Usada' : 'Disponível'} | ${k.isActive ? 'Ativa' : 'Inativa'}`).join('\n');
+    const blob = new Blob([textData], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'keys_export.txt';
+    a.click();
+    toast.success("Keys exportadas com sucesso!");
+  };
 
   return (
     <div className="space-y-6">
@@ -300,7 +328,7 @@ function ModeratorDashboard() {
       </div>
 
       <Tabs defaultValue="resellers" className="space-y-4">
-        <TabsList className="bg-[#1a1a1a] border border-neutral-800 p-1">
+        <TabsList className="bg-[#1a1a1a] border border-neutral-800 p-1 flex-wrap">
           <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Revendedores</TabsTrigger>
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Clientes</TabsTrigger>
           <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Gerenciar Keys</TabsTrigger>
@@ -308,6 +336,7 @@ function ModeratorDashboard() {
           <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Logs de Auditoria</TabsTrigger>
         </TabsList>
 
+        {/* REVENDEDORES */}
         <TabsContent value="resellers" className="space-y-4">
           <Card className="bg-[#181818] border-neutral-800 text-white">
             <CardHeader><CardTitle>Criar Novo Revendedor</CardTitle></CardHeader>
@@ -341,7 +370,7 @@ function ModeratorDashboard() {
                     <TableHead className="text-neutral-400">ID</TableHead>
                     <TableHead className="text-neutral-400">Usuário</TableHead>
                     <TableHead className="text-neutral-400">Créditos</TableHead>
-                    <TableHead className="text-neutral-400">Clientes Criados</TableHead>
+                    <TableHead className="text-neutral-400">Clientes</TableHead>
                     <TableHead className="text-neutral-400">Status</TableHead>
                     <TableHead className="text-neutral-400 text-right">Ações</TableHead>
                   </TableRow>
@@ -395,6 +424,7 @@ function ModeratorDashboard() {
           </Card>
         </TabsContent>
 
+        {/* CLIENTES */}
         <TabsContent value="clients" className="space-y-4">
           <Card className="bg-[#181818] border-neutral-800 text-white">
             <CardHeader><CardTitle>Todos os Clientes do Sistema</CardTitle></CardHeader>
@@ -447,7 +477,15 @@ function ModeratorDashboard() {
           </Card>
         </TabsContent>
 
+        {/* KEYS */}
         <TabsContent value="keys" className="space-y-4">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <h3 className="text-lg font-bold">Gestão de Keys (100% Ocultas para Revendedores)</h3>
+            <Button className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={exportKeys}>
+              <FileText className="w-4 h-4 mr-2" /> Exportar Keys (.txt)
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-[#181818] border-neutral-800 text-white">
               <CardHeader><CardTitle>Adicionar Key</CardTitle></CardHeader>
@@ -458,7 +496,7 @@ function ModeratorDashboard() {
             </Card>
 
             <Card className="bg-[#181818] border-neutral-800 text-white">
-              <CardHeader><CardTitle>Importar em Lote</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Importar em Lote (uma por linha)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <textarea
                   className="w-full h-24 bg-[#222] border border-neutral-700 rounded p-2 text-white font-mono text-xs"
@@ -474,14 +512,15 @@ function ModeratorDashboard() {
           </div>
 
           <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Lista de Keys (Oculto para Revendedores)</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Todas as Keys do Sistema</CardTitle></CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-neutral-400">ID</TableHead>
                     <TableHead className="text-neutral-400">Key Value</TableHead>
-                    <TableHead className="text-neutral-400">Status</TableHead>
+                    <TableHead className="text-neutral-400">Status Uso</TableHead>
+                    <TableHead className="text-neutral-400">Ativação</TableHead>
                     <TableHead className="text-neutral-400 text-right">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -495,7 +534,15 @@ function ModeratorDashboard() {
                           {k.isUsed ? "Usada" : "Disponível"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell>
+                        <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
+                          {k.isActive ? "Ativa" : "Inativa"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => toggleKeyStatusMutation.mutate({ keyId: k.id })}>
+                          <Power className="w-3 h-3" />
+                        </Button>
                         <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
@@ -508,19 +555,34 @@ function ModeratorDashboard() {
           </Card>
         </TabsContent>
 
+        {/* DOWNLOADS */}
         <TabsContent value="downloads" className="space-y-4">
           <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Cadastrar Download</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{editingDownload ? "Editar Download" : "Cadastrar Novo Download"}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={dlTitle} onChange={(e) => setDlTitle(e.target.value)} />
-                <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Versão" value={dlVersion} onChange={(e) => setDlVersion(e.target.value)} />
+                <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={editingDownload ? editingDownload.title : dlTitle} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, title: e.target.value}) : setDlTitle(e.target.value)} />
+                <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Versão" value={editingDownload ? editingDownload.version : dlVersion} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, version: e.target.value}) : setDlVersion(e.target.value)} />
               </div>
-              <Input className="bg-[#222] border-neutral-700 text-white" placeholder="URL de Download" value={dlUrl} onChange={(e) => setDlUrl(e.target.value)} />
-              <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" placeholder="Descrição..." value={dlDesc} onChange={(e) => setDlDesc(e.target.value)} />
-              <Button className="bg-red-600 hover:bg-red-700" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl })}>
-                Cadastrar
-              </Button>
+              <Input className="bg-[#222] border-neutral-700 text-white" placeholder="URL de Download" value={editingDownload ? editingDownload.fileUrl : dlUrl} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, fileUrl: e.target.value}) : setDlUrl(e.target.value)} />
+              <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" placeholder="Descrição..." value={editingDownload ? (editingDownload.description || "") : dlDesc} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, description: e.target.value}) : setDlDesc(e.target.value)} />
+              
+              <div className="flex gap-2">
+                {editingDownload ? (
+                  <>
+                    <Button className="bg-red-600 hover:bg-red-700 flex-1" onClick={() => updateDownloadMutation.mutate(editingDownload)}>
+                      Salvar Alterações
+                    </Button>
+                    <Button variant="outline" className="border-neutral-700 text-white" onClick={() => setEditingDownload(null)}>
+                      Cancelar
+                    </Button>
+                  </>
+                ) : (
+                  <Button className="bg-red-600 hover:bg-red-700 w-full" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl })}>
+                    Cadastrar Download
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -542,7 +604,10 @@ function ModeratorDashboard() {
                       <TableCell className="font-bold">{d.title}</TableCell>
                       <TableCell>{d.version}</TableCell>
                       <TableCell className="text-blue-400 truncate max-w-xs">{d.fileUrl}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
+                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => setEditingDownload(d)}>
+                          <Edit className="w-3 h-3" />
+                        </Button>
                         <Button size="sm" variant="destructive" onClick={() => deleteDownloadMutation.mutate({ downloadId: d.id })}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
@@ -555,9 +620,10 @@ function ModeratorDashboard() {
           </Card>
         </TabsContent>
 
+        {/* LOGS */}
         <TabsContent value="logs" className="space-y-4">
           <Card className="bg-[#181818] border-neutral-800 text-white">
-            <CardHeader><CardTitle>Logs de Auditoria</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Logs de Auditoria do Sistema</CardTitle></CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -591,10 +657,12 @@ function ResellerDashboard() {
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
   const [newClientUser, setNewClientUser] = useState("");
   const [newClientPass, setNewClientPass] = useState("");
+  const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string; keyValue: string } | null>(null);
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
-    onSuccess: () => {
-      toast.success("Cliente criado com sucesso!");
+    onSuccess: (res) => {
+      toast.success("Cliente criado com sucesso! 1 crédito consumido.");
+      setCreatedCredentials({ username: res.createdUsername, password: res.createdPassword, keyValue: res.keyValue });
       setNewClientUser("");
       setNewClientPass("");
       refetch();
@@ -604,7 +672,7 @@ function ResellerDashboard() {
 
   const deleteClientMutation = trpc.reseller.deleteClient.useMutation({
     onSuccess: () => {
-      toast.success("Cliente removido.");
+      toast.success("Cliente removido e Key devolvida.");
       refetch();
     },
     onError: (e) => toast.error(e.message),
@@ -628,16 +696,36 @@ function ResellerDashboard() {
         </Card>
       </div>
 
+      {createdCredentials && (
+        <Card className="bg-red-950/40 border-red-800 text-white p-4">
+          <CardHeader className="pb-2"><CardTitle className="text-red-400 text-sm">Cliente Criado com Sucesso!</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs text-neutral-300">Copie as credenciais abaixo para enviar ao seu cliente (A Key foi vinculada automaticamente e permanece invisível no sistema para revendedores):</p>
+            <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
+              <div>Usuário: <strong className="text-white">{createdCredentials.username}</strong></div>
+              <div>Senha: <strong className="text-white">{createdCredentials.password}</strong></div>
+              <div>Key Vinculada: <strong className="text-amber-400">{createdCredentials.keyValue}</strong></div>
+            </div>
+            <Button className="bg-red-600 hover:bg-red-700 mt-2" onClick={() => {
+              navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}\nKey: ${createdCredentials.keyValue}`);
+              toast.success("Credenciais copiadas!");
+            }}>
+              <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais Completas
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="bg-[#181818] border-neutral-800 text-white">
-        <CardHeader><CardTitle>Criar Novo Cliente</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Criar Novo Cliente (Consome 1 Crédito)</CardTitle></CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end flex-wrap">
             <div>
-              <label className="text-xs text-neutral-400 block mb-1">Usuário</label>
+              <label className="text-xs text-neutral-400 block mb-1">Usuário do Cliente</label>
               <Input className="bg-[#222] border-neutral-700 text-white" value={newClientUser} onChange={(e) => setNewClientUser(e.target.value)} placeholder="cliente1" />
             </div>
             <div>
-              <label className="text-xs text-neutral-400 block mb-1">Senha</label>
+              <label className="text-xs text-neutral-400 block mb-1">Senha do Cliente</label>
               <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newClientPass} onChange={(e) => setNewClientPass(e.target.value)} placeholder="senha" />
             </div>
             <Button className="bg-red-600 hover:bg-red-700" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass })}>
@@ -673,7 +761,7 @@ function ResellerDashboard() {
                     <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent" onClick={() => {
                       const p = prompt("Nova senha:");
                       if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });
-                    }}>Senha</Button>
+                    }}>Alterar Senha</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
                       if (confirm("Remover cliente?")) deleteClientMutation.mutate({ clientId: c.id });
                     }}>
@@ -698,11 +786,11 @@ function ClientDashboard() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <Card className="bg-[#181818] border-neutral-800 text-white">
         <CardHeader>
-          <CardTitle>Suas Credenciais</CardTitle>
-          <CardDescription className="text-neutral-400">Key de acesso atribuída à sua conta.</CardDescription>
+          <CardTitle>Suas Credenciais & Key</CardTitle>
+          <CardDescription className="text-neutral-400">Sua Key de acesso atribuída automaticamente pelo sistema.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between bg-[#222] p-4 rounded-xl border border-neutral-800">
+          <div className="flex items-center justify-between bg-[#222] p-4 rounded-xl border border-neutral-800 flex-wrap gap-4">
             <div>
               <span className="text-xs text-neutral-400 block uppercase">Usuário</span>
               <span className="text-lg font-bold">{data?.username}</span>
@@ -730,6 +818,7 @@ function ClientDashboard() {
       <Card className="bg-[#181818] border-neutral-800 text-white">
         <CardHeader>
           <CardTitle>Downloads Disponíveis</CardTitle>
+          <CardDescription className="text-neutral-400">Softwares e arquivos cadastrados pelo Moderador.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -743,7 +832,7 @@ function ClientDashboard() {
                   <p className="text-sm text-neutral-400 mb-4">{d.description || "Sem descrição."}</p>
                 </div>
                 <Button className="w-full bg-red-600 hover:bg-red-700 font-bold" onClick={() => window.open(d.fileUrl, "_blank")}>
-                  <Download className="w-4 h-4 mr-2" /> Baixar
+                  <Download className="w-4 h-4 mr-2" /> Baixar Arquivo
                 </Button>
               </div>
             ))}

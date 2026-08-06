@@ -993,6 +993,7 @@ function ResellerDashboard() {
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
                 <option value="basic">Proxy Android Basic</option>
                 <option value="advanced">Proxy Android Advanced</option>
+                <option value="ios">Proxy iOS</option>
               </select>
             </div>
             <div>
@@ -1004,7 +1005,7 @@ function ResellerDashboard() {
               <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newClientPass} onChange={(e) => setNewClientPass(e.target.value)} placeholder="senha" />
             </div>
             <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass, type: newClientType })}>
-              <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType === "advanced" ? "Advanced" : "Basic"})
+              <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType === "advanced" ? "Advanced" : newClientType === "basic" ? "Basic" : "iOS"})
             </Button>
           </div>
         </CardContent>

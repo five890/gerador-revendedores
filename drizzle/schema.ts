@@ -11,6 +11,7 @@ export const users = mysqlTable("users", {
   credits: int("credits").default(0).notNull(), // general / legacy
   creditsBasic: int("creditsBasic").default(0).notNull(),
   creditsAdvanced: int("creditsAdvanced").default(0).notNull(),
+  creditsIos: int("creditsIos").default(0).notNull(),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   isActive: boolean("isActive").default(true).notNull(),
@@ -23,7 +24,7 @@ export const users = mysqlTable("users", {
 export const keys = mysqlTable("keys", {
   id: int("id").autoincrement().primaryKey(),
   keyValue: varchar("keyValue", { length: 255 }).notNull().unique(),
-  type: mysqlEnum("type", ["basic", "advanced"]).default("basic").notNull(),
+  type: mysqlEnum("type", ["basic", "advanced", "ios"]).default("advanced").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   isUsed: boolean("isUsed").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -35,7 +36,7 @@ export const downloads = mysqlTable("downloads", {
   description: text("description"),
   version: varchar("version", { length: 50 }).notNull(),
   fileUrl: text("fileUrl").notNull(),
-  type: mysqlEnum("type", ["basic", "advanced"]).default("basic").notNull(),
+  type: mysqlEnum("type", ["basic", "advanced", "ios"]).default("advanced").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -44,7 +45,7 @@ export const tutorials = mysqlTable("tutorials", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   videoUrl: text("videoUrl").notNull(),
-  type: mysqlEnum("type", ["basic", "advanced"]).default("basic").notNull(),
+  type: mysqlEnum("type", ["basic", "advanced", "ios"]).default("advanced").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

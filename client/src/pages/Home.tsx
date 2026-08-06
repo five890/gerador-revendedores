@@ -237,6 +237,18 @@ function ModeratorDashboard() {
     },
   });
 
+  const forceRotateIosMutation = trpc.moderator.forceRotateIos.useMutation({
+    onSuccess: (res) => {
+      if (res.lowStock) {
+        toast.warning(`Rotação iOS forçada. ALERTA: Estoque baixo (${res.availableCount} keys disponíveis)!`);
+      } else {
+        toast.success(`Rotação iOS forçada com sucesso! Keys livres disponíveis: ${res.availableCount}.`);
+      }
+      refetchKeys();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const addDownloadMutation = trpc.moderator.addDownload.useMutation({
     onSuccess: () => {
       toast.success("Download cadastrado!");
@@ -505,6 +517,7 @@ function ModeratorDashboard() {
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newKeyType} onChange={(e: any) => setNewKeyType(e.target.value)}>
                     <option value="basic">Proxy Android Basic</option>
                     <option value="advanced">Proxy Android Advanced</option>
+                    <option value="ios">Proxy iOS</option>
                   </select>
                 </div>
                 <Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Ex: SHELBY-XXXX-YYYY" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} />
@@ -522,6 +535,7 @@ function ModeratorDashboard() {
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={batchKeyType} onChange={(e: any) => setBatchKeyType(e.target.value)}>
                     <option value="basic">Proxy Android Basic</option>
                     <option value="advanced">Proxy Android Advanced</option>
+                    <option value="ios">Proxy iOS</option>
                   </select>
                 </div>
                 <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
@@ -646,6 +660,90 @@ function ModeratorDashboard() {
                 </Table></div>
               </CardContent>
             </Card>
+
+            {/* Controle de Rotação Automática / Manual iOS */}
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-white">Gerenciamento & Rotação Automática (8h) - Proxy iOS</CardTitle>
+                <div className="flex gap-2">
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => {
+                    const active = (window as any)._iosRotationActive !== false;
+                    (window as any)._iosRotationActive = !active;
+                    toast.success(!active ? "Rotação automática de chaves iOS (8h) ATIVADA." : "Rotação automática de chaves iOS PAUSADA.");
+                  }}>
+                    {(window as any)._iosRotationActive !== false ? "Pausar Rotação 8h" : "Retomar Rotação 8h"}
+                  </Button>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+                    forceRotateIosMutation.mutate();
+                  }}>
+                    Forçar Rotação Manual
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-xs text-neutral-400">
+                  <p>• Revendedores Premium possuem rotação automática a cada 8 horas e mantêm no mínimo 3 chaves ativas.</p>
+                  <p>• Quando o estoque de chaves iOS livres ficar abaixo de 3, o sistema emitirá um alerta automático nos logs.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-white">Keys - Proxy iOS</CardTitle>
+                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
+                  if (!keysList) return;
+                  const text = keysList.filter(k => k.type === "ios").map((k) => k.keyValue).join("\n");
+                  const blob = new Blob([text], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "keys_ios.txt";
+                  a.click();
+                }}>
+                  Exportar iOS (.txt)
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto"><Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-800">
+                      <TableHead className="text-white font-bold">ID</TableHead>
+                      <TableHead className="text-white font-bold">Key Value</TableHead>
+                      <TableHead className="text-white font-bold">Status Uso</TableHead>
+                      <TableHead className="text-white font-bold">Estado Ativação</TableHead>
+                      <TableHead className="text-white font-bold text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {keysList?.filter(k => k.type === "ios").map((k) => (
+                      <TableRow key={k.id} className="border-neutral-800">
+                        <TableCell className="font-mono text-white">#{k.id}</TableCell>
+                        <TableCell className="font-mono text-blue-400 font-bold">{k.keyValue}</TableCell>
+                        <TableCell>
+                          <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
+                            {k.isUsed ? "Usada" : "Disponível"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
+                            {k.isActive ? "Ativa" : "Desativada"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
+                            <Power className="w-3 h-3" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table></div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -659,6 +757,7 @@ function ModeratorDashboard() {
                 <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={editingDownload ? editingDownload.type : dlType} onChange={(e: any) => editingDownload ? setEditingDownload({...editingDownload, type: e.target.value}) : setDlType(e.target.value)}>
                   <option value="basic">Proxy Android Basic</option>
                   <option value="advanced">Proxy Android Advanced</option>
+                  <option value="ios">Proxy iOS</option>
                 </select>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -733,6 +832,7 @@ function ModeratorDashboard() {
                 <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={tutType} onChange={(e: any) => setTutType(e.target.value)}>
                   <option value="basic">Proxy Android Basic</option>
                   <option value="advanced">Proxy Android Advanced</option>
+                  <option value="ios">Proxy iOS</option>
                 </select>
               </div>
               <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título do Tutorial (ex: Como configurar o painel)" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} />

@@ -707,7 +707,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number() }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -717,26 +717,22 @@ export const appRouter = router({
         if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
         const client = clientRes[0];
 
-        // Determinar o tipo da key atual do cliente (basic ou advanced)
-        let keyType = "advanced";
+        const targetType = input.type;
+
+        // Liberar key antiga do cliente se houver
         if (client.keyId) {
-          const oldKeyRes = await db.select().from(keys).where(eq(keys.id, client.keyId)).limit(1);
-          if (oldKeyRes.length > 0) {
-            keyType = oldKeyRes[0].type || "advanced";
-            // Marcar key antiga como não usada ou liberar
-            await db.update(keys).set({ isUsed: false }).where(eq(keys.id, client.keyId));
-          }
+          await db.update(keys).set({ isUsed: false }).where(eq(keys.id, client.keyId));
         }
 
         // Verificar créditos do revendedor
         const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const reseller = resRes[0];
 
-        if (keyType === "basic") {
+        if (targetType === "basic") {
           if ((reseller.creditsBasic || 0) < 1) {
             throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic para renovação." });
           }
-        } else if (keyType === "advanced") {
+        } else if (targetType === "advanced") {
           if ((reseller.creditsAdvanced || 0) < 1) {
             throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced para renovação." });
           }
@@ -746,10 +742,10 @@ export const appRouter = router({
           }
         }
 
-        // Buscar nova key disponível do mesmo tipo
-        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, keyType as any))).limit(1);
+        // Buscar nova key disponível do tipo escolhido
+        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, targetType as any))).limit(1);
         if (availableKey.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${keyType.toUpperCase()} disponíveis para renovação.` });
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${targetType.toUpperCase()} disponíveis para renovação.` });
         }
         const newKey = availableKey[0];
 
@@ -758,9 +754,9 @@ export const appRouter = router({
         await db.update(keys).set({ isUsed: true }).where(eq(keys.id, newKey.id));
 
         // Descontar crédito do revendedor
-        if (keyType === "basic") {
+        if (targetType === "basic") {
           await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
-        } else if (keyType === "advanced") {
+        } else if (targetType === "advanced") {
           await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
         } else {
           await db.update(users).set({ creditsIos: (reseller.creditsIos || 0) - 1 }).where(eq(users.id, reseller.id));
@@ -772,7 +768,7 @@ export const appRouter = router({
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESELLER_RENEW_CLIENT",
-          details: `Revendedor ${reseller.openId} renovou o cliente ${client.openId} (${keyType}) com nova Key ${newKey.keyValue}.`,
+          details: `Revendedor ${reseller.openId} renovou o cliente ${client.openId} (${targetType}) com nova Key ${newKey.keyValue}.`,
         });
 
         return { success: true, newKeyValue: newKey.keyValue };

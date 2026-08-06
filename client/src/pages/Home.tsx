@@ -1028,8 +1028,11 @@ function ResellerDashboard() {
                   <TableCell className="font-bold text-white">{c.username}</TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => {
-                      if (confirm("Deseja renovar este cliente? Isso consumirá 1 crédito correspondente e gerará uma nova Key de acesso para ele.")) {
-                        renewClientMutation.mutate({ clientId: c.id });
+                      const t = prompt("Escolha o tipo de renovação (digite: basic, advanced ou ios):", "advanced");
+                      if (t && ["basic", "advanced", "ios"].includes(t.toLowerCase())) {
+                        renewClientMutation.mutate({ clientId: c.id, type: t.toLowerCase() as any });
+                      } else if (t) {
+                        toast.error("Tipo inválido. Escolha basic, advanced ou ios.");
                       }
                     }}>Renovar</Button>
                     <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {

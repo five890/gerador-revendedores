@@ -19,3 +19,4 @@
 - [x] Renomear plataforma para Shelby Panel
 - [x] Otimizar layout e responsividade para dispositivos móveis (Mobile-first)
 - [x] Adicionar aviso de 5 segundos com link do Discord para clientes no login e remover botão de setup de moderador
+- [x] Alterar placeholder do input de login de 'Ex: murillo' para 'Ex: seu login'

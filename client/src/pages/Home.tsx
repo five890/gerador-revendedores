@@ -99,7 +99,7 @@ export default function Home() {
               <label className="text-xs uppercase tracking-wider text-neutral-400 font-semibold mb-1 block">Usuário</label>
               <Input
                 className="bg-[#1f1f1f] border-neutral-800 text-white focus:border-red-600"
-                placeholder="Ex: murillo"
+                placeholder="Ex: seu login"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 required

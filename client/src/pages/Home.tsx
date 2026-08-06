@@ -509,55 +509,121 @@ function ModeratorDashboard() {
             </Card>
           </div>
 
-          <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white">Todas as Keys do Sistema</CardTitle>
-              <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={exportKeys}>
-                Exportar Keys (.txt)
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto"><Table>
-                <TableHeader>
-                  <TableRow className="border-neutral-800">
-                    <TableHead className="text-white font-bold">ID</TableHead>
-                    <TableHead className="text-white font-bold">Tipo</TableHead>
-                    <TableHead className="text-white font-bold">Key Value</TableHead>
-                    <TableHead className="text-white font-bold">Status Uso</TableHead>
-                    <TableHead className="text-white font-bold">Estado Ativação</TableHead>
-                    <TableHead className="text-white font-bold text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {keysList?.map((k) => (
-                    <TableRow key={k.id} className="border-neutral-800">
-                      <TableCell className="font-mono text-white">#{k.id}</TableCell>
-                      <TableCell><Badge className={k.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-neutral-800 text-white"}>{k.type === "advanced" ? "Advanced" : "Basic"}</Badge></TableCell>
-                      <TableCell className="font-mono text-amber-400 font-bold">{k.keyValue}</TableCell>
-                      <TableCell>
-                        <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
-                          {k.isUsed ? "Usada" : "Disponível"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
-                          {k.isActive ? "Ativa" : "Desativada"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
-                          <Power className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </TableCell>
+          <div className="space-y-6">
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-white">Keys - Proxy Android Basic</CardTitle>
+                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
+                  if (!keysList) return;
+                  const text = keysList.filter(k => k.type === "basic").map((k) => k.keyValue).join("\n");
+                  const blob = new Blob([text], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "keys_basic.txt";
+                  a.click();
+                }}>
+                  Exportar Basic (.txt)
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto"><Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-800">
+                      <TableHead className="text-white font-bold">ID</TableHead>
+                      <TableHead className="text-white font-bold">Key Value</TableHead>
+                      <TableHead className="text-white font-bold">Status Uso</TableHead>
+                      <TableHead className="text-white font-bold">Estado Ativação</TableHead>
+                      <TableHead className="text-white font-bold text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table></div>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {keysList?.filter(k => k.type === "basic").map((k) => (
+                      <TableRow key={k.id} className="border-neutral-800">
+                        <TableCell className="font-mono text-white">#{k.id}</TableCell>
+                        <TableCell className="font-mono text-red-500 font-bold">{k.keyValue}</TableCell>
+                        <TableCell>
+                          <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
+                            {k.isUsed ? "Usada" : "Disponível"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
+                            {k.isActive ? "Ativa" : "Desativada"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
+                            <Power className="w-3 h-3" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table></div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-white">Keys - Proxy Android Advanced</CardTitle>
+                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
+                  if (!keysList) return;
+                  const text = keysList.filter(k => k.type === "advanced").map((k) => k.keyValue).join("\n");
+                  const blob = new Blob([text], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "keys_advanced.txt";
+                  a.click();
+                }}>
+                  Exportar Advanced (.txt)
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto"><Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-800">
+                      <TableHead className="text-white font-bold">ID</TableHead>
+                      <TableHead className="text-white font-bold">Key Value</TableHead>
+                      <TableHead className="text-white font-bold">Status Uso</TableHead>
+                      <TableHead className="text-white font-bold">Estado Ativação</TableHead>
+                      <TableHead className="text-white font-bold text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {keysList?.filter(k => k.type === "advanced").map((k) => (
+                      <TableRow key={k.id} className="border-neutral-800">
+                        <TableCell className="font-mono text-white">#{k.id}</TableCell>
+                        <TableCell className="font-mono text-amber-400 font-bold">{k.keyValue}</TableCell>
+                        <TableCell>
+                          <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
+                            {k.isUsed ? "Usada" : "Disponível"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
+                            {k.isActive ? "Ativa" : "Desativada"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
+                            <Power className="w-3 h-3" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table></div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* DOWNLOADS */}

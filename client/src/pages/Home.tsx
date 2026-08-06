@@ -18,19 +18,6 @@ export default function Home() {
   const [loginPassword, setLoginPassword] = useState("");
   const [deviceIdentifier] = useState(() => "device_" + Math.random().toString(36).substring(7));
 
-  // Alerta de 5 segundos para clientes
-  const [countdown, setCountdown] = useState(5);
-  const [showAlert, setShowAlert] = useState(true);
-
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowAlert(false);
-    }
-  }, [countdown]);
-
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
       toast.success("Login realizado com sucesso!");
@@ -60,27 +47,6 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-[#141414] text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-red-600/20 blur-[140px] rounded-full pointer-events-none"></div>
-
-        {/* Alerta de aviso para clientes */}
-        {showAlert && (
-          <div className="w-full max-w-md bg-zinc-900 border border-red-600/50 p-4 rounded-xl shadow-2xl mb-4 text-center relative z-10 animate-fade-in">
-          <div className="flex items-center justify-center gap-2 text-red-500 font-bold mb-2">
-            <AlertTriangle className="w-5 h-5" />
-            <span>Aviso Importante ({countdown}s)</span>
-          </div>
-          <p className="text-xs text-neutral-300 mb-3">
-            Aguarde... Se você comprou com revendedores não autorizados da Shelby, denuncie aqui:
-          </p>
-            <a
-              href="https://discord.gg/YYBZxhhm"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
-            >
-              Entre Aqui
-            </a>
-          </div>
-        )}
 
         <div className="w-full max-w-md bg-[#000000]/80 border border-white/10 p-8 rounded-2xl shadow-2xl backdrop-blur-xl relative z-10">
           <div className="text-center mb-8">
@@ -749,8 +715,41 @@ function ClientDashboard() {
   const { data } = trpc.clientPanel.dashboard.useQuery();
   const [copied, setCopied] = useState(false);
 
+  // Alerta de 5 segundos para clientes após o login
+  const [countdown, setCountdown] = useState(5);
+  const [showAlert, setShowAlert] = useState(true);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowAlert(false);
+    }
+  }, [countdown]);
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {showAlert && (
+        <Card className="bg-zinc-900 border-red-600/50 text-white p-4 animate-fade-in shadow-xl">
+          <div className="flex items-center gap-3 text-red-500 font-bold mb-2">
+            <AlertTriangle className="w-6 h-6" />
+            <span>Aviso Importante ({countdown}s)</span>
+          </div>
+          <p className="text-xs text-neutral-300 mb-3">
+            Aguarde... Se você comprou com revendedores não autorizados da Shelby, denuncie aqui:
+          </p>
+          <a
+            href="https://discord.gg/YYBZxhhm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
+          >
+            Entre Aqui
+          </a>
+        </Card>
+      )}
+
       <Card className="bg-[#181818] border-neutral-800 text-white">
         <CardHeader>
           <CardTitle>Suas Credenciais & Key</CardTitle>

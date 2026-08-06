@@ -20,3 +20,4 @@
 - [x] Otimizar layout e responsividade para dispositivos móveis (Mobile-first)
 - [x] Adicionar aviso de 5 segundos com link do Discord para clientes no login e remover botão de setup de moderador
 - [x] Alterar placeholder do input de login de 'Ex: murillo' para 'Ex: seu login'
+- [x] Mover o aviso importante de 5s com link do Discord para aparecer apenas no painel do cliente após o login

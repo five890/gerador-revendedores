@@ -183,6 +183,14 @@ function ModeratorDashboard() {
     onSuccess: () => toast.success("Sessão resetada!"),
   });
 
+  const toggleResellerPremiumMutation = trpc.moderator.toggleResellerPremium.useMutation({
+    onSuccess: (res) => {
+      toast.success(res.isPremium ? "Revendedor promovido a Premium!" : "Status Premium removido.");
+      refetchResellers();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const resetPasswordMutation = trpc.moderator.resetUserPassword.useMutation({
     onSuccess: () => toast.success("Senha alterada com sucesso!"),
   });
@@ -360,6 +368,7 @@ function ModeratorDashboard() {
                     <TableHead className="text-white font-bold">Usuário</TableHead>
                     <TableHead className="text-white font-bold">Créditos</TableHead>
                     <TableHead className="text-white font-bold">Clientes</TableHead>
+                    <TableHead className="text-white font-bold">Tipo</TableHead>
                     <TableHead className="text-white font-bold">Status</TableHead>
                     <TableHead className="text-white font-bold text-right">Ações</TableHead>
                   </TableRow>
@@ -389,11 +398,19 @@ function ModeratorDashboard() {
                       </TableCell>
                       <TableCell className="text-white">{r.clientCount}</TableCell>
                       <TableCell>
+                        <Badge className={r.isPremium ? "bg-amber-500 text-black font-bold border-amber-600" : "bg-neutral-800 text-neutral-300 border-neutral-700"}>
+                          {r.isPremium ? "★ Premium" : "Comum"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <Badge className={r.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
                           {r.isActive ? "Ativo" : "Bloqueado"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="outline" className={r.isPremium ? "border-amber-500 text-amber-400 bg-amber-950/30" : "border-neutral-700 bg-transparent text-white hover:bg-neutral-800"} title="Alternar Premium" onClick={() => toggleResellerPremiumMutation.mutate({ resellerId: r.id })}>
+                          ★
+                        </Button>
                         <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleStatusMutation.mutate({ userId: r.id })}>
                           {r.isActive ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                         </Button>

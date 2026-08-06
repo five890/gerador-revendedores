@@ -37,6 +37,7 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE users ADD COLUMN resellerId INT",
       "ALTER TABLE users ADD COLUMN keyId INT",
       "ALTER TABLE users ADD COLUMN isActive BOOLEAN DEFAULT TRUE",
+      "ALTER TABLE users ADD COLUMN isPremium BOOLEAN DEFAULT FALSE",
       "ALTER TABLE \`keys\` ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
       "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
       "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'"

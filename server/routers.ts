@@ -25,6 +25,7 @@ export const appRouter = router({
         username: u.openId,
         role: u.role,
         credits: u.credits,
+        isPremium: u.isPremium || false,
       };
     }),
 
@@ -178,6 +179,7 @@ export const appRouter = router({
           creditsBasic: r.creditsBasic || 0,
           creditsAdvanced: r.creditsAdvanced || 0,
           isActive: r.isActive,
+          isPremium: r.isPremium || false,
           clientCount: Number(clientCountRes[0]?.count || 0),
         });
       }
@@ -244,6 +246,28 @@ export const appRouter = router({
           });
           return { success: true, newCredits };
         }
+      }),
+
+    toggleResellerPremium: protectedProcedure
+      .input(z.object({ resellerId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const resellerRes = await db.select().from(users).where(eq(users.id, input.resellerId)).limit(1);
+        if (resellerRes.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
+        const reseller = resellerRes[0];
+        const newStatus = !reseller.isPremium;
+
+        await db.update(users).set({ isPremium: newStatus }).where(eq(users.id, input.resellerId));
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "TOGGLE_RESELLER_PREMIUM",
+          details: `Moderador alterou status Premium do revendedor ${reseller.openId} para ${newStatus ? "Ativo" : "Inativo"}.`,
+        });
+
+        return { success: true, isPremium: newStatus };
       }),
 
     listClients: protectedProcedure.query(async ({ ctx }) => {
@@ -536,6 +560,7 @@ export const appRouter = router({
       return {
         creditsBasic: reseller.creditsBasic || 0,
         creditsAdvanced: reseller.creditsAdvanced || 0,
+        isPremium: reseller.isPremium || false,
         clientsCount: clientsList.length,
         clients: clientsList.map((c) => ({
           id: c.id,

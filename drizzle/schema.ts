@@ -14,6 +14,7 @@ export const users = mysqlTable("users", {
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   isActive: boolean("isActive").default(true).notNull(),
+  isPremium: boolean("isPremium").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

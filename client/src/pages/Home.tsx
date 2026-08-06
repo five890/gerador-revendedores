@@ -722,12 +722,13 @@ function ResellerDashboard() {
             <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
               <div>Usuário: <strong className="text-white">{createdCredentials.username}</strong></div>
               <div>Senha: <strong className="text-white">{createdCredentials.password}</strong></div>
+              <div>Link de ativação: <strong className="text-blue-400">https://shelbypainel-production.up.railway.app</strong></div>
             </div>
             <Button className="bg-red-600 hover:bg-red-700 text-white mt-2" onClick={() => {
-              navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}`);
+              navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}\nLink de ativação: https://shelbypainel-production.up.railway.app`);
               toast.success("Credenciais copiadas!");
             }}>
-              <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais
+              <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais Completas
             </Button>
           </CardContent>
         </Card>

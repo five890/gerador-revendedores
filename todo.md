@@ -32,3 +32,4 @@
 - [x] Ajustar textos para cor branca em toda a interface
 - [x] Adicionar rotas e interface para tutoriais por link
 - [x] Ocultar Key do painel do Revendedor ao criar cliente (apenas usuário e senha)
+- [ ] Incluir link de ativação no texto copiado pelo revendedor

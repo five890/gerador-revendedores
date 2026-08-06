@@ -736,16 +736,20 @@ export const appRouter = router({
           if ((reseller.creditsBasic || 0) < 1) {
             throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic para renovação." });
           }
-        } else {
+        } else if (keyType === "advanced") {
           if ((reseller.creditsAdvanced || 0) < 1) {
             throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced para renovação." });
+          }
+        } else {
+          if ((reseller.creditsIos || 0) < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy iOS para renovação." });
           }
         }
 
         // Buscar nova key disponível do mesmo tipo
         const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, keyType as any))).limit(1);
         if (availableKey.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${keyType === "basic" ? "Basic" : "Advanced"} disponíveis para renovação.` });
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${keyType.toUpperCase()} disponíveis para renovação.` });
         }
         const newKey = availableKey[0];
 
@@ -756,8 +760,10 @@ export const appRouter = router({
         // Descontar crédito do revendedor
         if (keyType === "basic") {
           await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
-        } else {
+        } else if (keyType === "advanced") {
           await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
+        } else {
+          await db.update(users).set({ creditsIos: (reseller.creditsIos || 0) - 1 }).where(eq(users.id, reseller.id));
         }
 
         // Deletar sessões ativas do cliente para forçar novo login/atualização

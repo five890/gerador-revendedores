@@ -40,7 +40,8 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not connected" });
 
-        const userRes = await db.select().from(users).where(eq(users.openId, input.username)).limit(1);
+        const cleanUsername = input.username.trim();
+        const userRes = await db.select().from(users).where(eq(users.openId, cleanUsername)).limit(1);
         if (userRes.length === 0) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha inválidos." });
         }
@@ -535,6 +536,12 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
+        const cleanUsername = input.username.trim();
+        const existingUser = await db.select().from(users).where(eq(users.openId, cleanUsername)).limit(1);
+        if (existingUser.length > 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Este nome de usuário já está em uso." });
+        }
+
         const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const reseller = resRes[0];
         if (reseller.credits < 1) {
@@ -550,7 +557,7 @@ export const appRouter = router({
         const passHash = hashPassword(input.password);
 
         await db.insert(users).values({
-          openId: input.username,
+          openId: cleanUsername,
           role: "client",
           passwordHash: passHash as any,
           resellerId: ctx.user.id,

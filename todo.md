@@ -37,3 +37,4 @@
 - [x] Corrigir tag viewport em client/index.html para travar zoom em celulares
 - [x] Substituir card de Link de Ativação por botão do Discord no painel do cliente
 - [x] Restaurar exibição e cópia da Key de acesso no painel do cliente
+- [x] Corrigir erro de usuário e senha inválidos no login de clientes criados por revendedores

@@ -27,4 +27,16 @@ describe("Auth & Security Utilities", () => {
     const decoded = verifyJwt("invalid.token.string");
     expect(decoded).toBeNull();
   });
+
+  it("should correctly verify passwords created by reseller createClient flow", () => {
+    const rawPassword = "ClientPassword123!";
+    const hashed = hashPassword(rawPassword);
+    
+    // Simulate login verification
+    const isValid = verifyPassword(rawPassword, hashed);
+    expect(isValid).toBe(true);
+
+    const isInvalid = verifyPassword("WrongPassword123!", hashed);
+    expect(isInvalid).toBe(false);
+  });
 });

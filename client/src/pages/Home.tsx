@@ -949,7 +949,7 @@ function ResellerDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-[#141414] border-neutral-800 text-white">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy Basic</CardTitle></CardHeader>
           <CardContent><div className="text-4xl font-black text-red-600">{data?.creditsBasic || 0}</div></CardContent>
@@ -957,6 +957,10 @@ function ResellerDashboard() {
         <Card className="bg-[#141414] border-neutral-800 text-white">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy Advanced</CardTitle></CardHeader>
           <CardContent><div className="text-4xl font-black text-amber-400">{data?.creditsAdvanced || 0}</div></CardContent>
+        </Card>
+        <Card className="bg-[#141414] border-neutral-800 text-white">
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy iOS</CardTitle></CardHeader>
+          <CardContent><div className="text-4xl font-black text-blue-400">{data?.creditsIos || 0}</div></CardContent>
         </Card>
         <Card className="bg-[#141414] border-neutral-800 text-white">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Total Clientes Criados</CardTitle></CardHeader>

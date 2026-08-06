@@ -831,10 +831,26 @@ function ClientDashboard() {
       <Card className="bg-[#141414] border-neutral-800 text-white">
         <CardHeader><CardTitle className="text-white">Suas Informações de Acesso</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
               <span className="text-xs text-white font-bold block mb-1">SEU USUÁRIO</span>
               <strong className="text-lg text-white font-mono">{data?.username}</strong>
+            </div>
+            <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
+              <span className="text-xs text-white font-bold block mb-1">SUA KEY DE ACESSO</span>
+              <div className="flex items-center justify-between">
+                <span className="text-amber-400 font-mono font-bold text-sm">{data?.keyValue ? data.keyValue : "Nenhuma Key vinculada"}</span>
+                {data?.keyValue ? (
+                  <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800 shrink-0 ml-2" onClick={() => {
+                    navigator.clipboard.writeText(data.keyValue || "");
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                    toast.success("Key copiada!");
+                  }}>
+                    <Copy className="w-3 h-3 mr-1" /> {copied ? "Copiado" : "Copiar"}
+                  </Button>
+                ) : null}
+              </div>
             </div>
             <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800 flex flex-col justify-between">
               <span className="text-xs text-white font-bold block mb-1">SUPORTE E COMUNIDADE</span>

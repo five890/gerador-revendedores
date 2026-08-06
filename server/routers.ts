@@ -618,7 +618,7 @@ export const appRouter = router({
       const clientRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const client = clientRes[0];
 
-      let keyValue = "Nenhuma";
+      let keyValue: string | null = null;
       if (client.keyId) {
         const kRes = await db.select().from(keys).where(eq(keys.id, client.keyId)).limit(1);
         if (kRes.length > 0) keyValue = kRes[0].keyValue;

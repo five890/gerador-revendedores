@@ -33,4 +33,5 @@
 - [x] Adicionar rotas e interface para tutoriais por link
 - [x] Ocultar Key do painel do Revendedor ao criar cliente (apenas usuário e senha)
 - [x] Incluir link de ativação no texto copiado pelo revendedor
-- [ ] Substituir texto 'Key Vinculada' por 'Link de ativação: https://shelbypainel-production.up.railway.app' no painel do cliente
+- [x] Substituir texto 'Key Vinculada' por 'Link de ativação: https://shelbypainel-production.up.railway.app' no painel do cliente
+- [ ] Corrigir tag viewport em client/index.html para travar zoom em celulares

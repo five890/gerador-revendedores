@@ -568,7 +568,7 @@ export const appRouter = router({
           details: `Revendedor ${reseller.openId} criou o cliente ${input.username} com a Key ${key.keyValue}.`,
         });
 
-        return { success: true, createdUsername: input.username, createdPassword: input.password, keyValue: key.keyValue };
+        return { success: true, createdUsername: input.username, createdPassword: input.password };
       }),
 
     editClientPassword: protectedProcedure

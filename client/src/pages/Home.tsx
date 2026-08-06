@@ -675,17 +675,17 @@ function ResellerDashboard() {
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
   const [newClientUser, setNewClientUser] = useState("");
   const [newClientPass, setNewClientPass] = useState("");
-  const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string; keyValue: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
     onSuccess: (res) => {
       toast.success("Cliente criado com sucesso! 1 crédito consumido.");
-      setCreatedCredentials({ username: res.createdUsername, password: res.createdPassword, keyValue: res.keyValue });
+      setCreatedCredentials({ username: res.createdUsername, password: res.createdPassword });
       setNewClientUser("");
       setNewClientPass("");
       refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const deleteClientMutation = trpc.reseller.deleteClient.useMutation({

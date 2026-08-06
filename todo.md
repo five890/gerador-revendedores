@@ -31,4 +31,4 @@
 - [x] Adicionar sistema de tutoriais por link (Moderador cadastra, Clientes visualizam)
 - [x] Ajustar textos para cor branca em toda a interface
 - [x] Adicionar rotas e interface para tutoriais por link
-- [ ] Ocultar Key do painel do Revendedor ao criar cliente (apenas usuário e senha)
+- [x] Ocultar Key do painel do Revendedor ao criar cliente (apenas usuário e senha)

@@ -718,17 +718,16 @@ function ResellerDashboard() {
         <Card className="bg-red-950/40 border-red-800 text-white p-4">
           <CardHeader className="pb-2"><CardTitle className="text-white text-sm">Cliente Criado com Sucesso!</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-white">Copie as credenciais abaixo para enviar ao seu cliente:</p>
+            <p className="text-xs text-white">Copie as credenciais abaixo para enviar ao seu cliente (A Key é atribuída automaticamente pelo sistema e visível apenas no painel do cliente):</p>
             <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
               <div>Usuário: <strong className="text-white">{createdCredentials.username}</strong></div>
               <div>Senha: <strong className="text-white">{createdCredentials.password}</strong></div>
-              <div>Key Vinculada: <strong className="text-amber-400">{createdCredentials.keyValue}</strong></div>
             </div>
             <Button className="bg-red-600 hover:bg-red-700 text-white mt-2" onClick={() => {
-              navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}\nKey: ${createdCredentials.keyValue}`);
+              navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}`);
               toast.success("Credenciais copiadas!");
             }}>
-              <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais Completas
+              <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais
             </Button>
           </CardContent>
         </Card>

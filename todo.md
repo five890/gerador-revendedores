@@ -26,3 +26,4 @@
 - [x] Validar autenticação e conexão com banco de dados via smoke test (sucesso)
 - [x] Listar variáveis de ambiente para deploy no Railway
 - [x] Implementar auto-criação de tabelas e auto-sync de colunas ao iniciar o servidor (Railway/Produção)
+- [x] Fazer push das alterações de auto-sync para o GitHub (Railway)

@@ -1,13 +1,100 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { users, keys, downloads, sessions, logs, User, InsertUser } from "../drizzle/schema";
 import { hashPassword } from "./auth";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+async function ensureTables(dbUrl: string) {
+  try {
+    const connection = await mysql.createConnection(dbUrl);
+    
+    // Create tables if not exist
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        openId VARCHAR(64) NOT NULL UNIQUE,
+        name TEXT,
+        email VARCHAR(320),
+        loginMethod VARCHAR(64),
+        role VARCHAR(32) DEFAULT 'client' NOT NULL,
+        passwordHash VARCHAR(255),
+        credits INT DEFAULT 0 NOT NULL,
+        resellerId INT,
+        keyId INT,
+        isActive BOOLEAN DEFAULT TRUE NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+        lastSignedIn TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+
+    // Ensure columns exist on users table if table already existed without them
+    const alterQueries = [
+      "ALTER TABLE users ADD COLUMN passwordHash VARCHAR(255)",
+      "ALTER TABLE users ADD COLUMN credits INT DEFAULT 0",
+      "ALTER TABLE users ADD COLUMN resellerId INT",
+      "ALTER TABLE users ADD COLUMN keyId INT",
+      "ALTER TABLE users ADD COLUMN isActive BOOLEAN DEFAULT TRUE"
+    ];
+    for (const aq of alterQueries) {
+      try {
+        await connection.query(aq);
+      } catch (e) {
+        // Safe to ignore if column already exists
+      }
+    }
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`keys\` (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        keyValue VARCHAR(255) NOT NULL UNIQUE,
+        isActive BOOLEAN DEFAULT TRUE NOT NULL,
+        isUsed BOOLEAN DEFAULT FALSE NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS downloads (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        version VARCHAR(50) NOT NULL,
+        fileUrl TEXT NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId INT NOT NULL,
+        token VARCHAR(512) NOT NULL,
+        deviceIdentifier VARCHAR(255) NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId INT,
+        action VARCHAR(100) NOT NULL,
+        details TEXT,
+        ipAddress VARCHAR(45),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.end();
+    console.log("[Database] Tables and columns verified and ensured successfully.");
+  } catch (err) {
+    console.error("[Database] Failed to ensure tables:", err);
+  }
+}
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
+      await ensureTables(process.env.DATABASE_URL);
       _db = drizzle(process.env.DATABASE_URL);
       await seedDefaultModerator(_db);
     } catch (error) {

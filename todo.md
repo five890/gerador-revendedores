@@ -24,3 +24,5 @@
 - [x] Fazer push para o repositório GitHub five890/gerador-revendedores
 - [x] Investigar e corrigir erro 'Database not connected'
 - [x] Validar autenticação e conexão com banco de dados via smoke test (sucesso)
+- [x] Listar variáveis de ambiente para deploy no Railway
+- [x] Implementar auto-criação de tabelas e auto-sync de colunas ao iniciar o servidor (Railway/Produção)

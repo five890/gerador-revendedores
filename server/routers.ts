@@ -178,6 +178,7 @@ export const appRouter = router({
           username: r.openId,
           creditsBasic: r.creditsBasic || 0,
           creditsAdvanced: r.creditsAdvanced || 0,
+          creditsIos: r.creditsIos || 0,
           isActive: r.isActive,
           isPremium: r.isPremium || false,
           clientCount: Number(clientCountRes[0]?.count || 0),

@@ -135,6 +135,7 @@ function ModeratorDashboard() {
   const [newResellerPass, setNewResellerPass] = useState("");
   const [newResellerCreditsBasic, setNewResellerCreditsBasic] = useState(10);
   const [newResellerCreditsAdvanced, setNewResellerCreditsAdvanced] = useState(10);
+  const [newResellerCreditsIos, setNewResellerCreditsIos] = useState(10);
   const [newResellerIsPremium, setNewResellerIsPremium] = useState(false);
 
   const [newKeyVal, setNewKeyVal] = useState("");
@@ -365,11 +366,15 @@ function ModeratorDashboard() {
                   <label className="text-xs text-white font-semibold block mb-1">Créditos Advanced</label>
                   <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsAdvanced} onChange={(e) => setNewResellerCreditsAdvanced(Number(e.target.value))} />
                 </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Créditos iOS</label>
+                  <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsIos} onChange={(e) => setNewResellerCreditsIos(Number(e.target.value))} />
+                </div>
                 <div className="flex items-center space-x-2 pt-2">
                   <input type="checkbox" id="isPremiumCheck" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newResellerIsPremium} onChange={(e) => setNewResellerIsPremium(e.target.checked)} />
                   <label htmlFor="isPremiumCheck" className="text-xs font-bold text-amber-400 cursor-pointer">Revendedor Premium (★)</label>
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, isPremium: newResellerIsPremium })}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, isPremium: newResellerIsPremium })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>
@@ -411,6 +416,14 @@ function ModeratorDashboard() {
                             const val = prompt("Quantidade:");
                             const num = parseInt(val || "0", 10);
                             if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "advanced", action, amount: num });
+                          }
+                        }}>±</Button></div>
+                        <div className="text-xs font-mono text-white">iOS: <strong className="text-blue-400">{r.creditsIos}</strong> <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline" onClick={() => {
+                          const action = prompt(`Adicionar ou remover créditos iOS para ${r.username}? (add ou remove):`);
+                          if (action === "add" || action === "remove") {
+                            const val = prompt("Quantidade:");
+                            const num = parseInt(val || "0", 10);
+                            if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "ios", action, amount: num });
                           }
                         }}>±</Button></div>
                       </TableCell>

@@ -135,6 +135,7 @@ function ModeratorDashboard() {
   const [newResellerPass, setNewResellerPass] = useState("");
   const [newResellerCreditsBasic, setNewResellerCreditsBasic] = useState(10);
   const [newResellerCreditsAdvanced, setNewResellerCreditsAdvanced] = useState(10);
+  const [newResellerIsPremium, setNewResellerIsPremium] = useState(false);
 
   const [newKeyVal, setNewKeyVal] = useState("");
   const [newKeyType, setNewKeyType] = useState<"basic" | "advanced">("advanced");
@@ -158,6 +159,7 @@ function ModeratorDashboard() {
       toast.success("Revendedor criado com sucesso!");
       setNewResellerUser("");
       setNewResellerPass("");
+      setNewResellerIsPremium(false);
       refetchResellers();
     },
     onError: (e) => toast.error(e.message),
@@ -351,7 +353,11 @@ function ModeratorDashboard() {
                   <label className="text-xs text-white font-semibold block mb-1">Créditos Advanced</label>
                   <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsAdvanced} onChange={(e) => setNewResellerCreditsAdvanced(Number(e.target.value))} />
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced })}>
+                <div className="flex items-center space-x-2 pt-2">
+                  <input type="checkbox" id="isPremiumCheck" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newResellerIsPremium} onChange={(e) => setNewResellerIsPremium(e.target.checked)} />
+                  <label htmlFor="isPremiumCheck" className="text-xs font-bold text-amber-400 cursor-pointer">Revendedor Premium (★)</label>
+                </div>
+                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, isPremium: newResellerIsPremium })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>

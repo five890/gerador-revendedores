@@ -187,7 +187,7 @@ export const appRouter = router({
     }),
 
     createReseller: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), creditsBasic: z.number(), creditsAdvanced: z.number() }))
+      .input(z.object({ username: z.string(), password: z.string(), creditsBasic: z.number(), creditsAdvanced: z.number(), isPremium: z.boolean().default(false) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -201,12 +201,13 @@ export const appRouter = router({
           creditsBasic: input.creditsBasic,
           creditsAdvanced: input.creditsAdvanced,
           isActive: true,
+          isPremium: input.isPremium,
         });
 
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "CREATE_RESELLER",
-          details: `Moderador criou revendedor ${input.username} com ${input.creditsBasic} Basic e ${input.creditsAdvanced} Advanced.`,
+          details: `Moderador criou revendedor ${input.username} (${input.isPremium ? "Premium" : "Comum"}) com ${input.creditsBasic} Basic e ${input.creditsAdvanced} Advanced.`,
         });
 
         return { success: true };

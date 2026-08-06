@@ -15,3 +15,4 @@
 - [x] Exportação de Keys e ativação/desativação individual
 - [x] Edição de Downloads cadastrados pelo moderador
 - [x] Visualização e cópia rápida de senha para revendedores ao gerenciar clientes
+- [x] Auto-seed do moderador murillo / 300530 na inicialização do banco

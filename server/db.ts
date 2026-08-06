@@ -37,9 +37,9 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE users ADD COLUMN resellerId INT",
       "ALTER TABLE users ADD COLUMN keyId INT",
       "ALTER TABLE users ADD COLUMN isActive BOOLEAN DEFAULT TRUE",
-      "ALTER TABLE \`keys\` ADD COLUMN type VARCHAR(32) DEFAULT 'basic'",
-      "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'basic'",
-      "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'basic'"
+      "ALTER TABLE \`keys\` ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
+      "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
+      "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'"
     ];
     for (const aq of alterQueries) {
       try {
@@ -47,11 +47,16 @@ async function ensureTables(dbUrl: string) {
       } catch (e) {}
     }
 
+    // Update existing keys / downloads / tutorials to advanced if not set or if they were basic by default
+    try {
+      await connection.query("UPDATE \`keys\` SET type = 'advanced' WHERE type = 'basic' OR type IS NULL");
+    } catch (e) {}
+
     await connection.query(`
       CREATE TABLE IF NOT EXISTS \`keys\` (
         id INT AUTO_INCREMENT PRIMARY KEY,
         keyValue VARCHAR(255) NOT NULL UNIQUE,
-        type VARCHAR(32) DEFAULT 'basic' NOT NULL,
+        type VARCHAR(32) DEFAULT 'advanced' NOT NULL,
         isActive BOOLEAN DEFAULT TRUE NOT NULL,
         isUsed BOOLEAN DEFAULT FALSE NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL

@@ -137,9 +137,9 @@ function ModeratorDashboard() {
   const [newResellerCreditsAdvanced, setNewResellerCreditsAdvanced] = useState(10);
 
   const [newKeyVal, setNewKeyVal] = useState("");
-  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced">("basic");
+  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced">("advanced");
   const [batchKeysText, setBatchKeysText] = useState("");
-  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced">("basic");
+  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced">("advanced");
 
   const [dlTitle, setDlTitle] = useState("");
   const [dlDesc, setDlDesc] = useState("");

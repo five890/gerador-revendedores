@@ -2,15 +2,19 @@ import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "d
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
-  username: varchar("username", { length: 100 }).notNull().unique(),
-  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
-  role: mysqlEnum("role", ["moderator", "reseller", "client"]).default("client").notNull(),
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: mysqlEnum("role", ["moderator", "reseller", "client", "user", "admin"]).default("user").notNull(),
+  passwordHash: varchar("passwordHash", { length: 255 }),
   credits: int("credits").default(0).notNull(),
-  resellerId: int("resellerId"), // ID do revendedor que criou este cliente (se for cliente)
-  keyId: int("keyId"), // ID da key atribuída (se for cliente)
+  resellerId: int("resellerId"),
+  keyId: int("keyId"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
 export const keys = mysqlTable("keys", {

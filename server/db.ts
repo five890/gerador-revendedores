@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { users, keys, downloads, sessions, logs, InsertUser, User, Key, Download, Session, Log } from "../drizzle/schema";
+import { users, keys, downloads, sessions, logs, User, InsertUser } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -19,7 +19,7 @@ export async function getDb() {
 export async function getUserByUsername(username: string): Promise<User | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  const result = await db.select().from(users).where(eq(users.openId, username)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

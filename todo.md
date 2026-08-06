@@ -11,3 +11,4 @@
 - [x] Desenvolver frontend com tema Netflix (Login, Painel Moderador, Painel Revendedor, Painel Cliente)
 - [x] Escrever testes unitários em Vitest para autenticação e regras de negócio
 - [x] Salvar checkpoint do projeto
+- [x] Criar conta padrão de moderador (murillo / 300530)

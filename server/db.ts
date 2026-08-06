@@ -32,9 +32,14 @@ async function ensureTables(dbUrl: string) {
     const alterQueries = [
       "ALTER TABLE users ADD COLUMN passwordHash VARCHAR(255)",
       "ALTER TABLE users ADD COLUMN credits INT DEFAULT 0",
+      "ALTER TABLE users ADD COLUMN creditsBasic INT DEFAULT 0",
+      "ALTER TABLE users ADD COLUMN creditsAdvanced INT DEFAULT 0",
       "ALTER TABLE users ADD COLUMN resellerId INT",
       "ALTER TABLE users ADD COLUMN keyId INT",
-      "ALTER TABLE users ADD COLUMN isActive BOOLEAN DEFAULT TRUE"
+      "ALTER TABLE users ADD COLUMN isActive BOOLEAN DEFAULT TRUE",
+      "ALTER TABLE \`keys\` ADD COLUMN type VARCHAR(32) DEFAULT 'basic'",
+      "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'basic'",
+      "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'basic'"
     ];
     for (const aq of alterQueries) {
       try {
@@ -46,6 +51,7 @@ async function ensureTables(dbUrl: string) {
       CREATE TABLE IF NOT EXISTS \`keys\` (
         id INT AUTO_INCREMENT PRIMARY KEY,
         keyValue VARCHAR(255) NOT NULL UNIQUE,
+        type VARCHAR(32) DEFAULT 'basic' NOT NULL,
         isActive BOOLEAN DEFAULT TRUE NOT NULL,
         isUsed BOOLEAN DEFAULT FALSE NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -58,6 +64,7 @@ async function ensureTables(dbUrl: string) {
         description TEXT,
         version VARCHAR(50) NOT NULL,
         fileUrl TEXT NOT NULL,
+        type VARCHAR(32) DEFAULT 'basic' NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);
@@ -67,6 +74,7 @@ async function ensureTables(dbUrl: string) {
         title VARCHAR(255) NOT NULL,
         description TEXT,
         videoUrl TEXT NOT NULL,
+        type VARCHAR(32) DEFAULT 'basic' NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);

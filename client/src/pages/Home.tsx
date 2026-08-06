@@ -133,20 +133,25 @@ function ModeratorDashboard() {
 
   const [newResellerUser, setNewResellerUser] = useState("");
   const [newResellerPass, setNewResellerPass] = useState("");
-  const [newResellerCredits, setNewResellerCredits] = useState(10);
+  const [newResellerCreditsBasic, setNewResellerCreditsBasic] = useState(10);
+  const [newResellerCreditsAdvanced, setNewResellerCreditsAdvanced] = useState(10);
 
   const [newKeyVal, setNewKeyVal] = useState("");
+  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced">("basic");
   const [batchKeysText, setBatchKeysText] = useState("");
+  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced">("basic");
 
   const [dlTitle, setDlTitle] = useState("");
   const [dlDesc, setDlDesc] = useState("");
   const [dlVersion, setDlVersion] = useState("1.0");
   const [dlUrl, setDlUrl] = useState("");
+  const [dlType, setDlType] = useState<"basic" | "advanced">("basic");
   const [editingDownload, setEditingDownload] = useState<any | null>(null);
 
   const [tutTitle, setTutTitle] = useState("");
   const [tutDesc, setTutDesc] = useState("");
   const [tutUrl, setTutUrl] = useState("");
+  const [tutType, setTutType] = useState<"basic" | "advanced">("basic");
 
   const createResellerMutation = trpc.moderator.createReseller.useMutation({
     onSuccess: () => {
@@ -331,10 +336,14 @@ function ModeratorDashboard() {
                   <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newResellerPass} onChange={(e) => setNewResellerPass(e.target.value)} placeholder="senha" />
                 </div>
                 <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Créditos Iniciais</label>
-                  <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCredits} onChange={(e) => setNewResellerCredits(Number(e.target.value))} />
+                  <label className="text-xs text-white font-semibold block mb-1">Créditos Basic</label>
+                  <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsBasic} onChange={(e) => setNewResellerCreditsBasic(Number(e.target.value))} />
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, credits: newResellerCredits })}>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Créditos Advanced</label>
+                  <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsAdvanced} onChange={(e) => setNewResellerCreditsAdvanced(Number(e.target.value))} />
+                </div>
+                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>
@@ -360,18 +369,23 @@ function ModeratorDashboard() {
                     <TableRow key={r.id} className="border-neutral-800">
                       <TableCell className="font-mono text-white">#{r.id}</TableCell>
                       <TableCell className="font-bold text-white">{r.username}</TableCell>
-                      <TableCell className="font-bold text-red-500">
-                        {r.credits}
-                        <Button size="sm" variant="ghost" className="ml-2 text-white hover:text-red-500 p-1 h-auto" onClick={() => {
-                          const action = prompt(`Deseja "adicionar" ou "remover" créditos para ${r.username}? (Digite add ou remove):`);
+                      <TableCell className="space-y-1">
+                        <div className="text-xs font-mono text-white">Basic: <strong className="text-red-500">{r.creditsBasic}</strong> <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline" onClick={() => {
+                          const action = prompt(`Adicionar ou remover créditos Basic para ${r.username}? (add ou remove):`);
                           if (action === "add" || action === "remove") {
-                            const val = prompt(`Quantidade de créditos para ${action}:`);
+                            const val = prompt("Quantidade:");
                             const num = parseInt(val || "0", 10);
-                            if (!isNaN(num) && num > 0) {
-                              updateCreditsMutation.mutate({ resellerId: r.id, action, credits: num });
-                            }
+                            if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "basic", action, amount: num });
                           }
-                        }}>±</Button>
+                        }}>±</Button></div>
+                        <div className="text-xs font-mono text-white">Advanced: <strong className="text-amber-400">{r.creditsAdvanced}</strong> <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline" onClick={() => {
+                          const action = prompt(`Adicionar ou remover créditos Advanced para ${r.username}? (add ou remove):`);
+                          if (action === "add" || action === "remove") {
+                            const val = prompt("Quantidade:");
+                            const num = parseInt(val || "0", 10);
+                            if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "advanced", action, amount: num });
+                          }
+                        }}>±</Button></div>
                       </TableCell>
                       <TableCell className="text-white">{r.clientCount}</TableCell>
                       <TableCell>
@@ -463,8 +477,15 @@ function ModeratorDashboard() {
             <Card className="bg-[#141414] border-neutral-800 text-white">
               <CardHeader><CardTitle className="text-white">Adicionar Key Individual</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Tipo de Proxy</label>
+                  <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newKeyType} onChange={(e: any) => setNewKeyType(e.target.value)}>
+                    <option value="basic">Proxy Android Basic</option>
+                    <option value="advanced">Proxy Android Advanced</option>
+                  </select>
+                </div>
                 <Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Ex: SHELBY-XXXX-YYYY" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} />
-                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal })}>
+                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal, type: newKeyType })}>
                   Adicionar Key
                 </Button>
               </CardContent>
@@ -473,8 +494,15 @@ function ModeratorDashboard() {
             <Card className="bg-[#141414] border-neutral-800 text-white">
               <CardHeader><CardTitle className="text-white">Importar Keys em Lote (.txt)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Tipo de Proxy</label>
+                  <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={batchKeyType} onChange={(e: any) => setBatchKeyType(e.target.value)}>
+                    <option value="basic">Proxy Android Basic</option>
+                    <option value="advanced">Proxy Android Advanced</option>
+                  </select>
+                </div>
                 <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
-                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n") })}>
+                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: batchKeyType })}>
                   Importar em Lote
                 </Button>
               </CardContent>
@@ -493,6 +521,7 @@ function ModeratorDashboard() {
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-white font-bold">ID</TableHead>
+                    <TableHead className="text-white font-bold">Tipo</TableHead>
                     <TableHead className="text-white font-bold">Key Value</TableHead>
                     <TableHead className="text-white font-bold">Status Uso</TableHead>
                     <TableHead className="text-white font-bold">Estado Ativação</TableHead>
@@ -503,6 +532,7 @@ function ModeratorDashboard() {
                   {keysList?.map((k) => (
                     <TableRow key={k.id} className="border-neutral-800">
                       <TableCell className="font-mono text-white">#{k.id}</TableCell>
+                      <TableCell><Badge className={k.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-neutral-800 text-white"}>{k.type === "advanced" ? "Advanced" : "Basic"}</Badge></TableCell>
                       <TableCell className="font-mono text-amber-400 font-bold">{k.keyValue}</TableCell>
                       <TableCell>
                         <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
@@ -535,6 +565,13 @@ function ModeratorDashboard() {
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">{editingDownload ? "Editar Download" : "Cadastrar Novo Download"}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <label className="text-xs text-white font-semibold block mb-1">Tipo de Download</label>
+                <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={editingDownload ? editingDownload.type : dlType} onChange={(e: any) => editingDownload ? setEditingDownload({...editingDownload, type: e.target.value}) : setDlType(e.target.value)}>
+                  <option value="basic">Proxy Android Basic</option>
+                  <option value="advanced">Proxy Android Advanced</option>
+                </select>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={editingDownload ? editingDownload.title : dlTitle} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, title: e.target.value}) : setDlTitle(e.target.value)} />
                 <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Versão" value={editingDownload ? editingDownload.version : dlVersion} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, version: e.target.value}) : setDlVersion(e.target.value)} />
@@ -553,7 +590,7 @@ function ModeratorDashboard() {
                     </Button>
                   </>
                 ) : (
-                  <Button className="bg-red-600 hover:bg-red-700 text-white w-full" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl })}>
+                  <Button className="bg-red-600 hover:bg-red-700 text-white w-full" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl, type: dlType })}>
                     Cadastrar Download
                   </Button>
                 )}
@@ -568,6 +605,7 @@ function ModeratorDashboard() {
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-white font-bold">Título</TableHead>
+                    <TableHead className="text-white font-bold">Tipo</TableHead>
                     <TableHead className="text-white font-bold">Versão</TableHead>
                     <TableHead className="text-white font-bold">Link</TableHead>
                     <TableHead className="text-white font-bold text-right">Ação</TableHead>
@@ -577,6 +615,7 @@ function ModeratorDashboard() {
                   {downloadsList?.map((d) => (
                     <TableRow key={d.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{d.title}</TableCell>
+                      <TableCell><Badge className={d.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-neutral-800 text-white"}>{d.type === "advanced" ? "Advanced" : "Basic"}</Badge></TableCell>
                       <TableCell className="text-white">{d.version}</TableCell>
                       <TableCell className="text-blue-400 truncate max-w-xs">{d.fileUrl}</TableCell>
                       <TableCell className="text-right space-x-1">
@@ -600,10 +639,17 @@ function ModeratorDashboard() {
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">Cadastrar Novo Tutorial (Link)</CardTitle></CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <label className="text-xs text-white font-semibold block mb-1">Tipo de Tutorial</label>
+                <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={tutType} onChange={(e: any) => setTutType(e.target.value)}>
+                  <option value="basic">Proxy Android Basic</option>
+                  <option value="advanced">Proxy Android Advanced</option>
+                </select>
+              </div>
               <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título do Tutorial (ex: Como configurar o painel)" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} />
               <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Link do Vídeo/Tutorial (ex: https://youtube.com/... ou link direto)" value={tutUrl} onChange={(e) => setTutUrl(e.target.value)} />
               <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" placeholder="Descrição ou instruções..." value={tutDesc} onChange={(e) => setTutDesc(e.target.value)} />
-              <Button className="bg-red-600 hover:bg-red-700 text-white w-full" onClick={() => addTutorialMutation.mutate({ title: tutTitle, description: tutDesc, videoUrl: tutUrl })}>
+              <Button className="bg-red-600 hover:bg-red-700 text-white w-full" onClick={() => addTutorialMutation.mutate({ title: tutTitle, description: tutDesc, videoUrl: tutUrl, type: tutType })}>
                 Cadastrar Tutorial
               </Button>
             </CardContent>
@@ -616,6 +662,7 @@ function ModeratorDashboard() {
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-white font-bold">Título</TableHead>
+                    <TableHead className="text-white font-bold">Tipo</TableHead>
                     <TableHead className="text-white font-bold">Link</TableHead>
                     <TableHead className="text-white font-bold text-right">Ação</TableHead>
                   </TableRow>
@@ -624,6 +671,7 @@ function ModeratorDashboard() {
                   {tutorialsList?.map((t) => (
                     <TableRow key={t.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{t.title}</TableCell>
+                      <TableCell><Badge className={t.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-neutral-800 text-white"}>{t.type === "advanced" ? "Advanced" : "Basic"}</Badge></TableCell>
                       <TableCell><a href={t.videoUrl} target="_blank" rel="noreferrer" className="text-blue-400 underline truncate max-w-xs block">{t.videoUrl}</a></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}>
@@ -675,6 +723,7 @@ function ResellerDashboard() {
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
   const [newClientUser, setNewClientUser] = useState("");
   const [newClientPass, setNewClientPass] = useState("");
+  const [newClientType, setNewClientType] = useState<"basic" | "advanced">("basic");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
@@ -703,10 +752,14 @@ function ResellerDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-[#141414] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Disponíveis</CardTitle></CardHeader>
-          <CardContent><div className="text-4xl font-black text-red-600">{data?.credits || 0}</div></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy Basic</CardTitle></CardHeader>
+          <CardContent><div className="text-4xl font-black text-red-600">{data?.creditsBasic || 0}</div></CardContent>
+        </Card>
+        <Card className="bg-[#141414] border-neutral-800 text-white">
+          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy Advanced</CardTitle></CardHeader>
+          <CardContent><div className="text-4xl font-black text-amber-400">{data?.creditsAdvanced || 0}</div></CardContent>
         </Card>
         <Card className="bg-[#141414] border-neutral-800 text-white">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Total Clientes Criados</CardTitle></CardHeader>
@@ -739,6 +792,13 @@ function ResellerDashboard() {
         <CardContent>
           <div className="flex gap-4 items-end flex-wrap">
             <div>
+              <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
+              <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
+                <option value="basic">Proxy Android Basic</option>
+                <option value="advanced">Proxy Android Advanced</option>
+              </select>
+            </div>
+            <div>
               <label className="text-xs text-white font-semibold block mb-1">Usuário do Cliente</label>
               <Input className="bg-[#222] border-neutral-700 text-white" value={newClientUser} onChange={(e) => setNewClientUser(e.target.value)} placeholder="cliente1" />
             </div>
@@ -746,8 +806,8 @@ function ResellerDashboard() {
               <label className="text-xs text-white font-semibold block mb-1">Senha do Cliente</label>
               <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newClientPass} onChange={(e) => setNewClientPass(e.target.value)} placeholder="senha" />
             </div>
-            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass })}>
-              <UserPlus className="w-4 h-4 mr-1" /> Criar Cliente
+            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass, type: newClientType })}>
+              <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType === "advanced" ? "Advanced" : "Basic"})
             </Button>
           </div>
         </CardContent>

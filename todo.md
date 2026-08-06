@@ -38,3 +38,8 @@
 - [x] Substituir card de Link de Ativação por botão do Discord no painel do cliente
 - [x] Restaurar exibição e cópia da Key de acesso no painel do cliente
 - [x] Corrigir erro de usuário e senha inválidos no login de clientes criados por revendedores
+- [x] Atualizar schema Drizzle para separar créditos e keys em Basic e Advanced
+- [x] Atualizar backend tRPC para gerenciar créditos e chaves separados (Basic e Advanced)
+- [x] Atualizar painel do moderador para gerenciar créditos Basic/Advanced e cadastrar keys/tutoriais/downloads separados
+- [x] Atualizar painel do revendedor para exibir créditos Basic/Advanced e gerar clientes/keys separados
+- [x] Atualizar painel do cliente e testes automatizados

@@ -175,7 +175,8 @@ export const appRouter = router({
         result.push({
           id: r.id,
           username: r.openId,
-          credits: r.credits,
+          creditsBasic: r.creditsBasic || 0,
+          creditsAdvanced: r.creditsAdvanced || 0,
           isActive: r.isActive,
           clientCount: Number(clientCountRes[0]?.count || 0),
         });
@@ -184,7 +185,7 @@ export const appRouter = router({
     }),
 
     createReseller: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), credits: z.number() }))
+      .input(z.object({ username: z.string(), password: z.string(), creditsBasic: z.number(), creditsAdvanced: z.number() }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -195,21 +196,22 @@ export const appRouter = router({
           openId: input.username,
           role: "reseller",
           passwordHash: passHash as any,
-          credits: input.credits,
+          creditsBasic: input.creditsBasic,
+          creditsAdvanced: input.creditsAdvanced,
           isActive: true,
         });
 
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "CREATE_RESELLER",
-          details: `Moderador criou revendedor ${input.username} com ${input.credits} créditos.`,
+          details: `Moderador criou revendedor ${input.username} com ${input.creditsBasic} Basic e ${input.creditsAdvanced} Advanced.`,
         });
 
         return { success: true };
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), credits: z.number(), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced"]), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -219,19 +221,29 @@ export const appRouter = router({
         if (resellerRes.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
         const reseller = resellerRes[0];
 
-        let newCredits = reseller.credits;
-        if (input.action === "add") newCredits += input.credits;
-        else newCredits = Math.max(0, newCredits - input.credits);
-
-        await db.update(users).set({ credits: newCredits }).where(eq(users.id, input.resellerId));
-
-        await db.insert(logs).values({
-          userId: ctx.user.id,
-          action: "UPDATE_CREDITS",
-          details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.credits} créditos do revendedor ${reseller.openId}. Saldo final: ${newCredits}`,
-        });
-
-        return { success: true, newCredits };
+        if (input.type === "basic") {
+          let newCredits = reseller.creditsBasic;
+          if (input.action === "add") newCredits += input.amount;
+          else newCredits = Math.max(0, newCredits - input.amount);
+          await db.update(users).set({ creditsBasic: newCredits }).where(eq(users.id, input.resellerId));
+          await db.insert(logs).values({
+            userId: ctx.user.id,
+            action: "UPDATE_CREDITS_BASIC",
+            details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.amount} créditos Basic do revendedor ${reseller.openId}. Saldo final: ${newCredits}`,
+          });
+          return { success: true, newCredits };
+        } else {
+          let newCredits = reseller.creditsAdvanced;
+          if (input.action === "add") newCredits += input.amount;
+          else newCredits = Math.max(0, newCredits - input.amount);
+          await db.update(users).set({ creditsAdvanced: newCredits }).where(eq(users.id, input.resellerId));
+          await db.insert(logs).values({
+            userId: ctx.user.id,
+            action: "UPDATE_CREDITS_ADVANCED",
+            details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.amount} créditos Advanced do revendedor ${reseller.openId}. Saldo final: ${newCredits}`,
+          });
+          return { success: true, newCredits };
+        }
       }),
 
     listClients: protectedProcedure.query(async ({ ctx }) => {
@@ -359,18 +371,18 @@ export const appRouter = router({
     }),
 
     addKey: protectedProcedure
-      .input(z.object({ keyValue: z.string() }))
+      .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        await db.insert(keys).values({ keyValue: input.keyValue });
+        await db.insert(keys).values({ keyValue: input.keyValue, type: input.type });
         return { success: true };
       }),
 
     importKeysBatch: protectedProcedure
-      .input(z.object({ keysList: z.array(z.string()) }))
+      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -381,7 +393,7 @@ export const appRouter = router({
           const trimmed = k.trim();
           if (trimmed) {
             try {
-              await db.insert(keys).values({ keyValue: trimmed });
+              await db.insert(keys).values({ keyValue: trimmed, type: input.type });
               added++;
             } catch (e) {}
           }
@@ -423,7 +435,7 @@ export const appRouter = router({
     }),
 
     addDownload: protectedProcedure
-      .input(z.object({ title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string() }))
+      .input(z.object({ title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string(), type: z.enum(["basic", "advanced"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -434,12 +446,13 @@ export const appRouter = router({
           description: input.description || null,
           version: input.version,
           fileUrl: input.fileUrl,
+          type: input.type,
         });
         return { success: true };
       }),
 
     updateDownload: protectedProcedure
-      .input(z.object({ id: z.number(), title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string() }))
+      .input(z.object({ id: z.number(), title: z.string(), description: z.string().optional(), version: z.string(), fileUrl: z.string(), type: z.enum(["basic", "advanced"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -450,6 +463,7 @@ export const appRouter = router({
           description: input.description || null,
           version: input.version,
           fileUrl: input.fileUrl,
+          type: input.type,
         }).where(eq(downloads.id, input.id));
 
         return { success: true };
@@ -481,7 +495,7 @@ export const appRouter = router({
     }),
 
     addTutorial: protectedProcedure
-      .input(z.object({ title: z.string(), description: z.string().optional(), videoUrl: z.string() }))
+      .input(z.object({ title: z.string(), description: z.string().optional(), videoUrl: z.string(), type: z.enum(["basic", "advanced"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -491,6 +505,7 @@ export const appRouter = router({
           title: input.title,
           description: input.description || null,
           videoUrl: input.videoUrl,
+          type: input.type,
         });
         return { success: true };
       }),
@@ -511,7 +526,7 @@ export const appRouter = router({
     dashboard: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
-      if (!db) return { credits: 0, clientsCount: 0, clients: [] };
+      if (!db) return { creditsBasic: 0, creditsAdvanced: 0, clientsCount: 0, clients: [] };
 
       const resellerRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const reseller = resellerRes[0];
@@ -519,7 +534,8 @@ export const appRouter = router({
       const clientsList = await db.select().from(users).where(eq(users.resellerId, ctx.user.id));
 
       return {
-        credits: reseller.credits,
+        creditsBasic: reseller.creditsBasic || 0,
+        creditsAdvanced: reseller.creditsAdvanced || 0,
         clientsCount: clientsList.length,
         clients: clientsList.map((c) => ({
           id: c.id,
@@ -530,7 +546,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string() }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -544,13 +560,20 @@ export const appRouter = router({
 
         const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const reseller = resRes[0];
-        if (reseller.credits < 1) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes para criar cliente." });
+
+        if (input.type === "basic") {
+          if ((reseller.creditsBasic || 0) < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic." });
+          }
+        } else {
+          if ((reseller.creditsAdvanced || 0) < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced." });
+          }
         }
 
-        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true))).limit(1);
+        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, input.type))).limit(1);
         if (availableKey.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Keys disponíveis ou ativas no sistema." });
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${input.type === "basic" ? "Basic" : "Advanced"} disponíveis ou ativas no sistema.` });
         }
         const key = availableKey[0];
 
@@ -567,12 +590,17 @@ export const appRouter = router({
         });
 
         await db.update(keys).set({ isUsed: true }).where(eq(keys.id, key.id));
-        await db.update(users).set({ credits: reseller.credits - 1 }).where(eq(users.id, reseller.id));
+
+        if (input.type === "basic") {
+          await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
+        } else {
+          await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
+        }
 
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESELLER_CREATE_CLIENT",
-          details: `Revendedor ${reseller.openId} criou o cliente ${input.username} com a Key ${key.keyValue}.`,
+          details: `Revendedor ${reseller.openId} criou o cliente ${input.username} (${input.type}) com a Key ${key.keyValue}.`,
         });
 
         return { success: true, createdUsername: input.username, createdPassword: input.password };

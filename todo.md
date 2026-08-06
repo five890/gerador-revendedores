@@ -21,3 +21,6 @@
 - [x] Adicionar aviso de 5 segundos com link do Discord para clientes no login e remover botão de setup de moderador
 - [x] Alterar placeholder do input de login de 'Ex: murillo' para 'Ex: seu login'
 - [x] Mover o aviso importante de 5s com link do Discord para aparecer apenas no painel do cliente após o login
+- [x] Fazer push para o repositório GitHub five890/gerador-revendedores
+- [x] Investigar e corrigir erro 'Database not connected'
+- [x] Validar autenticação e conexão com banco de dados via smoke test (sucesso)

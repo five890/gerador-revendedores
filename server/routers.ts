@@ -634,26 +634,24 @@ export const appRouter = router({
         }
 
         let keyId: number | null = null;
-        let keyValueUsed = "KEY-AUTOMATICA-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        let keyValueUsed = "DEFAULT-KEY-" + input.type.toUpperCase();
 
-        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, input.type))).limit(1);
-        
-        if (availableKey.length > 0) {
-          const key = availableKey[0];
-          keyId = key.id;
-          keyValueUsed = key.keyValue;
-          await db.update(keys).set({ isUsed: true }).where(eq(keys.id, key.id));
+        // Buscar a chave ativa mais recente cadastrada pelo moderador para esse tipo
+        const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
+
+        if (latestKey.length > 0) {
+          keyId = latestKey[0].id;
+          keyValueUsed = latestKey[0].keyValue;
         } else {
-          // Se não houver key cadastrada no estoque, cria uma key automática para não travar a criação do cliente
-          const newKeyRes = await db.insert(keys).values({
+          // Se não houver nenhuma chave cadastrada pelo moderador, cria uma chave padrão
+          await db.insert(keys).values({
             keyValue: keyValueUsed,
             type: input.type,
-            isUsed: true,
             isActive: true,
           });
-          const insertedKey = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
-          if (insertedKey.length > 0) {
-            keyId = insertedKey[0].id;
+          const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
+          if (inserted.length > 0) {
+            keyId = inserted[0].id;
           }
         }
 
@@ -761,16 +759,24 @@ export const appRouter = router({
           }
         }
 
-        // Buscar nova key disponível do tipo escolhido
-        const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, targetType as any))).limit(1);
-        if (availableKey.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${targetType.toUpperCase()} disponíveis para renovação.` });
-        }
-        const newKey = availableKey[0];
+        // Buscar a chave ativa mais recente cadastrada pelo moderador para esse tipo
+        const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, targetType as any))).orderBy(desc(keys.id)).limit(1);
+        let newKeyId: number | null = null;
+        let newKeyValue = "DEFAULT-KEY-" + targetType.toUpperCase();
 
-        // Atualizar cliente com a nova key
-        await db.update(users).set({ keyId: newKey.id }).where(eq(users.id, client.id));
-        await db.update(keys).set({ isUsed: true }).where(eq(keys.id, newKey.id));
+        if (latestKey.length > 0) {
+          newKeyId = latestKey[0].id;
+          newKeyValue = latestKey[0].keyValue;
+        } else {
+          await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true });
+          const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
+          if (inserted.length > 0) {
+            newKeyId = inserted[0].id;
+          }
+        }
+
+        // Atualizar cliente com a nova key mais recente
+        await db.update(users).set({ keyId: newKeyId }).where(eq(users.id, client.id));
 
         // Descontar crédito do revendedor
         if (targetType === "basic") {
@@ -787,10 +793,10 @@ export const appRouter = router({
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESELLER_RENEW_CLIENT",
-          details: `Revendedor ${reseller.openId} renovou o cliente ${client.openId} (${targetType}) com nova Key ${newKey.keyValue}.`,
+          details: `Revendedor ${reseller.openId} renovou o cliente ${client.openId} (${targetType}) com nova Key ${newKeyValue}.`,
         });
 
-        return { success: true, newKeyValue: newKey.keyValue };
+        return { success: true, newKeyValue };
       }),
   }),
 

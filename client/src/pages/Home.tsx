@@ -1014,6 +1014,7 @@ function ResellerDashboard() {
   const [newClientPass, setNewClientPass] = useState("");
   const [newClientType, setNewClientType] = useState<"basic" | "advanced">("basic");
   const [newClientMaxDevices, setNewClientMaxDevices] = useState(1);
+  const [clientSearch, setClientSearch] = useState("");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
@@ -1128,7 +1129,17 @@ function ResellerDashboard() {
       </Card>
 
       <Card className="bg-[#141414] border-neutral-800 text-white">
-        <CardHeader><CardTitle className="text-white">Seus Clientes</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-white">Seus Clientes</CardTitle>
+          <div className="w-72">
+            <Input
+              className="bg-[#222] border-neutral-700 text-white text-xs placeholder:text-neutral-500"
+              placeholder="Pesquisar login do cliente..."
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
+            />
+          </div>
+        </CardHeader>
         <CardContent>
           <div className="overflow-x-auto"><Table>
             <TableHeader>
@@ -1139,7 +1150,7 @@ function ResellerDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.clients?.map((c) => (
+              {data?.clients?.filter(c => c.username.toLowerCase().includes(clientSearch.toLowerCase())).map((c) => (
                 <TableRow key={c.id} className="border-neutral-800">
                   <TableCell className="font-mono text-white">#{c.id}</TableCell>
                   <TableCell className="font-bold text-white">{c.username}</TableCell>

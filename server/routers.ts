@@ -679,22 +679,35 @@ export const appRouter = router({
         let keyId: number | null = null;
         let keyValueUsed = "DEFAULT-KEY-" + input.type.toUpperCase();
 
-        // Buscar a chave ativa mais recente cadastrada pelo moderador para esse tipo
-        const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
-
-        if (latestKey.length > 0) {
-          keyId = latestKey[0].id;
-          keyValueUsed = latestKey[0].keyValue;
+        if (input.type === "ios") {
+          // iOS compartilha a chave ativa mais recente
+          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
+          if (latestKey.length > 0) {
+            keyId = latestKey[0].id;
+            keyValueUsed = latestKey[0].keyValue;
+          } else {
+            await db.insert(keys).values({ keyValue: keyValueUsed, type: "ios", isActive: true });
+            const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
+            if (inserted.length > 0) keyId = inserted[0].id;
+          }
         } else {
-          // Se não houver nenhuma chave cadastrada pelo moderador, cria uma chave padrão
-          await db.insert(keys).values({
-            keyValue: keyValueUsed,
-            type: input.type,
-            isActive: true,
-          });
-          const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
-          if (inserted.length > 0) {
-            keyId = inserted[0].id;
+          // Basic e Advanced puxam uma chave não utilizada (isUsed = false)
+          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
+          if (unusedKey.length > 0) {
+            keyId = unusedKey[0].id;
+            keyValueUsed = unusedKey[0].keyValue;
+            await db.update(keys).set({ isUsed: true }).where(eq(keys.id, keyId));
+          } else {
+            // Se não houver chave livre no estoque, busca a mais recente ou cria uma nova
+            const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
+            if (latestKey.length > 0) {
+              keyId = latestKey[0].id;
+              keyValueUsed = latestKey[0].keyValue;
+            } else {
+              await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true });
+              const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
+              if (inserted.length > 0) keyId = inserted[0].id;
+            }
           }
         }
 
@@ -805,19 +818,35 @@ export const appRouter = router({
           }
         }
 
-        // Buscar a chave ativa mais recente cadastrada pelo moderador para esse tipo
-        const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, targetType as any))).orderBy(desc(keys.id)).limit(1);
         let newKeyId: number | null = null;
         let newKeyValue = "DEFAULT-KEY-" + targetType.toUpperCase();
 
-        if (latestKey.length > 0) {
-          newKeyId = latestKey[0].id;
-          newKeyValue = latestKey[0].keyValue;
+        if (targetType === "ios") {
+          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
+          if (latestKey.length > 0) {
+            newKeyId = latestKey[0].id;
+            newKeyValue = latestKey[0].keyValue;
+          } else {
+            await db.insert(keys).values({ keyValue: newKeyValue, type: "ios", isActive: true });
+            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
+            if (inserted.length > 0) newKeyId = inserted[0].id;
+          }
         } else {
-          await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true });
-          const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
-          if (inserted.length > 0) {
-            newKeyId = inserted[0].id;
+          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, targetType), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
+          if (unusedKey.length > 0) {
+            newKeyId = unusedKey[0].id;
+            newKeyValue = unusedKey[0].keyValue;
+            await db.update(keys).set({ isUsed: true }).where(eq(keys.id, newKeyId));
+          } else {
+            const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, targetType))).orderBy(desc(keys.id)).limit(1);
+            if (latestKey.length > 0) {
+              newKeyId = latestKey[0].id;
+              newKeyValue = latestKey[0].keyValue;
+            } else {
+              await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true, isUsed: true });
+              const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
+              if (inserted.length > 0) newKeyId = inserted[0].id;
+            }
           }
         }
 

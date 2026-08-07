@@ -155,6 +155,20 @@ function ModeratorDashboard() {
   const [tutUrl, setTutUrl] = useState("");
   const [tutType, setTutType] = useState<"basic" | "advanced">("basic");
 
+  const [modClientUser, setModClientUser] = useState("");
+  const [modClientPass, setModClientPass] = useState("");
+  const [modClientType, setModClientType] = useState<"basic" | "advanced" | "ios">("advanced");
+
+  const modCreateClientMutation = trpc.reseller.createClient.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Cliente ${res.createdUsername} criado com sucesso pelo Moderador!`);
+      setModClientUser("");
+      setModClientPass("");
+      refetchClients();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const createResellerMutation = trpc.moderator.createReseller.useMutation({
     onSuccess: () => {
       toast.success("Revendedor criado com sucesso!");
@@ -477,6 +491,33 @@ function ModeratorDashboard() {
         {/* CLIENTES */}
         <TabsContent value="clients" className="space-y-4">
           <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Criar Novo Cliente (Modo Direto / Moderador)</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex gap-4 items-end flex-wrap">
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
+                  <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modClientType} onChange={(e: any) => setModClientType(e.target.value)}>
+                    <option value="basic">Proxy Android Basic</option>
+                    <option value="advanced">Proxy Android Advanced</option>
+                    <option value="ios">Proxy iOS</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Usuário do Cliente</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={modClientUser} onChange={(e) => setModClientUser(e.target.value)} placeholder="cliente_moderador" />
+                </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Senha do Cliente</label>
+                  <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={modClientPass} onChange={(e) => setModClientPass(e.target.value)} placeholder="senha" />
+                </div>
+                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => modCreateClientMutation.mutate({ username: modClientUser, password: modClientPass, type: modClientType })}>
+                  <UserPlus className="w-4 h-4 mr-1" /> Criar Cliente
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">Todos os Clientes do Sistema</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
@@ -485,7 +526,7 @@ function ModeratorDashboard() {
                     <TableHead className="text-white font-bold">ID</TableHead>
                     <TableHead className="text-white font-bold">Usuário</TableHead>
                     <TableHead className="text-white font-bold">Key Atribuída</TableHead>
-                    <TableHead className="text-white font-bold">Revendedor</TableHead>
+                    <TableHead className="text-white font-bold">Criado por</TableHead>
                     <TableHead className="text-white font-bold">Status</TableHead>
                     <TableHead className="text-white font-bold text-right">Ações</TableHead>
                   </TableRow>

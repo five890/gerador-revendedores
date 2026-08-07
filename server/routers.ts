@@ -625,7 +625,7 @@ export const appRouter = router({
     createClient: protectedProcedure
       .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
+        if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -636,19 +636,21 @@ export const appRouter = router({
         }
 
         const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-        const reseller = resRes[0];
+        const actor = resRes[0];
 
-        if (input.type === "basic") {
-          if ((reseller.creditsBasic || 0) < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic." });
-          }
-        } else if (input.type === "advanced") {
-          if ((reseller.creditsAdvanced || 0) < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced." });
-          }
-        } else {
-          if ((reseller.creditsIos || 0) < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy iOS." });
+        if (ctx.user.role === "reseller") {
+          if (input.type === "basic") {
+            if ((actor.creditsBasic || 0) < 1) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic." });
+            }
+          } else if (input.type === "advanced") {
+            if ((actor.creditsAdvanced || 0) < 1) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced." });
+            }
+          } else {
+            if ((actor.creditsIos || 0) < 1) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy iOS." });
+            }
           }
         }
 
@@ -688,18 +690,20 @@ export const appRouter = router({
 
         // already handled above
 
-        if (input.type === "basic") {
-          await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
-        } else if (input.type === "advanced") {
-          await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
-        } else {
-          await db.update(users).set({ creditsIos: (reseller.creditsIos || 0) - 1 }).where(eq(users.id, reseller.id));
+        if (ctx.user.role === "reseller") {
+          if (input.type === "basic") {
+            await db.update(users).set({ creditsBasic: (actor.creditsBasic || 0) - 1 }).where(eq(users.id, actor.id));
+          } else if (input.type === "advanced") {
+            await db.update(users).set({ creditsAdvanced: (actor.creditsAdvanced || 0) - 1 }).where(eq(users.id, actor.id));
+          } else {
+            await db.update(users).set({ creditsIos: (actor.creditsIos || 0) - 1 }).where(eq(users.id, actor.id));
+          }
         }
 
         await db.insert(logs).values({
           userId: ctx.user.id,
-          action: "RESELLER_CREATE_CLIENT",
-          details: `Revendedor ${reseller.openId} criou o cliente ${input.username} (${input.type}) com a Key ${keyValueUsed}.`,
+          action: ctx.user.role === "moderator" ? "MODERATOR_CREATE_CLIENT" : "RESELLER_CREATE_CLIENT",
+          details: `${ctx.user.role === "moderator" ? "Moderador" : "Revendedor"} ${actor.openId} criou o cliente ${input.username} (${input.type}) com a Key ${keyValueUsed}.`,
         });
 
         return { success: true, createdUsername: input.username, createdPassword: input.password };

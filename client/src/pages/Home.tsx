@@ -1015,6 +1015,8 @@ function ResellerDashboard() {
   const [newClientType, setNewClientType] = useState<"basic" | "advanced">("basic");
   const [newClientMaxDevices, setNewClientMaxDevices] = useState(1);
   const [clientSearch, setClientSearch] = useState("");
+  const [renewingClient, setRenewingClient] = useState<{ id: number; username: string } | null>(null);
+  const [renewType, setRenewType] = useState<"basic" | "advanced" | "ios">("advanced");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
@@ -1128,6 +1130,29 @@ function ResellerDashboard() {
         </CardContent>
       </Card>
 
+      {renewingClient && (
+        <Card className="bg-neutral-900 border-neutral-700 text-white p-6 space-y-4">
+          <CardHeader className="p-0"><CardTitle className="text-white text-base">Renovar Cliente: <span className="text-red-500">{renewingClient.username}</span></CardTitle></CardHeader>
+          <CardContent className="p-0 space-y-4">
+            <div>
+              <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
+              <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={renewType} onChange={(e: any) => setRenewType(e.target.value)}>
+                <option value="basic">Proxy Android Basic</option>
+                <option value="advanced">Proxy Android Advanced</option>
+                <option value="ios">Proxy iOS</option>
+              </select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => setRenewingClient(null)}>Cancelar</Button>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => {
+                renewClientMutation.mutate({ clientId: renewingClient.id, type: renewType });
+                setRenewingClient(null);
+              }}>Confirmar Renovação</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="bg-[#141414] border-neutral-800 text-white">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle className="text-white">Seus Clientes</CardTitle>
@@ -1155,14 +1180,7 @@ function ResellerDashboard() {
                   <TableCell className="font-mono text-white">#{c.id}</TableCell>
                   <TableCell className="font-bold text-white">{c.username}</TableCell>
                   <TableCell className="text-right space-x-1">
-                    <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => {
-                      const t = prompt("Escolha o tipo de renovação (digite: basic, advanced ou ios):", "advanced");
-                      if (t && ["basic", "advanced", "ios"].includes(t.toLowerCase())) {
-                        renewClientMutation.mutate({ clientId: c.id, type: t.toLowerCase() as any });
-                      } else if (t) {
-                        toast.error("Tipo inválido. Escolha basic, advanced ou ios.");
-                      }
-                    }}>Renovar</Button>
+                    <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => setRenewingClient({ id: c.id, username: c.username })}>Renovar</Button>
                     <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
                       const p = prompt("Nova senha:");
                       if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });

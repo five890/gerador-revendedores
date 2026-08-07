@@ -139,9 +139,9 @@ function ModeratorDashboard() {
   const [newResellerIsPremium, setNewResellerIsPremium] = useState(false);
 
   const [newKeyVal, setNewKeyVal] = useState("");
-  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced">("advanced");
+  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced" | "ios">("advanced");
   const [batchKeysText, setBatchKeysText] = useState("");
-  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced">("advanced");
+  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced" | "ios">("advanced");
 
   const [dlTitle, setDlTitle] = useState("");
   const [dlDesc, setDlDesc] = useState("");
@@ -602,9 +602,13 @@ function ModeratorDashboard() {
 
         {/* GERENCIAR KEYS */}
         <TabsContent value="keys" className="space-y-4">
-          <div className="flex justify-end mb-2">
-            <Button className={keysRevealed ? "bg-amber-600 hover:bg-amber-700 text-white font-bold" : "bg-neutral-800 hover:bg-neutral-700 text-white font-bold"} onClick={() => setKeysRevealed(!keysRevealed)}>
-              {keysRevealed ? "Ocultar Keys" : "Revelar Keys"}
+          <div className="flex justify-between items-center mb-2 bg-[#141414] border border-neutral-800 p-4 rounded-lg">
+            <div>
+              <h3 className="text-sm font-bold text-white">Segurança de Chaves</h3>
+              <p className="text-xs text-neutral-400">As chaves aparecem mascaradas por padrão. Clique para alternar a visualização.</p>
+            </div>
+            <Button className={keysRevealed ? "bg-amber-600 hover:bg-amber-700 text-white font-bold cursor-pointer" : "bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer"} onClick={() => setKeysRevealed(prev => !prev)}>
+              {keysRevealed ? "🔓 Ocultar Keys" : "🔒 Revelar Keys"}
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

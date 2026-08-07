@@ -159,6 +159,7 @@ function ModeratorDashboard() {
   const [modClientPass, setModClientPass] = useState("");
   const [modClientType, setModClientType] = useState<"basic" | "advanced" | "ios">("advanced");
   const [modClientMaxDevices, setModClientMaxDevices] = useState(1);
+  const [keysRevealed, setKeysRevealed] = useState(false);
 
   const modCreateClientMutation = trpc.reseller.createClient.useMutation({
     onSuccess: (res) => {
@@ -601,6 +602,11 @@ function ModeratorDashboard() {
 
         {/* GERENCIAR KEYS */}
         <TabsContent value="keys" className="space-y-4">
+          <div className="flex justify-end mb-2">
+            <Button className={keysRevealed ? "bg-amber-600 hover:bg-amber-700 text-white font-bold" : "bg-neutral-800 hover:bg-neutral-700 text-white font-bold"} onClick={() => setKeysRevealed(!keysRevealed)}>
+              {keysRevealed ? "Ocultar Keys" : "Revelar Keys"}
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-[#141414] border-neutral-800 text-white">
               <CardHeader><CardTitle className="text-white">Adicionar Key Individual</CardTitle></CardHeader>
@@ -678,7 +684,7 @@ function ModeratorDashboard() {
                     {keysList?.filter(k => k.type === "basic").map((k) => (
                       <TableRow key={k.id} className="border-neutral-800">
                         <TableCell className="font-mono text-white">#{k.id}</TableCell>
-                        <TableCell className="font-mono text-red-500 font-bold">{k.keyValue}</TableCell>
+                        <TableCell className="font-mono text-red-500 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
                         <TableCell>
                           <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
                             {k.isUsed ? "Usada" : "Disponível"}
@@ -735,7 +741,7 @@ function ModeratorDashboard() {
                     {keysList?.filter(k => k.type === "advanced").map((k) => (
                       <TableRow key={k.id} className="border-neutral-800">
                         <TableCell className="font-mono text-white">#{k.id}</TableCell>
-                        <TableCell className="font-mono text-amber-400 font-bold">{k.keyValue}</TableCell>
+                        <TableCell className="font-mono text-amber-400 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
                         <TableCell>
                           <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
                             {k.isUsed ? "Usada" : "Disponível"}
@@ -819,7 +825,7 @@ function ModeratorDashboard() {
                     {keysList?.filter(k => k.type === "ios").map((k) => (
                       <TableRow key={k.id} className="border-neutral-800">
                         <TableCell className="font-mono text-white">#{k.id}</TableCell>
-                        <TableCell className="font-mono text-blue-400 font-bold">{k.keyValue}</TableCell>
+                        <TableCell className="font-mono text-blue-400 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
                         <TableCell>
                           <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
                             {k.isUsed ? "Usada" : "Disponível"}

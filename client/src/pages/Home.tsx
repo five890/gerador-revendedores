@@ -158,12 +158,22 @@ function ModeratorDashboard() {
   const [modClientUser, setModClientUser] = useState("");
   const [modClientPass, setModClientPass] = useState("");
   const [modClientType, setModClientType] = useState<"basic" | "advanced" | "ios">("advanced");
+  const [modClientMaxDevices, setModClientMaxDevices] = useState(1);
 
   const modCreateClientMutation = trpc.reseller.createClient.useMutation({
     onSuccess: (res) => {
       toast.success(`Cliente ${res.createdUsername} criado com sucesso pelo Moderador!`);
       setModClientUser("");
       setModClientPass("");
+      setModClientMaxDevices(1);
+      refetchClients();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateClientMaxDevicesMutation = trpc.moderator.updateClientMaxDevices.useMutation({
+    onSuccess: () => {
+      toast.success("Limite de dispositivos atualizado!");
       refetchClients();
     },
     onError: (e: any) => toast.error(e.message),
@@ -510,7 +520,17 @@ function ModeratorDashboard() {
                   <label className="text-xs text-white font-semibold block mb-1">Senha do Cliente</label>
                   <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={modClientPass} onChange={(e) => setModClientPass(e.target.value)} placeholder="senha" />
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => modCreateClientMutation.mutate({ username: modClientUser, password: modClientPass, type: modClientType })}>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Limite Dispositivos</label>
+                  <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modClientMaxDevices} onChange={(e: any) => setModClientMaxDevices(Number(e.target.value))}>
+                    <option value={1}>1 Dispositivo</option>
+                    <option value={2}>2 Dispositivos</option>
+                    <option value={3}>3 Dispositivos</option>
+                    <option value={5}>5 Dispositivos</option>
+                    <option value={10}>10 Dispositivos</option>
+                  </select>
+                </div>
+                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => modCreateClientMutation.mutate({ username: modClientUser, password: modClientPass, type: modClientType, maxDevices: modClientMaxDevices })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Cliente
                 </Button>
               </div>
@@ -538,6 +558,17 @@ function ModeratorDashboard() {
                       <TableCell className="font-bold text-white">{c.username}</TableCell>
                       <TableCell className="font-mono text-xs text-amber-400">{c.keyValue}</TableCell>
                       <TableCell className="text-white">{c.resellerName}</TableCell>
+                      <TableCell>
+                        <span className="text-xs font-mono text-cyan-400 cursor-pointer underline" title="Alterar limite" onClick={() => {
+                          const val = prompt(`Alterar limite de dispositivos para ${c.username} (atual: ${c.maxDevices || 1}):`, String(c.maxDevices || 1));
+                          const num = parseInt(val || "", 10);
+                          if (!isNaN(num) && num > 0) {
+                            updateClientMaxDevicesMutation.mutate({ clientId: c.id, maxDevices: num });
+                          }
+                        }}>
+                          {c.maxDevices || 1} disp.
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Badge className={c.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
                           {c.isActive ? "Ativo" : "Bloqueado"}
@@ -982,6 +1013,7 @@ function ResellerDashboard() {
   const [newClientUser, setNewClientUser] = useState("");
   const [newClientPass, setNewClientPass] = useState("");
   const [newClientType, setNewClientType] = useState<"basic" | "advanced">("basic");
+  const [newClientMaxDevices, setNewClientMaxDevices] = useState(1);
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
@@ -990,6 +1022,7 @@ function ResellerDashboard() {
       setCreatedCredentials({ username: res.createdUsername, password: res.createdPassword });
       setNewClientUser("");
       setNewClientPass("");
+      setNewClientMaxDevices(1);
       refetch();
     },
     onError: (e: any) => toast.error(e.message),
@@ -1077,7 +1110,17 @@ function ResellerDashboard() {
               <label className="text-xs text-white font-semibold block mb-1">Senha do Cliente</label>
               <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newClientPass} onChange={(e) => setNewClientPass(e.target.value)} placeholder="senha" />
             </div>
-            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass, type: newClientType })}>
+            <div>
+              <label className="text-xs text-white font-semibold block mb-1">Limite Dispositivos</label>
+              <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientMaxDevices} onChange={(e: any) => setNewClientMaxDevices(Number(e.target.value))}>
+                <option value={1}>1 Dispositivo</option>
+                <option value={2}>2 Dispositivos</option>
+                <option value={3}>3 Dispositivos</option>
+                <option value={5}>5 Dispositivos</option>
+                <option value={10}>10 Dispositivos</option>
+              </select>
+            </div>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass, type: newClientType, maxDevices: newClientMaxDevices })}>
               <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType === "advanced" ? "Advanced" : newClientType === "basic" ? "Basic" : "iOS"})
             </Button>
           </div>

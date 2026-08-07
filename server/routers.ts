@@ -58,15 +58,17 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Sua conta está bloqueada pelo Moderador." });
         }
 
-        // Restrição de sessão única para Reseller e Client (Moderador isento)
+        // Restrição de limite de dispositivos (maxDevices) para Reseller e Client (Moderador isento)
         if (user.role === "reseller" || user.role === "client") {
           const activeSessions = await db.select().from(sessions).where(eq(sessions.userId, user.id));
-          if (activeSessions.length > 0) {
-            const existing = activeSessions[0];
-            if (existing.deviceIdentifier !== input.deviceIdentifier) {
+          const maxAllowed = user.maxDevices || 1;
+          const isAlreadyRegistered = activeSessions.some(s => s.deviceIdentifier === input.deviceIdentifier);
+
+          if (!isAlreadyRegistered) {
+            if (activeSessions.length >= maxAllowed) {
               throw new TRPCError({
                 code: "CONFLICT",
-                message: "Aviso de Segurança: Esta conta já possui uma sessão ativa em outro dispositivo. Encerre a sessão anterior ou solicite reset ao Moderador.",
+                message: `Limite excedido: Esta conta permite no máximo ${maxAllowed} dispositivo(s) conectado(s). Encerre a sessão em outro dispositivo ou solicite ao moderador/revendedor.`,
               });
             }
           }
@@ -74,12 +76,15 @@ export const appRouter = router({
 
         const token = signJwt({ userId: user.id, username: user.openId, role: user.role });
 
-        await db.delete(sessions).where(eq(sessions.userId, user.id));
-        await db.insert(sessions).values({
-          userId: user.id,
-          token,
-          deviceIdentifier: input.deviceIdentifier,
-        });
+        // Registrar sessão se não existir para este device
+        const existingForDevice = await db.select().from(sessions).where(and(eq(sessions.userId, user.id), eq(sessions.deviceIdentifier, input.deviceIdentifier)));
+        if (existingForDevice.length === 0) {
+          await db.insert(sessions).values({
+            userId: user.id,
+            token,
+            deviceIdentifier: input.deviceIdentifier,
+          });
+        }
 
         await db.insert(logs).values({
           userId: user.id,
@@ -307,6 +312,7 @@ export const appRouter = router({
           id: c.id,
           username: c.openId,
           isActive: c.isActive,
+          maxDevices: c.maxDevices || 1,
           keyValue,
           resellerName,
         });
@@ -355,6 +361,22 @@ export const appRouter = router({
           details: `Moderador resetou a sessão do usuário ID ${input.userId}.`,
         });
 
+        return { success: true };
+      }),
+
+    updateClientMaxDevices: protectedProcedure
+      .input(z.object({ clientId: z.number(), maxDevices: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator" && ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        if (ctx.user.role === "reseller") {
+          const clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.resellerId, ctx.user.id))).limit(1);
+          if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
+        }
+
+        await db.update(users).set({ maxDevices: input.maxDevices }).where(eq(users.id, input.clientId));
         return { success: true };
       }),
 
@@ -623,7 +645,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios"]) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -684,6 +706,7 @@ export const appRouter = router({
           passwordHash: passHash as any,
           resellerId: ctx.user.id,
           keyId: keyId,
+          maxDevices: input.maxDevices || 1,
           credits: 0,
           isActive: true,
         });

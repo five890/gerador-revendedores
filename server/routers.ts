@@ -465,6 +465,25 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    deleteHgKeys: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        // Remover chaves que começam com hg ou HG (case insensitive em SQL ou LIKE 'hg%' / 'HG%')
+        // No TiDB/MySQL o LIKE é case-insensitive por padrão dependendo do collation, mas podemos usar or
+        const allKeys = await db.select().from(keys);
+        let deletedCount = 0;
+        for (const k of allKeys) {
+          if (k.keyValue.toLowerCase().startsWith("hg")) {
+            await db.delete(keys).where(eq(keys.id, k.id));
+            deletedCount++;
+          }
+        }
+        return { success: true, deletedCount };
+      }),
+
     listDownloads: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();

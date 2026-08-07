@@ -238,6 +238,14 @@ function ModeratorDashboard() {
     },
   });
 
+  const deleteHgKeysMutation = trpc.moderator.deleteHgKeys.useMutation({
+    onSuccess: (res) => {
+      toast.success(`${res.deletedCount} keys iniciadas com 'HG' foram removidas com sucesso!`);
+      refetchKeys();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const forceRotateIosMutation = trpc.moderator.forceRotateIos.useMutation({
     onSuccess: (res) => {
       if (res.lowStock) {
@@ -554,6 +562,13 @@ function ModeratorDashboard() {
                 <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
                 <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: batchKeyType })}>
                   Importar em Lote
+                </Button>
+                <Button className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold mt-2" onClick={() => {
+                  if (confirm("Tem certeza que deseja remover todas as keys que começam com 'hg' ou 'HG'?")) {
+                    deleteHgKeysMutation.mutate();
+                  }
+                }}>
+                  Remover Todas as Keys com Início "HG"
                 </Button>
               </CardContent>
             </Card>

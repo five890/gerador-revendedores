@@ -633,11 +633,29 @@ export const appRouter = router({
           }
         }
 
+        let keyId: number | null = null;
+        let keyValueUsed = "KEY-AUTOMATICA-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
         const availableKey = await db.select().from(keys).where(and(eq(keys.isUsed, false), eq(keys.isActive, true), eq(keys.type, input.type))).limit(1);
-        if (availableKey.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Keys ${input.type.toUpperCase()} disponíveis ou ativas no sistema.` });
+        
+        if (availableKey.length > 0) {
+          const key = availableKey[0];
+          keyId = key.id;
+          keyValueUsed = key.keyValue;
+          await db.update(keys).set({ isUsed: true }).where(eq(keys.id, key.id));
+        } else {
+          // Se não houver key cadastrada no estoque, cria uma key automática para não travar a criação do cliente
+          const newKeyRes = await db.insert(keys).values({
+            keyValue: keyValueUsed,
+            type: input.type,
+            isUsed: true,
+            isActive: true,
+          });
+          const insertedKey = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
+          if (insertedKey.length > 0) {
+            keyId = insertedKey[0].id;
+          }
         }
-        const key = availableKey[0];
 
         const passHash = hashPassword(input.password);
 
@@ -646,12 +664,12 @@ export const appRouter = router({
           role: "client",
           passwordHash: passHash as any,
           resellerId: ctx.user.id,
-          keyId: key.id,
+          keyId: keyId,
           credits: 0,
           isActive: true,
         });
 
-        await db.update(keys).set({ isUsed: true }).where(eq(keys.id, key.id));
+        // already handled above
 
         if (input.type === "basic") {
           await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
@@ -664,7 +682,7 @@ export const appRouter = router({
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESELLER_CREATE_CLIENT",
-          details: `Revendedor ${reseller.openId} criou o cliente ${input.username} (${input.type}) com a Key ${key.keyValue}.`,
+          details: `Revendedor ${reseller.openId} criou o cliente ${input.username} (${input.type}) com a Key ${keyValueUsed}.`,
         });
 
         return { success: true, createdUsername: input.username, createdPassword: input.password };

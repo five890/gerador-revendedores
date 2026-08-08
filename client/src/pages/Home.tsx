@@ -160,13 +160,25 @@ function ModeratorDashboard() {
   const [modClientType, setModClientType] = useState<"basic" | "advanced" | "ios">("advanced");
   const [modClientMaxDevices, setModClientMaxDevices] = useState(1);
   const [keysRevealed, setKeysRevealed] = useState(false);
+  const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
+  const [modRenewingClient, setModRenewingClient] = useState<{ id: number; username: string } | null>(null);
+  const [modRenewType, setModRenewType] = useState<"basic" | "advanced" | "ios">("advanced");
 
   const modCreateClientMutation = trpc.reseller.createClient.useMutation({
     onSuccess: (res) => {
       toast.success(`Cliente ${res.createdUsername} criado com sucesso pelo Moderador!`);
+      setModCreatedCredentials({ username: res.createdUsername, password: res.createdPassword });
       setModClientUser("");
       setModClientPass("");
       setModClientMaxDevices(1);
+      refetchClients();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const modRenewClientMutation = trpc.reseller.renewClient.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Cliente renovado com sucesso! Nova Key atribuída: ${res.newKeyValue}`);
       refetchClients();
     },
     onError: (e: any) => toast.error(e.message),
@@ -501,6 +513,49 @@ function ModeratorDashboard() {
 
         {/* CLIENTES */}
         <TabsContent value="clients" className="space-y-4">
+          {modCreatedCredentials && (
+            <Card className="bg-red-950/40 border-red-800 text-white p-4">
+              <CardHeader className="pb-2"><CardTitle className="text-white text-sm">Cliente Criado com Sucesso pelo Moderador!</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-white">Copie as credenciais abaixo para enviar ao seu cliente:</p>
+                <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
+                  <div>Usuário: <strong className="text-white">{modCreatedCredentials.username}</strong></div>
+                  <div>Senha: <strong className="text-white">{modCreatedCredentials.password}</strong></div>
+                  <div>Link de ativação: <strong className="text-blue-400">https://shelbypainel-production.up.railway.app</strong></div>
+                </div>
+                <Button className="bg-red-600 hover:bg-red-700 text-white mt-2" onClick={() => {
+                  navigator.clipboard.writeText(`Usuário: ${modCreatedCredentials.username}\nSenha: ${modCreatedCredentials.password}\nLink de ativação: https://shelbypainel-production.up.railway.app`);
+                  toast.success("Credenciais copiadas!");
+                }}>
+                  <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais Completas
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {modRenewingClient && (
+            <Card className="bg-neutral-900 border-neutral-700 text-white p-6 space-y-4">
+              <CardHeader className="p-0"><CardTitle className="text-white text-base">Renovar Cliente (Moderador): <span className="text-red-500">{modRenewingClient.username}</span></CardTitle></CardHeader>
+              <CardContent className="p-0 space-y-4">
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
+                  <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modRenewType} onChange={(e: any) => setModRenewType(e.target.value)}>
+                    <option value="basic">Proxy Android Basic</option>
+                    <option value="advanced">Proxy Android Advanced</option>
+                    <option value="ios">Proxy iOS</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => setModRenewingClient(null)}>Cancelar</Button>
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => {
+                    modRenewClientMutation.mutate({ clientId: modRenewingClient.id, type: modRenewType });
+                    setModRenewingClient(null);
+                  }}>Confirmar Renovação</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">Criar Novo Cliente (Modo Direto / Moderador)</CardTitle></CardHeader>
             <CardContent>
@@ -576,6 +631,9 @@ function ModeratorDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => setModRenewingClient({ id: c.id, username: c.username })}>
+                          Renovar
+                        </Button>
                         <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleStatusMutation.mutate({ userId: c.id })}>
                           {c.isActive ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                         </Button>

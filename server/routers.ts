@@ -785,11 +785,16 @@ export const appRouter = router({
     renewClient: protectedProcedure
       .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
+        if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        const clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.resellerId, ctx.user.id))).limit(1);
+        let clientRes;
+        if (ctx.user.role === "moderator") {
+          clientRes = await db.select().from(users).where(eq(users.id, input.clientId)).limit(1);
+        } else {
+          clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.resellerId, ctx.user.id))).limit(1);
+        }
         if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
         const client = clientRes[0];
 
@@ -800,21 +805,23 @@ export const appRouter = router({
           await db.update(keys).set({ isUsed: false }).where(eq(keys.id, client.keyId));
         }
 
-        // Verificar créditos do revendedor
+        // Verificar créditos do ator (se for revendedor)
         const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const reseller = resRes[0];
 
-        if (targetType === "basic") {
-          if ((reseller.creditsBasic || 0) < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic para renovação." });
-          }
-        } else if (targetType === "advanced") {
-          if ((reseller.creditsAdvanced || 0) < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced para renovação." });
-          }
-        } else {
-          if ((reseller.creditsIos || 0) < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy iOS para renovação." });
+        if (ctx.user.role === "reseller") {
+          if (targetType === "basic") {
+            if ((reseller.creditsBasic || 0) < 1) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic para renovação." });
+            }
+          } else if (targetType === "advanced") {
+            if ((reseller.creditsAdvanced || 0) < 1) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced para renovação." });
+            }
+          } else {
+            if ((reseller.creditsIos || 0) < 1) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy iOS para renovação." });
+            }
           }
         }
 
@@ -853,13 +860,15 @@ export const appRouter = router({
         // Atualizar cliente com a nova key mais recente
         await db.update(users).set({ keyId: newKeyId }).where(eq(users.id, client.id));
 
-        // Descontar crédito do revendedor
-        if (targetType === "basic") {
-          await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
-        } else if (targetType === "advanced") {
-          await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
-        } else {
-          await db.update(users).set({ creditsIos: (reseller.creditsIos || 0) - 1 }).where(eq(users.id, reseller.id));
+        // Descontar crédito apenas se for revendedor
+        if (ctx.user.role === "reseller") {
+          if (targetType === "basic") {
+            await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
+          } else if (targetType === "advanced") {
+            await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
+          } else {
+            await db.update(users).set({ creditsIos: (reseller.creditsIos || 0) - 1 }).where(eq(users.id, reseller.id));
+          }
         }
 
         // Deletar sessões ativas do cliente para forçar novo login/atualização

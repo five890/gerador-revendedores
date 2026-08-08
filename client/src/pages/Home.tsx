@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -533,10 +534,12 @@ function ModeratorDashboard() {
             </Card>
           )}
 
-          {modRenewingClient && (
-            <Card className="bg-neutral-900 border-neutral-700 text-white p-6 space-y-4">
-              <CardHeader className="p-0"><CardTitle className="text-white text-base">Renovar Cliente (Moderador): <span className="text-red-500">{modRenewingClient.username}</span></CardTitle></CardHeader>
-              <CardContent className="p-0 space-y-4">
+          <Dialog open={!!modRenewingClient} onOpenChange={(open) => !open && setModRenewingClient(null)}>
+            <DialogContent className="bg-[#141414] border-neutral-800 text-white">
+              <DialogHeader>
+                <DialogTitle className="text-white">Renovar Cliente (Moderador): <span className="text-red-500">{modRenewingClient?.username}</span></DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
                 <div>
                   <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modRenewType} onChange={(e: any) => setModRenewType(e.target.value)}>
@@ -548,13 +551,15 @@ function ModeratorDashboard() {
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => setModRenewingClient(null)}>Cancelar</Button>
                   <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => {
-                    modRenewClientMutation.mutate({ clientId: modRenewingClient.id, type: modRenewType });
-                    setModRenewingClient(null);
+                    if (modRenewingClient) {
+                      modRenewClientMutation.mutate({ clientId: modRenewingClient.id, type: modRenewType });
+                      setModRenewingClient(null);
+                    }
                   }}>Confirmar Renovação</Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">Criar Novo Cliente (Modo Direto / Moderador)</CardTitle></CardHeader>

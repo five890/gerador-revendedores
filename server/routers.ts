@@ -984,8 +984,17 @@ export const appRouter = router({
         }
       }
 
-      const filteredDownloads = await db.select().from(downloads).where(eq(downloads.type, keyType as any)).orderBy(desc(downloads.id));
-      const filteredTutorials = await db.select().from(tutorials).where(eq(tutorials.type, keyType as any)).orderBy(desc(tutorials.id));
+      // Se for ios_basic ou ios_advanced, permite buscar também downloads de 'ios' caso não haja específicos cadastrados
+      const targetTypes = [keyType];
+      if (keyType === "ios_basic" || keyType === "ios_advanced") {
+        targetTypes.push("ios");
+      }
+
+      const allDownloads = await db.select().from(downloads).orderBy(desc(downloads.id));
+      const allTutorials = await db.select().from(tutorials).orderBy(desc(tutorials.id));
+
+      const filteredDownloads = allDownloads.filter(d => targetTypes.includes(d.type || "advanced"));
+      const filteredTutorials = allTutorials.filter(t => targetTypes.includes(t.type || "advanced"));
 
       return {
         username: client.openId,

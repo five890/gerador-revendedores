@@ -26,7 +26,7 @@ export const users = mysqlTable("users", {
 export const keys = mysqlTable("keys", {
   id: int("id").autoincrement().primaryKey(),
   keyValue: varchar("keyValue", { length: 255 }).notNull().unique(),
-  type: mysqlEnum("type", ["basic", "advanced", "ios", "ios_basic", "ios_advanced"]).default("advanced").notNull(),
+  type: varchar("type", { length: 50 }).default("advanced").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   isUsed: boolean("isUsed").default(false).notNull(),
   isBanned: boolean("isBanned").default(false).notNull(),

@@ -520,12 +520,15 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        // Uma chave é considerada expirada se usedAt tiver mais de 24 horas ou se estiver associada a clientes expirados
+        // Apenas apagar chaves usadas com mais de 24h que NÃO estejam vinculadas a nenhum usuário ativo
         const now = new Date().getTime();
         const allKeys = await db.select().from(keys);
+        const allClients = await db.select().from(users).where(eq(users.role, "client"));
+        const activeKeyIds = new Set(allClients.map(c => c.keyId).filter(Boolean));
+
         let deletedCount = 0;
         for (const k of allKeys) {
-          if (k.isUsed && k.usedAt) {
+          if (k.isUsed && k.usedAt && !activeKeyIds.has(k.id)) {
             const usedTime = new Date(k.usedAt).getTime();
             if (now - usedTime > 24 * 60 * 60 * 1000) {
               await db.delete(keys).where(eq(keys.id, k.id));

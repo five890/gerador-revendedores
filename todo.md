@@ -43,9 +43,9 @@
 - [x] Atualizar painel do moderador para gerenciar créditos Basic/Advanced e cadastrar keys/tutoriais/downloads separados
 - [x] Atualizar painel do revendedor para exibir créditos Basic/Advanced e gerar clientes/keys separados
 - [x] Atualizar painel do cliente e testes automatizados
-- [ ] Adicionar suporte a expiração de 24h na tabela users (expiresAt)
-- [ ] Implementar busca de clientes no painel do moderador
-- [ ] Implementar botão de excluir chaves expiradas em massa no painel do moderador
-- [ ] Garantir que renovação gere nova chave e atualize link e validade de 24h
-- [ ] Exibir mensagem de bloqueio por expiração de 24h no painel do cliente
-- [ ] Preservar intactos todos os slots de chaves Basic e Advanced
+- [x] Adicionar suporte a expiração de 24h na tabela users (expiresAt)
+- [x] Implementar busca de clientes no painel do moderador
+- [x] Implementar botão de excluir chaves expiradas em massa no painel do moderador
+- [x] Garantir que renovação gere nova chave e atualize link e validade de 24h
+- [x] Exibir mensagem de bloqueio por expiração de 24h no painel do cliente
+- [x] Preservar intactos todos os slots de chaves Basic e Advanced

@@ -18,6 +18,7 @@ export const users = mysqlTable("users", {
   isActive: boolean("isActive").default(true).notNull(),
   isPremium: boolean("isPremium").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
@@ -28,6 +29,7 @@ export const keys = mysqlTable("keys", {
   type: mysqlEnum("type", ["basic", "advanced", "ios"]).default("advanced").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   isUsed: boolean("isUsed").default(false).notNull(),
+  usedAt: timestamp("usedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

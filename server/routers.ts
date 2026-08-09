@@ -58,6 +58,16 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Sua conta está bloqueada pelo Moderador." });
         }
 
+        // Verificar se a conta expirou (24h de uso)
+        if (user.role === "client" && user.expiresAt) {
+          if (new Date().getTime() > new Date(user.expiresAt).getTime()) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Seu login e sua key expirou, contate o suporte ou compre outra key.",
+            });
+          }
+        }
+
         // Restrição de limite de dispositivos (maxDevices) para Reseller e Client (Moderador isento)
         if (user.role === "reseller" || user.role === "client") {
           const activeSessions = await db.select().from(sessions).where(eq(sessions.userId, user.id));
@@ -493,14 +503,34 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        // Remover chaves que começam com hg ou HG (case insensitive em SQL ou LIKE 'hg%' / 'HG%')
-        // No TiDB/MySQL o LIKE é case-insensitive por padrão dependendo do collation, mas podemos usar or
         const allKeys = await db.select().from(keys);
         let deletedCount = 0;
         for (const k of allKeys) {
           if (k.keyValue.toLowerCase().startsWith("hg")) {
             await db.delete(keys).where(eq(keys.id, k.id));
             deletedCount++;
+          }
+        }
+        return { success: true, deletedCount };
+      }),
+
+    deleteExpiredKeys: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        // Uma chave é considerada expirada se usedAt tiver mais de 24 horas ou se estiver associada a clientes expirados
+        const now = new Date().getTime();
+        const allKeys = await db.select().from(keys);
+        let deletedCount = 0;
+        for (const k of allKeys) {
+          if (k.isUsed && k.usedAt) {
+            const usedTime = new Date(k.usedAt).getTime();
+            if (now - usedTime > 24 * 60 * 60 * 1000) {
+              await db.delete(keys).where(eq(keys.id, k.id));
+              deletedCount++;
+            }
           }
         }
         return { success: true, deletedCount };
@@ -679,14 +709,18 @@ export const appRouter = router({
         let keyId: number | null = null;
         let keyValueUsed = "DEFAULT-KEY-" + input.type.toUpperCase();
 
+        const now = new Date();
+        const expiresAtDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
+
         if (input.type === "ios") {
           // iOS compartilha a chave ativa mais recente
           const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
           if (latestKey.length > 0) {
             keyId = latestKey[0].id;
             keyValueUsed = latestKey[0].keyValue;
+            await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
           } else {
-            await db.insert(keys).values({ keyValue: keyValueUsed, type: "ios", isActive: true });
+            await db.insert(keys).values({ keyValue: keyValueUsed, type: "ios", isActive: true, isUsed: true, usedAt: now });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
             if (inserted.length > 0) keyId = inserted[0].id;
           }
@@ -696,11 +730,11 @@ export const appRouter = router({
           if (unusedKey.length > 0) {
             keyId = unusedKey[0].id;
             keyValueUsed = unusedKey[0].keyValue;
-            await db.update(keys).set({ isUsed: true }).where(eq(keys.id, keyId));
+            await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
           } else {
             // Se o estoque acabou, gera uma nova chave exclusiva para este cliente
             keyValueUsed = "KEY-" + input.type.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-            await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true });
+            await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true, usedAt: now });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
             if (inserted.length > 0) keyId = inserted[0].id;
           }
@@ -717,6 +751,7 @@ export const appRouter = router({
           maxDevices: input.maxDevices || 1,
           credits: 0,
           isActive: true,
+          expiresAt: expiresAtDate,
         });
 
         // already handled above
@@ -847,8 +882,15 @@ export const appRouter = router({
           }
         }
 
-        // Atualizar cliente com a nova key mais recente
-        await db.update(users).set({ keyId: newKeyId }).where(eq(users.id, client.id));
+        const renewalNow = new Date();
+        const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
+
+        if (newKeyId) {
+          await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+        }
+
+        // Atualizar cliente com a nova key mais recente e renovar validade por 24h
+        await db.update(users).set({ keyId: newKeyId, expiresAt: newExpiresAt, isActive: true }).where(eq(users.id, client.id));
 
         // Descontar crédito apenas se for revendedor
         if (ctx.user.role === "reseller") {
@@ -885,11 +927,13 @@ export const appRouter = router({
 
       let keyValue: string | null = null;
       let keyType = "advanced";
+      let keyUsedAt: Date | null = null;
       if (client.keyId) {
         const kRes = await db.select().from(keys).where(eq(keys.id, client.keyId)).limit(1);
         if (kRes.length > 0) {
           keyValue = kRes[0].keyValue;
           keyType = kRes[0].type || "advanced";
+          keyUsedAt = kRes[0].usedAt || null;
         }
       }
 
@@ -900,6 +944,8 @@ export const appRouter = router({
         username: client.openId,
         keyValue,
         keyType,
+        keyUsedAt,
+        expiresAt: client.expiresAt || null,
         downloads: filteredDownloads,
         tutorials: filteredTutorials,
       };

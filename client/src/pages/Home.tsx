@@ -163,6 +163,15 @@ function ModeratorDashboard() {
   const [keysRevealed, setKeysRevealed] = useState(false);
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
   const [modRenewingClient, setModRenewingClient] = useState<{ id: number; username: string } | null>(null);
+  const [modClientSearch, setModClientSearch] = useState("");
+
+  const deleteExpiredKeysMutation = trpc.moderator.deleteExpiredKeys.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.deletedCount} chaves expiradas excluídas com sucesso!`);
+      refetchKeys();
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const [modRenewType, setModRenewType] = useState<"basic" | "advanced" | "ios">("advanced");
 
   const modCreateClientMutation = trpc.reseller.createClient.useMutation({
@@ -599,7 +608,17 @@ function ModeratorDashboard() {
           </Card>
 
           <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader><CardTitle className="text-white">Todos os Clientes do Sistema</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-white">Todos os Clientes do Sistema</CardTitle>
+              <div className="w-72">
+                <Input
+                  className="bg-[#222] border-neutral-700 text-white text-sm"
+                  placeholder="Pesquisar login do cliente..."
+                  value={modClientSearch}
+                  onChange={(e) => setModClientSearch(e.target.value)}
+                />
+              </div>
+            </CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
@@ -613,7 +632,9 @@ function ModeratorDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clients?.map((c) => (
+                  {clients
+                    ?.filter((c) => c.username.toLowerCase().includes(modClientSearch.toLowerCase()))
+                    ?.map((c) => (
                     <TableRow key={c.id} className="border-neutral-800">
                       <TableCell className="font-mono text-white">#{c.id}</TableCell>
                       <TableCell className="font-bold text-white">{c.username}</TableCell>
@@ -665,14 +686,23 @@ function ModeratorDashboard() {
 
         {/* GERENCIAR KEYS */}
         <TabsContent value="keys" className="space-y-4">
-          <div className="flex justify-between items-center mb-2 bg-[#141414] border border-neutral-800 p-4 rounded-lg">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-2 bg-[#141414] border border-neutral-800 p-4 rounded-lg">
             <div>
-              <h3 className="text-sm font-bold text-white">Segurança de Chaves</h3>
-              <p className="text-xs text-neutral-400">As chaves aparecem mascaradas por padrão. Clique para alternar a visualização.</p>
+              <h3 className="text-sm font-bold text-white">Segurança e Gestão de Chaves</h3>
+              <p className="text-xs text-neutral-400">As chaves aparecem mascaradas por padrão. Você também pode remover todas as chaves expiradas (&gt;24h de uso).</p>
             </div>
-            <Button className={keysRevealed ? "bg-amber-600 hover:bg-amber-700 text-white font-bold cursor-pointer" : "bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer"} onClick={() => setKeysRevealed(prev => !prev)}>
-              {keysRevealed ? "🔓 Ocultar Keys" : "🔒 Revelar Keys"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="destructive" size="sm" onClick={() => {
+                if (confirm("Deseja realmente excluir todas as chaves expiradas (mais de 24h de uso)?")) {
+                  deleteExpiredKeysMutation.mutate();
+                }
+              }}>
+                <Trash2 className="w-4 h-4 mr-1" /> Excluir Keys Expiradas
+              </Button>
+              <Button className={keysRevealed ? "bg-amber-600 hover:bg-amber-700 text-white font-bold cursor-pointer" : "bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer"} onClick={() => setKeysRevealed(prev => !prev)}>
+                {keysRevealed ? "🔓 Ocultar Keys" : "🔒 Revelar Keys"}
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-[#141414] border-neutral-800 text-white">
@@ -1275,7 +1305,7 @@ function ResellerDashboard() {
 }
 
 function ClientDashboard() {
-  const { data } = trpc.clientPanel.dashboard.useQuery();
+  const { data, isLoading } = trpc.clientPanel.dashboard.useQuery();
   const [copied, setCopied] = useState(false);
 
   const [countdown, setCountdown] = useState(5);
@@ -1289,6 +1319,33 @@ function ClientDashboard() {
       setShowAlert(false);
     }
   }, [countdown]);
+
+  if (isLoading) return <div className="p-8 text-center text-white">Carregando painel...</div>;
+
+  // Verificar se expirou (24h)
+  const isExpired = data?.expiresAt ? new Date().getTime() > new Date(data.expiresAt).getTime() : false;
+
+  if (isExpired) {
+    return (
+      <div className="max-w-xl mx-auto mt-20 p-6 bg-[#141414] border border-red-600 rounded-xl text-white text-center space-y-4 shadow-2xl">
+        <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-bounce" />
+        <h2 className="text-2xl font-bold text-red-500">Acesso Expirado</h2>
+        <p className="text-sm text-neutral-300">
+          Seu login e sua key expirou, contate o suporte ou compre outra key.
+        </p>
+        <div className="pt-2">
+          <a
+            href="https://discord.gg/YYBZxhhm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition"
+          >
+            Contatar Suporte / Discord
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto text-white">
@@ -1322,7 +1379,7 @@ function ClientDashboard() {
             </div>
             <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
               <span className="text-xs text-white font-bold block mb-1">SUA KEY DE ACESSO</span>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-amber-400 font-mono font-bold text-sm">{data?.keyValue ? data.keyValue : "Nenhuma Key vinculada"}</span>
                 {data?.keyValue ? (
                   <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800 shrink-0 ml-2" onClick={() => {
@@ -1335,6 +1392,16 @@ function ClientDashboard() {
                   </Button>
                 ) : null}
               </div>
+              {data?.keyUsedAt && (
+                <div className="text-[11px] text-neutral-400 border-t border-neutral-800 pt-2 mt-2">
+                  Ativada em: <span className="text-white">{new Date(data.keyUsedAt).toLocaleString()}</span>
+                  {data?.expiresAt && (
+                    <div className="text-red-400 mt-1 font-semibold">
+                      Expira em: {new Date(data.expiresAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800 flex flex-col justify-between">
               <span className="text-xs text-white font-bold block mb-1">SUPORTE E COMUNIDADE</span>

@@ -17,6 +17,10 @@ export default function Home() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: productsList, refetch: refetchProducts } = trpc.moderator.listProducts.useQuery(undefined, {
+    enabled: !!user
+  });
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -113,15 +117,15 @@ export default function Home() {
       </header>
 
       <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full">
-        {user.role === "moderator" && <ModeratorDashboard />}
-        {user.role === "reseller" && <ResellerDashboard />}
-        {user.role === "client" && <ClientDashboard />}
+        {user.role === "moderator" && <ModeratorDashboard productsList={productsList} refetchProducts={refetchProducts} />}
+        {user.role === "reseller" && <ResellerDashboard productsList={productsList} />}
+        {user.role === "client" && <ClientDashboard productsList={productsList} />}
       </main>
     </div>
   );
 }
 
-function ModeratorDashboard() {
+function ModeratorDashboard({ productsList, refetchProducts }: any) {
   const { data: stats } = trpc.moderator.dashboardStats.useQuery();
   const { data: resellers, refetch: refetchResellers } = trpc.moderator.listResellers.useQuery();
   const { data: clients, refetch: refetchClients } = trpc.moderator.listClients.useQuery();
@@ -172,7 +176,6 @@ function ModeratorDashboard() {
   const [newProductTutorialUrl, setNewProductTutorialUrl] = useState("");
   const [newProductType, setNewProductType] = useState("advanced");
 
-  const { data: productsList, refetch: refetchProducts } = trpc.moderator.listProducts.useQuery();
   const addProductMutation = trpc.moderator.addProduct.useMutation({
     onSuccess: () => {
       toast.success("Produto customizado criado com sucesso!");
@@ -1300,7 +1303,7 @@ function ModeratorDashboard() {
   );
 }
 
-function ResellerDashboard() {
+function ResellerDashboard({ productsList }: any) {
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
   const { data: subResellers, refetch: refetchSubResellers } = trpc.moderator.listResellers.useQuery(undefined, {
     enabled: !!data?.isPremium
@@ -1381,7 +1384,7 @@ function ResellerDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {productsList?.map((prod) => (
+        {productsList?.map((prod: any) => (
           <Card key={prod.id} className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs uppercase text-white">Créditos {prod.displayName}</CardTitle>
@@ -1402,6 +1405,16 @@ function ResellerDashboard() {
           <CardContent><div className="text-4xl font-bold text-white">{data?.clientsCount || 0}</div></CardContent>
         </Card>
       </div>
+
+      <Tabs defaultValue="clients" className="space-y-4">
+        <TabsList className="bg-[#141414] border border-neutral-800 p-1">
+          <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Clientes</TabsTrigger>
+          {data?.isPremium && (
+            <TabsTrigger value="subresellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Revendedores</TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="clients" className="space-y-4">
 
       {createdCredentials && (
         <Card className="bg-red-950/40 border-red-800 text-white p-4">
@@ -1484,19 +1497,19 @@ function ResellerDashboard() {
       )}
 
       <Card className="bg-[#141414] border-neutral-800 text-white">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-white">Seus Clientes</CardTitle>
-          <div className="w-72">
-            <Input
-              className="bg-[#222] border-neutral-700 text-white text-xs placeholder:text-neutral-500"
-              placeholder="Pesquisar login do cliente..."
-              value={clientSearch}
-              onChange={(e) => setClientSearch(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto"><Table>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <CardTitle className="text-white">Seus Clientes</CardTitle>
+              <div className="w-72">
+                <Input
+                  className="bg-[#222] border-neutral-700 text-white text-xs placeholder:text-neutral-500"
+                  placeholder="Pesquisar login do cliente..."
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto"><Table>
 	                <TableHeader>
 	                  <TableRow className="border-neutral-800">
 	                    <TableHead className="text-white font-bold">ID</TableHead>
@@ -1539,14 +1552,95 @@ function ResellerDashboard() {
 			            })
 			          }
             </TableBody>
-          </Table></div>
-        </CardContent>
-      </Card>
+		          </Table></div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {data?.isPremium && (
+          <TabsContent value="subresellers" className="space-y-4">
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader><CardTitle className="text-white">Criar Novo Sub-Revendedor (Consome seus créditos)</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex gap-4 items-end flex-wrap">
+                  <div>
+                    <label className="text-xs text-white font-semibold block mb-1">Usuário</label>
+                    <Input className="bg-[#222] border-neutral-700 text-white" value={newSubUser} onChange={(e) => setNewSubUser(e.target.value)} placeholder="revendedor1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white font-semibold block mb-1">Senha</label>
+                    <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newSubPass} onChange={(e) => setNewSubPass(e.target.value)} placeholder="••••••" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white font-semibold block mb-1">Créditos Basic</label>
+                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newSubCreditsBasic} onChange={(e) => setNewSubCreditsBasic(Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white font-semibold block mb-1">Créditos Advanced</label>
+                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newSubCreditsAdvanced} onChange={(e) => setNewSubCreditsAdvanced(Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white font-semibold block mb-1">Créditos iOS</label>
+                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newSubCreditsIos} onChange={(e) => setNewSubCreditsIos(Number(e.target.value))} />
+                  </div>
+                  <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createResellerMutation.mutate({ username: newSubUser, password: newSubPass, creditsBasic: newSubCreditsBasic, creditsAdvanced: newSubCreditsAdvanced, creditsIos: newSubCreditsIos })}>
+                    <UserPlus className="w-4 h-4 mr-1" /> Criar Sub-Revendedor
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#141414] border-neutral-800 text-white">
+              <CardHeader><CardTitle className="text-white">Seus Sub-Revendedores</CardTitle></CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto"><Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-800">
+                      <TableHead className="text-white font-bold">Usuário</TableHead>
+                      <TableHead className="text-white font-bold">Créditos</TableHead>
+                      <TableHead className="text-white font-bold text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subResellers?.map((r: any) => (
+                      <TableRow key={r.id} className="border-neutral-800">
+                        <TableCell className="font-bold text-white">{r.username}</TableCell>
+                        <TableCell className="space-y-1">
+                          {productsList?.map((prod: any) => (
+                            <div key={prod.id} className="text-[10px] font-mono text-white flex items-center gap-1">
+                              <span className="opacity-70">{prod.displayName}:</span>
+                              <strong className="text-red-500">{(r.credits as any)?.[prod.name] || 0}</strong>
+                              <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline text-[10px]" onClick={() => {
+                                const action = prompt(`Adicionar ou remover créditos ${prod.displayName} para ${r.username}? (add ou remove):`);
+                                if (action === "add" || action === "remove") {
+                                  const val = prompt("Quantidade:");
+                                  const num = parseInt(val || "0", 10);
+                                  if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: prod.name, action, amount: num });
+                                }
+                              }}>±</Button>
+                            </div>
+                          ))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
+                            const p = prompt("Nova senha:");
+                            if (p) resetPassMutation.mutate({ clientId: r.id, newPassword: p });
+                          }}>Senha</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table></div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
 
-function ClientDashboard() {
+function ClientDashboard({ productsList }: any) {
   const { data, isLoading } = trpc.clientPanel.dashboard.useQuery();
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState(5);
@@ -1682,6 +1776,29 @@ function ClientDashboard() {
         </CardContent>
       </Card>
 
+      {/* PRODUTO ATUAL - LINKS RÁPIDOS */}
+      {productsList?.find((p: any) => p.name === data?.keyType) && (
+        <Card className="bg-red-950/20 border-red-900/50 text-white">
+          <CardHeader><CardTitle className="text-white text-sm uppercase">Links do seu Produto: {productsList.find((p: any) => p.name === data?.keyType).displayName}</CardTitle></CardHeader>
+          <CardContent className="flex gap-4 flex-wrap">
+            {productsList.find((p: any) => p.name === data?.keyType).link && (
+              <a href={productsList.find((p: any) => p.name === data?.keyType).link} target="_blank" rel="noopener noreferrer">
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <DownloadIcon className="w-4 h-4 mr-2" /> Download do Produto
+                </Button>
+              </a>
+            )}
+            {productsList.find((p: any) => p.name === data?.keyType).tutorialUrl && (
+              <a href={productsList.find((p: any) => p.name === data?.keyType).tutorialUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white">
+                  <Video className="w-4 h-4 mr-2" /> Ver Tutorial do Produto
+                </Button>
+              </a>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* DOWNLOADS */}
       <Card className="bg-[#141414] border-neutral-800 text-white">
         <CardHeader><CardTitle className="text-white flex items-center gap-2"><FileDown className="w-5 h-5 text-red-600" /> Downloads Disponíveis</CardTitle></CardHeader>
@@ -1690,7 +1807,7 @@ function ClientDashboard() {
             {data?.downloads?.length === 0 ? (
               <p className="text-sm text-white">Nenhum download cadastrado no momento.</p>
             ) : (
-              data?.downloads?.map((d) => (
+              data?.downloads?.map((d: any) => (
                 <div key={d.id} className="bg-[#1f1f1f] border border-neutral-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">

@@ -873,22 +873,13 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Este nome de usuário já está em uso." });
         }
 
-        const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-        const actor = resRes[0];
+        const dbProduct = await db.select().from(products).where(eq(products.name, input.type)).limit(1);
+        const productType = dbProduct.length > 0 ? dbProduct[0].type : (input.type.startsWith("ios") ? "ios" : "advanced");
 
         if (ctx.user.role === "reseller") {
-          if (input.type === "basic") {
-            if ((actor.creditsBasic || 0) < 1) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic." });
-            }
-          } else if (input.type === "advanced") {
-            if ((actor.creditsAdvanced || 0) < 1) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced." });
-            }
-          } else {
-            if ((actor.creditsIos || 0) < 1) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy iOS." });
-            }
+          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, input.type))).limit(1);
+          if (!currentCredit.length || currentCredit[0].amount < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${input.type}.` });
           }
         }
 
@@ -898,7 +889,7 @@ export const appRouter = router({
         const now = new Date();
         const expiresAtDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
 
-        if (input.type === "ios") {
+        if (productType === "ios") {
           // iOS compartilha a chave ativa mais recente
           const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
           if (latestKey.length > 0) {
@@ -944,12 +935,9 @@ export const appRouter = router({
         // already handled above
 
         if (ctx.user.role === "reseller") {
-          if (input.type === "basic") {
-            await db.update(users).set({ creditsBasic: (actor.creditsBasic || 0) - 1 }).where(eq(users.id, actor.id));
-          } else if (input.type === "advanced") {
-            await db.update(users).set({ creditsAdvanced: (actor.creditsAdvanced || 0) - 1 }).where(eq(users.id, actor.id));
-          } else {
-            await db.update(users).set({ creditsIos: (actor.creditsIos || 0) - 1 }).where(eq(users.id, actor.id));
+          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, input.type))).limit(1);
+          if (currentCredit.length > 0) {
+            await db.update(userCredits).set({ amount: Math.max(0, currentCredit[0].amount - 1) }).where(eq(userCredits.id, currentCredit[0].id));
           }
         }
 
@@ -1016,24 +1004,14 @@ export const appRouter = router({
         const client = clientRes[0];
 
         const targetType = input.type;
+        const dbProduct = await db.select().from(products).where(eq(products.name, targetType)).limit(1);
+        const productType = dbProduct.length > 0 ? dbProduct[0].type : (targetType.startsWith("ios") ? "ios" : "advanced");
 
         // Verificar créditos do ator (se for revendedor)
-        const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-        const reseller = resRes[0];
-
         if (ctx.user.role === "reseller") {
-          if (targetType === "basic") {
-            if ((reseller.creditsBasic || 0) < 1) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Basic para renovação." });
-            }
-          } else if (targetType === "advanced") {
-            if ((reseller.creditsAdvanced || 0) < 1) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy Advanced para renovação." });
-            }
-          } else {
-            if ((reseller.creditsIos || 0) < 1) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos insuficientes de Proxy iOS para renovação." });
-            }
+          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, targetType))).limit(1);
+          if (!currentCredit.length || currentCredit[0].amount < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${targetType} para renovação.` });
           }
         }
 
@@ -1043,7 +1021,7 @@ export const appRouter = router({
         const renewalNow = new Date();
         const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
 
-        if (targetType === "ios") {
+        if (productType === "ios") {
           // iOS compartilha a chave ativa mais recente
           const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
           if (latestKey.length > 0) {

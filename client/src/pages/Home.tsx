@@ -1169,11 +1169,11 @@ function ResellerDashboard() {
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
   const [newClientUser, setNewClientUser] = useState("");
   const [newClientPass, setNewClientPass] = useState("");
-  const [newClientType, setNewClientType] = useState<"basic" | "advanced">("basic");
+  const [newClientType, setNewClientType] = useState<"basic" | "advanced" | "ios" | "ios_basic" | "ios_advanced">("basic");
   const [newClientMaxDevices, setNewClientMaxDevices] = useState(1);
   const [clientSearch, setClientSearch] = useState("");
   const [renewingClient, setRenewingClient] = useState<{ id: number; username: string } | null>(null);
-  const [renewType, setRenewType] = useState<"basic" | "advanced" | "ios">("advanced");
+  const [renewType, setRenewType] = useState<"basic" | "advanced" | "ios" | "ios_basic" | "ios_advanced">("advanced");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
@@ -1259,7 +1259,9 @@ function ResellerDashboard() {
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
                 <option value="basic">Proxy Android Basic</option>
                 <option value="advanced">Proxy Android Advanced</option>
-                <option value="ios">Proxy iOS</option>
+                <option value="ios">Proxy iOS Geral</option>
+                <option value="ios_basic">Proxy iOS Basic</option>
+                <option value="ios_advanced">Proxy iOS Advanced</option>
               </select>
             </div>
             <div>
@@ -1280,9 +1282,9 @@ function ResellerDashboard() {
                 <option value={10}>10 Dispositivos</option>
               </select>
             </div>
-            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass, type: newClientType, maxDevices: newClientMaxDevices })}>
-              <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType === "advanced" ? "Advanced" : newClientType === "basic" ? "Basic" : "iOS"})
-            </Button>
+              <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createClientMutation.mutate({ username: newClientUser, password: newClientPass, type: newClientType as any, maxDevices: newClientMaxDevices })}>
+                <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType})
+              </Button>
           </div>
         </CardContent>
       </Card>
@@ -1296,7 +1298,9 @@ function ResellerDashboard() {
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={renewType} onChange={(e: any) => setRenewType(e.target.value)}>
                 <option value="basic">Proxy Android Basic</option>
                 <option value="advanced">Proxy Android Advanced</option>
-                <option value="ios">Proxy iOS</option>
+                <option value="ios">Proxy iOS Geral</option>
+                <option value="ios_basic">Proxy iOS Basic</option>
+                <option value="ios_advanced">Proxy iOS Advanced</option>
               </select>
             </div>
             <div className="flex gap-2 justify-end">
@@ -1361,9 +1365,9 @@ function ResellerDashboard() {
 function ClientDashboard() {
   const { data, isLoading } = trpc.clientPanel.dashboard.useQuery();
   const [copied, setCopied] = useState(false);
-
   const [countdown, setCountdown] = useState(5);
   const [showAlert, setShowAlert] = useState(true);
+  const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
     if (countdown > 0) {
@@ -1373,6 +1377,24 @@ function ClientDashboard() {
       setShowAlert(false);
     }
   }, [countdown]);
+
+  useEffect(() => {
+    const calc = () => {
+      if (!data?.expiresAt) return;
+      const diff = new Date(data.expiresAt).getTime() - new Date().getTime();
+      if (diff <= 0) {
+        setTimeLeft("Expirado");
+        return;
+      }
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+    };
+    calc();
+    const interval = setInterval(calc, 1000);
+    return () => clearInterval(interval);
+  }, [data?.expiresAt]);
 
   if (isLoading) return <div className="p-8 text-center text-white">Carregando painel...</div>;
 
@@ -1400,26 +1422,6 @@ function ClientDashboard() {
       </div>
     );
   }
-
-  // Contagem regressiva em tempo real até expiresAt
-  const [timeLeft, setTimeLeft] = useState("");
-  useEffect(() => {
-    const calc = () => {
-      if (!data?.expiresAt) return;
-      const diff = new Date(data.expiresAt).getTime() - new Date().getTime();
-      if (diff <= 0) {
-        setTimeLeft("Expirado");
-        return;
-      }
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
-    };
-    calc();
-    const interval = setInterval(calc, 1000);
-    return () => clearInterval(interval);
-  }, [data?.expiresAt]);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto text-white select-none relative" style={{ WebkitUserSelect: 'none' }}>

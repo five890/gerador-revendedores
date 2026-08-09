@@ -368,15 +368,25 @@ export const appRouter = router({
     resetUserSession: protectedProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        if (ctx.user.role !== "moderator" && ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        if (ctx.user.role === "reseller") {
+          // Verifica se o revendedor é o dono ou se é premium
+          const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+          const isPremium = resRes[0]?.isPremium || false;
+          if (!isPremium) {
+            const clientRes = await db.select().from(users).where(and(eq(users.id, input.userId), eq(users.resellerId, ctx.user.id))).limit(1);
+            if (clientRes.length === 0) throw new TRPCError({ code: "FORBIDDEN", message: "Cliente não pertence ao seu painel." });
+          }
+        }
 
         await db.delete(sessions).where(eq(sessions.userId, input.userId));
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESET_SESSION",
-          details: `Moderador resetou a sessão do usuário ID ${input.userId}.`,
+          details: `Usuário ${ctx.user.id} resetou a sessão do cliente ID ${input.userId}.`,
         });
 
         return { success: true };
@@ -711,7 +721,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "ios_basic", "ios_advanced"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -850,7 +860,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios"]) }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "ios_basic", "ios_advanced"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();

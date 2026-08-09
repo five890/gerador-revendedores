@@ -1396,10 +1396,9 @@ function ClientDashboard() {
     return () => clearInterval(interval);
   }, [data?.expiresAt]);
 
-  if (isLoading) return <div className="p-8 text-center text-white">Carregando painel...</div>;
-
-  // Verificar se expirou (24h)
   const isExpired = data?.expiresAt ? new Date().getTime() > new Date(data.expiresAt).getTime() : false;
+
+  if (isLoading) return <div className="p-8 text-center text-white">Carregando painel...</div>;
 
   if (isExpired) {
     return (

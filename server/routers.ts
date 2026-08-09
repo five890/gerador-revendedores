@@ -798,7 +798,7 @@ export const appRouter = router({
         const now = new Date();
         const expiresAtDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
 
-        if (productType === "ios") {
+        if (input.type === "ios") {
           // iOS compartilha a chave ativa mais recente
           const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
           if (latestKey.length > 0) {
@@ -929,7 +929,7 @@ export const appRouter = router({
         const renewalNow = new Date();
         const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
 
-        if (productType === "ios") {
+        if (input.type === "ios") {
           // iOS compartilha a chave ativa mais recente
           const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
           if (latestKey.length > 0) {
@@ -944,7 +944,7 @@ export const appRouter = router({
           }
         } else {
           // Basic e Advanced puxam obrigatoriamente uma chave NOVA (isUsed = false)
-          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, targetType), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
+          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
           if (unusedKey.length > 0) {
             newKeyId = unusedKey[0].id;
             newKeyValue = unusedKey[0].keyValue;
@@ -952,8 +952,8 @@ export const appRouter = router({
             await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
           } else {
             // Se o estoque acabou, gera uma nova chave exclusiva
-            newKeyValue = "KEY-" + targetType.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-            await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true, isUsed: true, isBanned: true, usedAt: renewalNow });
+            newKeyValue = "KEY-" + input.type.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+            await db.insert(keys).values({ keyValue: newKeyValue, type: input.type, isActive: true, isUsed: true, isBanned: true, usedAt: renewalNow });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
             if (inserted.length > 0) newKeyId = inserted[0].id;
           }
@@ -974,7 +974,7 @@ export const appRouter = router({
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESELLER_RENEW_CLIENT",
-          details: `Revendedor ${reseller.openId} renovou o cliente ${client.openId} (${targetType}) com nova Key ${newKeyValue}.`,
+          details: `Revendedor ${actor.openId} renovou o cliente ${client.openId} (${input.type}) com nova Key ${newKeyValue}.`,
         });
 
         return { success: true, newKeyValue };

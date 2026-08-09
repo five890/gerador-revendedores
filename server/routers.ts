@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { users, keys, downloads, tutorials, products, sessions, logs, userCredits } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, sessions, logs } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
@@ -181,14 +181,13 @@ export const appRouter = router({
 
     listResellers: protectedProcedure.query(async ({ ctx }) => {
       const isMod = ctx.user.role === "moderator";
-      const isPremiumReseller = ctx.user.role === "reseller"; // Frontend check will handle isPremium
+      const isPremiumReseller = ctx.user.role === "reseller";
       
       if (!isMod && !isPremiumReseller) throw new TRPCError({ code: "FORBIDDEN" });
       
       const db = await getDb();
       if (!db) return [];
 
-      // Se for moderador vê todos, se for revendedor vê apenas os que ele criou
       const query = isMod 
         ? db.select().from(users).where(eq(users.role, "reseller"))
         : db.select().from(users).where(and(eq(users.role, "reseller"), eq(users.resellerId, ctx.user.id)));
@@ -197,15 +196,16 @@ export const appRouter = router({
       const result = [];
       for (const r of resellers) {
         const clientCountRes = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.resellerId, r.id));
-        const credits = await db.select().from(userCredits).where(eq(userCredits.userId, r.id));
         
         result.push({
           id: r.id,
           username: r.openId,
-          credits: credits.reduce((acc: any, c) => {
-            acc[c.productName] = c.amount;
-            return acc;
-          }, {}),
+          credits: {
+            basic: r.creditsBasic || 0,
+            advanced: r.creditsAdvanced || 0,
+            ios: r.creditsIos || 0,
+            android: r.creditsAndroid || 0,
+          },
           isActive: r.isActive,
           isPremium: r.isPremium || false,
           clientCount: Number(clientCountRes[0]?.count || 0),
@@ -215,7 +215,15 @@ export const appRouter = router({
     }),
 
     createReseller: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), creditsBasic: z.number(), creditsAdvanced: z.number(), creditsIos: z.number().default(0), isPremium: z.boolean().default(false) }))
+      .input(z.object({ 
+        username: z.string(), 
+        password: z.string(), 
+        creditsBasic: z.number().default(0), 
+        creditsAdvanced: z.number().default(0), 
+        creditsIos: z.number().default(0), 
+        creditsAndroid: z.number().default(0),
+        isPremium: z.boolean().default(false) 
+      }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
@@ -223,49 +231,41 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
+        const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        const actor = actorRes[0];
+
         if (isReseller) {
-          const actor = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-          if (!actor.length || !actor[0].isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas revendedores Premium podem criar outros revendedores." });
+          if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas revendedores Premium podem criar outros revendedores." });
           
-          // Verificar se tem créditos suficientes para a carga inicial
-          const types = [{ n: 'basic', a: input.creditsBasic }, { n: 'advanced', a: input.creditsAdvanced }, { n: 'ios', a: input.creditsIos }];
-          for (const t of types) {
-            if (t.a > 0) {
-              const c = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, t.n))).limit(1);
-              if (!c.length || c[0].amount < t.a) throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${t.n} para carga inicial.` });
-            }
-          }
+          if ((actor.creditsBasic || 0) < input.creditsBasic) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Basic insuficientes." });
+          if ((actor.creditsAdvanced || 0) < input.creditsAdvanced) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Advanced insuficientes." });
+          if ((actor.creditsIos || 0) < input.creditsIos) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos iOS insuficientes." });
+          if ((actor.creditsAndroid || 0) < input.creditsAndroid) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Android insuficientes." });
         } else if (!isMod) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
         const passHash = hashPassword(input.password);
-        const [res] = await db.insert(users).values({
+        await db.insert(users).values({
           openId: input.username,
           role: "reseller",
           passwordHash: passHash as any,
           resellerId: isReseller ? ctx.user.id : null,
           isActive: true,
-          isPremium: isMod ? input.isPremium : false, // Apenas mod pode criar outro Premium
+          isPremium: isMod ? input.isPremium : false,
+          creditsBasic: input.creditsBasic,
+          creditsAdvanced: input.creditsAdvanced,
+          creditsIos: input.creditsIos,
+          creditsAndroid: input.creditsAndroid,
         });
 
-        const newUserId = (res as any).insertId;
-        if (newUserId) {
-          const initialCredits = [
-            { name: 'basic', amount: input.creditsBasic },
-            { name: 'advanced', amount: input.creditsAdvanced },
-            { name: 'ios', amount: input.creditsIos }
-          ];
-          for (const c of initialCredits) {
-            if (c.amount > 0) {
-              await db.insert(userCredits).values({ userId: newUserId, productName: c.name, amount: c.amount });
-              // Se for revendedor criando outro, desconta do pai
-              if (isReseller) {
-                const parentCred = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, c.name))).limit(1);
-                await db.update(userCredits).set({ amount: parentCred[0].amount - c.amount }).where(eq(userCredits.id, parentCred[0].id));
-              }
-            }
-          }
+        if (isReseller) {
+          await db.update(users).set({
+            creditsBasic: (actor.creditsBasic || 0) - input.creditsBasic,
+            creditsAdvanced: (actor.creditsAdvanced || 0) - input.creditsAdvanced,
+            creditsIos: (actor.creditsIos || 0) - input.creditsIos,
+            creditsAndroid: (actor.creditsAndroid || 0) - input.creditsAndroid,
+          }).where(eq(users.id, ctx.user.id));
         }
 
         await db.insert(logs).values({
@@ -278,7 +278,7 @@ export const appRouter = router({
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.string(), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "android"]), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
@@ -286,36 +286,34 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        const targetReseller = await db.select().from(users).where(eq(users.id, input.resellerId)).limit(1);
-        if (targetReseller.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
-        const sub = targetReseller[0];
+        const targetResellerRes = await db.select().from(users).where(eq(users.id, input.resellerId)).limit(1);
+        if (targetResellerRes.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
+        const sub = targetResellerRes[0];
+
+        const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        const actor = actorRes[0];
+
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", android: "creditsAndroid" };
+        const col = colMap[input.type];
 
         if (isReseller) {
-          const actor = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-          if (!actor.length || !actor[0].isPremium) throw new TRPCError({ code: "FORBIDDEN" });
+          if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN" });
           if (sub.resellerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode gerenciar seus próprios revendedores." });
           
           if (input.action === "add") {
-            const parentCred = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, input.type))).limit(1);
-            if (!parentCred.length || parentCred[0].amount < input.amount) throw new TRPCError({ code: "BAD_REQUEST", message: "Saldo insuficiente." });
+            const parentAmount = (actor as any)[col] || 0;
+            if (parentAmount < input.amount) throw new TRPCError({ code: "BAD_REQUEST", message: "Saldo insuficiente." });
             
-            // Descontar do pai
-            await db.update(userCredits).set({ amount: parentCred[0].amount - input.amount }).where(eq(userCredits.id, parentCred[0].id));
+            await db.update(users).set({ [col]: parentAmount - input.amount }).where(eq(users.id, actor.id));
           }
         } else if (!isMod) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
-        const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, input.resellerId), eq(userCredits.productName, input.type))).limit(1);
+        const currentSubAmount = (sub as any)[col] || 0;
+        const newAmount = input.action === "add" ? currentSubAmount + input.amount : Math.max(0, currentSubAmount - input.amount);
         
-        let newAmount = 0;
-        if (currentCredit.length > 0) {
-          newAmount = input.action === "add" ? currentCredit[0].amount + input.amount : Math.max(0, currentCredit[0].amount - input.amount);
-          await db.update(userCredits).set({ amount: newAmount }).where(eq(userCredits.id, currentCredit[0].id));
-        } else {
-          newAmount = input.action === "add" ? input.amount : 0;
-          await db.insert(userCredits).values({ userId: input.resellerId, productName: input.type, amount: newAmount });
-        }
+        await db.update(users).set({ [col]: newAmount }).where(eq(users.id, sub.id));
 
         await db.insert(logs).values({
           userId: ctx.user.id,
@@ -348,96 +346,7 @@ export const appRouter = router({
         return { success: true, isPremium: newStatus };
       }),
 
-    listProducts: protectedProcedure.query(async ({ ctx }) => {
-      const db = await getDb();
-      if (!db) return [];
-      const prods = await db.select().from(products).orderBy(desc(products.id));
-      return prods;
-    }),
 
-    addProduct: protectedProcedure
-      .input(z.object({
-        name: z.string(),
-        displayName: z.string(),
-        description: z.string().optional(),
-        isShared: z.boolean().default(false),
-        link: z.string().optional(),
-        tutorialUrl: z.string().optional(),
-        type: z.string().default("advanced"),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-        const cleanName = input.name.trim().toLowerCase().replace(/\s+/g, '_');
-        const existing = await db.select().from(products).where(eq(products.name, cleanName)).limit(1);
-        if (existing.length > 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Já existe um produto com este identificador." });
-        }
-
-        await db.insert(products).values({
-          name: cleanName,
-          displayName: input.displayName,
-          description: input.description || "",
-          isShared: input.isShared,
-          link: input.link || null,
-          tutorialUrl: input.tutorialUrl || null,
-          type: input.type,
-        });
-
-        await db.insert(logs).values({
-          userId: ctx.user.id,
-          action: "ADD_PRODUCT",
-          details: `Moderador criou novo produto: ${input.displayName} (${cleanName})`,
-        });
-
-        return { success: true };
-      }),
-
-    updateProduct: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        displayName: z.string(),
-        description: z.string().optional(),
-        isShared: z.boolean(),
-        link: z.string().optional(),
-        tutorialUrl: z.string().optional(),
-        type: z.string(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-        await db.update(products).set({
-          displayName: input.displayName,
-          description: input.description || "",
-          isShared: input.isShared,
-          link: input.link || null,
-          tutorialUrl: input.tutorialUrl || null,
-          type: input.type,
-        }).where(eq(products.id, input.id));
-
-        await db.insert(logs).values({
-          userId: ctx.user.id,
-          action: "UPDATE_PRODUCT",
-          details: `Moderador atualizou produto ID ${input.id}: ${input.displayName}`,
-        });
-
-        return { success: true };
-      }),
-
-    deleteProduct: protectedProcedure
-      .input(z.object({ productId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-        await db.delete(products).where(eq(products.id, input.productId));
-        return { success: true };
-      }),
 
     listClients: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
@@ -851,9 +760,12 @@ export const appRouter = router({
       }
 
       return {
-        creditsBasic: reseller.creditsBasic || 0,
-        creditsAdvanced: reseller.creditsAdvanced || 0,
-        creditsIos: reseller.creditsIos || 0,
+        credits: {
+          basic: reseller.creditsBasic || 0,
+          advanced: reseller.creditsAdvanced || 0,
+          ios: reseller.creditsIos || 0,
+          android: reseller.creditsAndroid || 0,
+        },
         isPremium,
         clientsCount: clientsFormatted.length,
         clients: clientsFormatted,
@@ -861,7 +773,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.string(), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "android"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -873,13 +785,16 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Este nome de usuário já está em uso." });
         }
 
-        const dbProduct = await db.select().from(products).where(eq(products.name, input.type)).limit(1);
-        const productType = dbProduct.length > 0 ? dbProduct[0].type : (input.type.startsWith("ios") ? "ios" : "advanced");
+        const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        const actor = actorRes[0];
+
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", android: "creditsAndroid" };
+        const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {
-          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, input.type))).limit(1);
-          if (!currentCredit.length || currentCredit[0].amount < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${input.type}.` });
+          const currentAmount = (actor as any)[col] || 0;
+          if (currentAmount < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${input.type.toUpperCase()}.` });
           }
         }
 
@@ -935,10 +850,8 @@ export const appRouter = router({
         // already handled above
 
         if (ctx.user.role === "reseller") {
-          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, input.type))).limit(1);
-          if (currentCredit.length > 0) {
-            await db.update(userCredits).set({ amount: Math.max(0, currentCredit[0].amount - 1) }).where(eq(userCredits.id, currentCredit[0].id));
-          }
+          const currentAmount = (actor as any)[col] || 0;
+          await db.update(users).set({ [col]: Math.max(0, currentAmount - 1) }).where(eq(users.id, ctx.user.id));
         }
 
         await db.insert(logs).values({
@@ -988,7 +901,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number(), type: z.string() }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "android"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -1003,15 +916,16 @@ export const appRouter = router({
         if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
         const client = clientRes[0];
 
-        const targetType = input.type;
-        const dbProduct = await db.select().from(products).where(eq(products.name, targetType)).limit(1);
-        const productType = dbProduct.length > 0 ? dbProduct[0].type : (targetType.startsWith("ios") ? "ios" : "advanced");
+        const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        const actor = actorRes[0];
 
-        // Verificar créditos do ator (se for revendedor)
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", android: "creditsAndroid" };
+        const col = colMap[input.type];
+
         if (ctx.user.role === "reseller") {
-          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, targetType))).limit(1);
-          if (!currentCredit.length || currentCredit[0].amount < 1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${targetType} para renovação.` });
+          const currentAmount = (actor as any)[col] || 0;
+          if (currentAmount < 1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${input.type.toUpperCase()} para renovação.` });
           }
         }
 
@@ -1056,10 +970,8 @@ export const appRouter = router({
 
         // Descontar crédito apenas se for revendedor
         if (ctx.user.role === "reseller") {
-          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, targetType))).limit(1);
-          if (currentCredit.length > 0) {
-            await db.update(userCredits).set({ amount: Math.max(0, currentCredit[0].amount - 1) }).where(eq(userCredits.id, currentCredit[0].id));
-          }
+          const currentAmount = (actor as any)[col] || 0;
+          await db.update(users).set({ [col]: Math.max(0, currentAmount - 1) }).where(eq(users.id, ctx.user.id));
         }
 
         // Deletar sessões ativas do cliente para forçar novo login/atualização

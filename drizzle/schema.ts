@@ -54,17 +54,7 @@ export const tutorials = mysqlTable("tutorials", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-export const products = mysqlTable("products", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 100 }).notNull().unique(),
-  displayName: varchar("displayName", { length: 255 }).notNull(),
-  description: text("description"),
-  isShared: boolean("isShared").default(false).notNull(), // true para iOS rotativo, false para single-use Basic/Advanced
-  link: text("link"),
-  tutorialUrl: text("tutorialUrl"),
-  type: varchar("type", { length: 50 }).default("advanced").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+
 
 export const sessions = mysqlTable("sessions", {
   id: int("id").autoincrement().primaryKey(),
@@ -83,13 +73,7 @@ export const logs = mysqlTable("logs", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-export const userCredits = mysqlTable("user_credits", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  productName: varchar("productName", { length: 100 }).notNull(),
-  amount: int("amount").default(0).notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -98,4 +82,4 @@ export type Download = typeof downloads.$inferSelect;
 export type Tutorial = typeof tutorials.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Log = typeof logs.$inferSelect;
-export type UserCredit = typeof userCredits.$inferSelect;
+

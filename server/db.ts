@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { users, keys, downloads, tutorials, sessions, logs, userCredits, User, InsertUser } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, sessions, logs, User, InsertUser } from "../drizzle/schema";
 import { hashPassword } from "./auth";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -36,35 +36,7 @@ async function ensureTables(dbUrl: string) {
       )
     `);
 
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        displayName VARCHAR(255) NOT NULL,
-        description TEXT,
-        isShared BOOLEAN DEFAULT FALSE NOT NULL,
-        link TEXT,
-        tutorialUrl TEXT,
-        type VARCHAR(50) DEFAULT 'advanced' NOT NULL,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-      )
-    `);
 
-    // Inserir produtos padrão se vazios
-    try {
-      const [rows]: any = await connection.query("SELECT COUNT(*) as cnt FROM products");
-      if (rows[0].cnt === 0) {
-        await connection.query(`
-          INSERT INTO products (name, displayName, description, isShared, type) VALUES
-          ('basic', 'Proxy Android Basic', 'Proxy Android básico single-use', FALSE, 'android'),
-          ('advanced', 'Proxy Android Advanced', 'Proxy Android avançado single-use', FALSE, 'android'),
-          ('android', 'Proxy Android Geral', 'Proxy Android padrão', FALSE, 'android'),
-          ('ios', 'Proxy iOS Geral', 'Proxy iOS compartilhado com rotação', TRUE, 'ios'),
-          ('ios_basic', 'Proxy iOS Basic', 'Proxy iOS básico', TRUE, 'ios'),
-          ('ios_advanced', 'Proxy iOS Advanced', 'Proxy iOS avançado', TRUE, 'ios')
-        `);
-      }
-    } catch (e) {}
 
     const alterQueries = [
       "ALTER TABLE users ADD COLUMN passwordHash VARCHAR(255)",
@@ -151,16 +123,7 @@ async function ensureTables(dbUrl: string) {
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS user_credits (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        userId INT NOT NULL,
-        productName VARCHAR(100) NOT NULL,
-        amount INT DEFAULT 0 NOT NULL,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
-        UNIQUE KEY user_product (userId, productName)
-      )
-    `);
+
     await connection.end();
     console.log("[Database] Tables and columns verified and ensured successfully.");
   } catch (err) {
@@ -174,7 +137,6 @@ export async function getDb() {
       await ensureTables(process.env.DATABASE_URL);
       _db = drizzle(process.env.DATABASE_URL);
       await seedDefaultModerator(_db);
-      await migrateLegacyCredits(_db);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -237,32 +199,4 @@ export async function createLog(userId: number | null, action: string, details?:
   }
 }
 
-async function migrateLegacyCredits(db: any) {
-  try {
-    const allUsers = await db.select().from(users);
-    for (const user of allUsers) {
-      const legacyTypes = [
-        { name: 'basic', amount: user.creditsBasic },
-        { name: 'advanced', amount: user.creditsAdvanced },
-        { name: 'ios', amount: user.creditsIos },
-        { name: 'android', amount: user.creditsAndroid || 0 }
-      ];
 
-      for (const type of legacyTypes) {
-        if (type.amount > 0) {
-          try {
-            await db.insert(userCredits).values({
-              userId: user.id,
-              productName: type.name,
-              amount: type.amount
-            }).onDuplicateKeyUpdate({
-              set: { amount: type.amount }
-            });
-          } catch (e) {}
-        }
-      }
-    }
-  } catch (err) {
-    console.error("[Database] Migration error:", err);
-  }
-}

@@ -17,9 +17,7 @@ export default function Home() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: productsList, refetch: refetchProducts } = trpc.moderator.listProducts.useQuery(undefined, {
-    enabled: !!user
-  });
+
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -117,15 +115,15 @@ export default function Home() {
       </header>
 
       <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full">
-        {user.role === "moderator" && <ModeratorDashboard productsList={productsList} refetchProducts={refetchProducts} />}
-        {user.role === "reseller" && <ResellerDashboard productsList={productsList} />}
-        {user.role === "client" && <ClientDashboard productsList={productsList} />}
+        {user.role === "moderator" && <ModeratorDashboard />}
+        {user.role === "reseller" && <ResellerDashboard />}
+        {user.role === "client" && <ClientDashboard />}
       </main>
     </div>
   );
 }
 
-function ModeratorDashboard({ productsList, refetchProducts }: any) {
+function ModeratorDashboard() {
   const { data: stats } = trpc.moderator.dashboardStats.useQuery();
   const { data: resellers, refetch: refetchResellers } = trpc.moderator.listResellers.useQuery();
   const { data: clients, refetch: refetchClients } = trpc.moderator.listClients.useQuery();
@@ -168,33 +166,7 @@ function ModeratorDashboard({ productsList, refetchProducts }: any) {
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
   const [modRenewingClient, setModRenewingClient] = useState<{ id: number; username: string } | null>(null);
   const [modClientSearch, setModClientSearch] = useState("");
-  const [newProductName, setNewProductName] = useState("");
-  const [newProductDisplayName, setNewProductDisplayName] = useState("");
-  const [newProductDesc, setNewProductDesc] = useState("");
-  const [newProductIsShared, setNewProductIsShared] = useState(false);
-  const [newProductLink, setNewProductLink] = useState("");
-  const [newProductTutorialUrl, setNewProductTutorialUrl] = useState("");
-  const [newProductType, setNewProductType] = useState("advanced");
 
-  const addProductMutation = trpc.moderator.addProduct.useMutation({
-    onSuccess: () => {
-      toast.success("Produto customizado criado com sucesso!");
-      setNewProductName("");
-      setNewProductDisplayName("");
-      setNewProductDesc("");
-      setNewProductLink("");
-      setNewProductTutorialUrl("");
-      refetchProducts();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-  const deleteProductMutation = trpc.moderator.deleteProduct.useMutation({
-    onSuccess: () => {
-      toast.success("Produto excluído!");
-      refetchProducts();
-    },
-    onError: (e) => toast.error(e.message),
-  });
 
   const deleteExpiredKeysMutation = trpc.moderator.deleteExpiredKeys.useMutation({
     onSuccess: (data) => {
@@ -427,7 +399,6 @@ function ModeratorDashboard({ productsList, refetchProducts }: any) {
             <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Keys Banidas / Usadas</TabsTrigger>
             <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
             <TabsTrigger value="tutorials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Tutoriais</TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Produtos</TabsTrigger>
             <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs de Auditoria</TabsTrigger>
           </TabsList>
         </div>
@@ -490,22 +461,23 @@ function ModeratorDashboard({ productsList, refetchProducts }: any) {
                       <TableCell className="font-mono text-white">#{r.id}</TableCell>
                       <TableCell className="font-bold text-white">{r.username}</TableCell>
                       <TableCell className="space-y-1">
-                        {productsList?.map((prod) => (
-                          <div key={prod.id} className="text-[10px] font-mono text-white flex items-center gap-1">
-                            <span className="opacity-70">{prod.displayName}:</span>
-                            <strong className={
-                              prod.type === 'ios' ? 'text-blue-400' : 
-                              prod.type === 'advanced' ? 'text-amber-400' : 
-                              prod.type === 'android' ? 'text-emerald-400' : 'text-red-500'
-                            }>
-                              {(r.credits as any)?.[prod.name] || 0}
+                        {[
+                          { name: 'basic', label: 'Basic', color: 'text-red-500' },
+                          { name: 'advanced', label: 'Advanced', color: 'text-amber-400' },
+                          { name: 'ios', label: 'iOS', color: 'text-blue-400' },
+                          { name: 'android', label: 'Android', color: 'text-emerald-400' }
+                        ].map((cat) => (
+                          <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
+                            <span className="opacity-70">{cat.label}:</span>
+                            <strong className={cat.color}>
+                              {(r.credits as any)?.[cat.name] || 0}
                             </strong>
                             <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline text-[10px]" onClick={() => {
-                              const action = prompt(`Adicionar ou remover créditos ${prod.displayName} para ${r.username}? (add ou remove):`);
+                              const action = prompt(`Adicionar ou remover créditos ${cat.label} para ${r.username}? (add ou remove):`);
                               if (action === "add" || action === "remove") {
                                 const val = prompt("Quantidade:");
                                 const num = parseInt(val || "0", 10);
-                                if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: prod.name, action, amount: num });
+                                if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: cat.name as any, action, amount: num });
                               }
                             }}>±</Button>
                           </div>
@@ -1160,115 +1132,7 @@ function ModeratorDashboard({ productsList, refetchProducts }: any) {
           </Card>
         </TabsContent>
 
-        {/* GERENCIAR PRODUTOS */}
-        <TabsContent value="products" className="space-y-4">
-          <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader><CardTitle className="text-white">Adicionar Novo Produto / Tipo de Proxy</CardTitle></CardHeader>
-            <CardContent>
-              <div className="flex gap-4 items-end flex-wrap">
-                <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Identificador (ex: vip_5g)</label>
-                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="vip_5g" />
-                </div>
-                <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Nome de Exibição</label>
-                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductDisplayName} onChange={(e) => setNewProductDisplayName(e.target.value)} placeholder="Proxy VIP 5G" />
-                </div>
-                <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Descrição</label>
-                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductDesc} onChange={(e) => setNewProductDesc(e.target.value)} placeholder="Descrição do produto" />
-                </div>
-                <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Link do Produto</label>
-                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductLink} onChange={(e) => setNewProductLink(e.target.value)} placeholder="https://..." />
-                </div>
-                <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Link do Tutorial</label>
-                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductTutorialUrl} onChange={(e) => setNewProductTutorialUrl(e.target.value)} placeholder="https://youtube.com/..." />
-                </div>
-                <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Categoria</label>
-                  <select 
-                    className="flex h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                    value={newProductType}
-                    onChange={(e) => setNewProductType(e.target.value)}
-                  >
-                    <option value="basic">Basic</option>
-                    <option value="advanced">Advanced</option>
-                    <option value="ios">iOS</option>
-                    <option value="android">Android</option>
-                  </select>
-                </div>
-                <div className="flex items-center space-x-2 pt-2">
-                  <input type="checkbox" id="isSharedProd" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newProductIsShared} onChange={(e) => setNewProductIsShared(e.target.checked)} />
-                  <label htmlFor="isSharedProd" className="text-xs font-bold text-amber-400 cursor-pointer">Compartilhado / Rotativo (Estilo iOS)</label>
-                </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => addProductMutation.mutate({ 
-                  name: newProductName, 
-                  displayName: newProductDisplayName, 
-                  description: newProductDesc, 
-                  isShared: newProductIsShared,
-                  link: newProductLink,
-                  tutorialUrl: newProductTutorialUrl,
-                  type: newProductType
-                })}>
-                  Adicionar Produto
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader><CardTitle className="text-white">Produtos Cadastrados no Sistema</CardTitle></CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto"><Table>
-                <TableHeader>
-                  <TableRow className="border-neutral-800">
-                    <TableHead className="text-white font-bold">ID</TableHead>
-                    <TableHead className="text-white font-bold">Identificador</TableHead>
-                    <TableHead className="text-white font-bold">Nome Exibição</TableHead>
-                    <TableHead className="text-white font-bold">Categoria</TableHead>
-                    <TableHead className="text-white font-bold">Tipo de Key</TableHead>
-                    <TableHead className="text-white font-bold">Links</TableHead>
-                    <TableHead className="text-white font-bold text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {productsList?.map((p) => (
-                    <TableRow key={p.id} className="border-neutral-800">
-                      <TableCell className="font-mono text-white">#{p.id}</TableCell>
-                      <TableCell className="font-mono text-cyan-400">{p.name}</TableCell>
-                      <TableCell className="font-bold text-white">{p.displayName}</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-950 text-red-400 border-red-800 uppercase text-[10px]">
-                          {p.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={p.isShared ? "bg-blue-950 text-blue-400 border-blue-800" : "bg-neutral-800 text-white"}>
-                          {p.isShared ? "Rotativo / Compartilhado" : "Single-Use (Exclusiva)"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {p.link && <a href={p.link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 underline">Link</a>}
-                          {p.tutorialUrl && <a href={p.tutorialUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 underline">Tutorial</a>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="destructive" onClick={() => {
-                          if (confirm("Excluir produto?")) deleteProductMutation.mutate({ productId: p.id });
-                        }}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table></div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* LOGS */}
         <TabsContent value="logs" className="space-y-4">
@@ -1303,7 +1167,7 @@ function ModeratorDashboard({ productsList, refetchProducts }: any) {
   );
 }
 
-function ResellerDashboard({ productsList }: any) {
+function ResellerDashboard() {
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
   const { data: subResellers, refetch: refetchSubResellers } = trpc.moderator.listResellers.useQuery(undefined, {
     enabled: !!data?.isPremium
@@ -1384,18 +1248,19 @@ function ResellerDashboard({ productsList }: any) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {productsList?.map((prod: any) => (
-          <Card key={prod.id} className="bg-[#141414] border-neutral-800 text-white">
+        {[
+          { name: 'basic', label: 'Basic', color: 'text-red-600' },
+          { name: 'advanced', label: 'Advanced', color: 'text-amber-400' },
+          { name: 'ios', label: 'iOS', color: 'text-blue-400' },
+          { name: 'android', label: 'Android', color: 'text-emerald-400' }
+        ].map((cat) => (
+          <Card key={cat.name} className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs uppercase text-white">Créditos {prod.displayName}</CardTitle>
+              <CardTitle className="text-xs uppercase text-white">Créditos {cat.label}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-4xl font-black ${
-                prod.type === 'ios' ? 'text-blue-400' : 
-                prod.type === 'advanced' ? 'text-amber-400' : 
-                prod.type === 'android' ? 'text-emerald-400' : 'text-red-600'
-              }`}>
-                {(data?.credits as any)?.[prod.name] || 0}
+              <div className={`text-4xl font-black ${cat.color}`}>
+                {(data?.credits as any)?.[cat.name] || 0}
               </div>
             </CardContent>
           </Card>
@@ -1443,9 +1308,10 @@ function ResellerDashboard({ productsList }: any) {
             <div>
               <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
-                {productsList?.map(p => (
-                  <option key={p.id} value={p.name}>{p.displayName}</option>
-                ))}
+                <option value="basic">Proxy Android Basic</option>
+                <option value="advanced">Proxy Android Advanced</option>
+                <option value="ios">Proxy iOS</option>
+                <option value="android">Proxy Android</option>
               </select>
             </div>
             <div>
@@ -1480,9 +1346,10 @@ function ResellerDashboard({ productsList }: any) {
             <div>
               <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={renewType} onChange={(e: any) => setRenewType(e.target.value)}>
-                {productsList?.map(p => (
-                  <option key={p.id} value={p.name}>{p.displayName}</option>
-                ))}
+                <option value="basic">Proxy Android Basic</option>
+                <option value="advanced">Proxy Android Advanced</option>
+                <option value="ios">Proxy iOS</option>
+                <option value="android">Proxy Android</option>
               </select>
             </div>
             <div className="flex gap-2 justify-end">
@@ -1606,16 +1473,21 @@ function ResellerDashboard({ productsList }: any) {
                       <TableRow key={r.id} className="border-neutral-800">
                         <TableCell className="font-bold text-white">{r.username}</TableCell>
                         <TableCell className="space-y-1">
-                          {productsList?.map((prod: any) => (
-                            <div key={prod.id} className="text-[10px] font-mono text-white flex items-center gap-1">
-                              <span className="opacity-70">{prod.displayName}:</span>
-                              <strong className="text-red-500">{(r.credits as any)?.[prod.name] || 0}</strong>
+                          {[
+                            { name: 'basic', label: 'Basic' },
+                            { name: 'advanced', label: 'Advanced' },
+                            { name: 'ios', label: 'iOS' },
+                            { name: 'android', label: 'Android' }
+                          ].map((cat) => (
+                            <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
+                              <span className="opacity-70">{cat.label}:</span>
+                              <strong className="text-red-500">{(r.credits as any)?.[cat.name] || 0}</strong>
                               <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline text-[10px]" onClick={() => {
-                                const action = prompt(`Adicionar ou remover créditos ${prod.displayName} para ${r.username}? (add ou remove):`);
+                                const action = prompt(`Adicionar ou remover créditos ${cat.label} para ${r.username}? (add ou remove):`);
                                 if (action === "add" || action === "remove") {
                                   const val = prompt("Quantidade:");
                                   const num = parseInt(val || "0", 10);
-                                  if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: prod.name, action, amount: num });
+                                  if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: cat.name as any, action, amount: num });
                                 }
                               }}>±</Button>
                             </div>
@@ -1640,7 +1512,7 @@ function ResellerDashboard({ productsList }: any) {
   );
 }
 
-function ClientDashboard({ productsList }: any) {
+function ClientDashboard() {
   const { data, isLoading } = trpc.clientPanel.dashboard.useQuery();
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState(5);
@@ -1776,28 +1648,7 @@ function ClientDashboard({ productsList }: any) {
         </CardContent>
       </Card>
 
-      {/* PRODUTO ATUAL - LINKS RÁPIDOS */}
-      {productsList?.find((p: any) => p.name === data?.keyType) && (
-        <Card className="bg-red-950/20 border-red-900/50 text-white">
-          <CardHeader><CardTitle className="text-white text-sm uppercase">Links do seu Produto: {productsList.find((p: any) => p.name === data?.keyType).displayName}</CardTitle></CardHeader>
-          <CardContent className="flex gap-4 flex-wrap">
-            {productsList.find((p: any) => p.name === data?.keyType).link && (
-              <a href={productsList.find((p: any) => p.name === data?.keyType).link} target="_blank" rel="noopener noreferrer">
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <DownloadIcon className="w-4 h-4 mr-2" /> Download do Produto
-                </Button>
-              </a>
-            )}
-            {productsList.find((p: any) => p.name === data?.keyType).tutorialUrl && (
-              <a href={productsList.find((p: any) => p.name === data?.keyType).tutorialUrl} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white">
-                  <Video className="w-4 h-4 mr-2" /> Ver Tutorial do Produto
-                </Button>
-              </a>
-            )}
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* DOWNLOADS */}
       <Card className="bg-[#141414] border-neutral-800 text-white">

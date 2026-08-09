@@ -29,6 +29,7 @@ export const keys = mysqlTable("keys", {
   type: mysqlEnum("type", ["basic", "advanced", "ios"]).default("advanced").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   isUsed: boolean("isUsed").default(false).notNull(),
+  isBanned: boolean("isBanned").default(false).notNull(),
   usedAt: timestamp("usedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

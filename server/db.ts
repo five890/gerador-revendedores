@@ -43,6 +43,7 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE users ADD COLUMN expiresAt TIMESTAMP NULL",
       "ALTER TABLE \`keys\` ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
       "ALTER TABLE \`keys\` ADD COLUMN usedAt TIMESTAMP NULL",
+      "ALTER TABLE \`keys\` ADD COLUMN isBanned BOOLEAN DEFAULT FALSE",
       "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
       "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'"
     ];
@@ -52,9 +53,9 @@ async function ensureTables(dbUrl: string) {
       } catch (e) {}
     }
 
-    // Update existing keys / downloads / tutorials to advanced if not set or if they were basic by default
+    // Apenas define advanced caso seja null ou vazio
     try {
-      await connection.query("UPDATE \`keys\` SET type = 'advanced' WHERE type = 'basic' OR type IS NULL");
+      await connection.query("UPDATE \`keys\` SET type = 'advanced' WHERE type IS NULL");
     } catch (e) {}
 
     await connection.query(`

@@ -49,3 +49,9 @@
 - [x] Garantir que renovação gere nova chave e atualize link e validade de 24h
 - [x] Exibir mensagem de bloqueio por expiração de 24h no painel do cliente
 - [x] Preservar intactos todos os slots de chaves Basic e Advanced
+- [x] Chaves Basic/Advanced usadas somem do estoque ativo (banidas/queimadas) mas continuam no login do cliente
+- [x] Criar área de "Keys Banidas" no painel do moderador para visualizar o histórico de chaves usadas
+- [x] Exibir data/hora exata de uso e contagem regressiva de expiração de 24h nos painéis de cliente, revendedor e moderador
+- [x] Garantir preservação total dos estoques Basic e Advanced em qualquer alteração
+- [x] Revendedores normais veem apenas seus próprios clientes; apenas revendedores Premium e Moderador veem todos os revendedores/clientes
+- [x] Adicionar proteção visual (anti-screen sharing / overlay de segurança) nas abas após o login

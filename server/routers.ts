@@ -318,6 +318,12 @@ export const appRouter = router({
           if (rRes.length > 0) resellerName = rRes[0].openId;
         }
 
+        let usedAt = null;
+        if (c.keyId) {
+          const kRes = await db.select().from(keys).where(eq(keys.id, c.keyId)).limit(1);
+          if (kRes.length > 0) usedAt = kRes[0].usedAt;
+        }
+
         result.push({
           id: c.id,
           username: c.openId,
@@ -325,6 +331,8 @@ export const appRouter = router({
           maxDevices: c.maxDevices || 1,
           keyValue,
           resellerName,
+          expiresAt: c.expiresAt ? new Date(c.expiresAt).getTime() : null,
+          usedAt: usedAt ? new Date(usedAt).getTime() : null,
         });
       }
       return result;
@@ -437,6 +445,7 @@ export const appRouter = router({
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
       if (!db) return [];
+      // Retorna todas para a aba de banidas/histórico, mas as tabelas ativas podem filtrar isBanned !== true
       return await db.select().from(keys).orderBy(desc(keys.id));
     }),
 
@@ -661,19 +670,43 @@ export const appRouter = router({
       const resellerRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const reseller = resellerRes[0];
 
-      const clientsList = await db.select().from(users).where(eq(users.resellerId, ctx.user.id));
+      const isPremium = reseller.isPremium || false;
+      // Se for premium, vê todos os clientes do sistema; senão, apenas os seus
+      const clientsList = isPremium
+        ? await db.select().from(users).where(eq(users.role, "client"))
+        : await db.select().from(users).where(eq(users.resellerId, ctx.user.id));
+
+      const clientsFormatted = [];
+      for (const c of clientsList) {
+        let keyValue = "Nenhuma";
+        if (c.keyId) {
+          const kRes = await db.select().from(keys).where(eq(keys.id, c.keyId)).limit(1);
+          if (kRes.length > 0) keyValue = kRes[0].keyValue;
+        }
+        let usedAt = null;
+        if (c.keyId) {
+          const kRes = await db.select().from(keys).where(eq(keys.id, c.keyId)).limit(1);
+          if (kRes.length > 0) usedAt = kRes[0].usedAt;
+        }
+
+        clientsFormatted.push({
+          id: c.id,
+          username: c.openId,
+          isActive: c.isActive,
+          maxDevices: c.maxDevices || 1,
+          keyValue,
+          expiresAt: c.expiresAt ? new Date(c.expiresAt).getTime() : null,
+          usedAt: usedAt ? new Date(usedAt).getTime() : null,
+        });
+      }
 
       return {
         creditsBasic: reseller.creditsBasic || 0,
         creditsAdvanced: reseller.creditsAdvanced || 0,
         creditsIos: reseller.creditsIos || 0,
-        isPremium: reseller.isPremium || false,
-        clientsCount: clientsList.length,
-        clients: clientsList.map((c) => ({
-          id: c.id,
-          username: c.openId,
-          isActive: c.isActive,
-        })),
+        isPremium,
+        clientsCount: clientsFormatted.length,
+        clients: clientsFormatted,
       };
     }),
 
@@ -733,11 +766,12 @@ export const appRouter = router({
           if (unusedKey.length > 0) {
             keyId = unusedKey[0].id;
             keyValueUsed = unusedKey[0].keyValue;
-            await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
+            // Ao ser usada em Basic/Advanced, a chave é banida/removida do estoque ativo, mas preservada no usuário
+            await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: now }).where(eq(keys.id, keyId));
           } else {
-            // Se o estoque acabou, gera uma nova chave exclusiva para este cliente
+            // Se o estoque acabou, gera uma nova chave exclusiva que já nasce usada/banida do estoque ativo
             keyValueUsed = "KEY-" + input.type.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-            await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true, usedAt: now });
+            await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true, isBanned: true, usedAt: now });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
             if (inserted.length > 0) keyId = inserted[0].id;
           }
@@ -876,10 +910,10 @@ export const appRouter = router({
           if (unusedKey.length > 0) {
             newKeyId = unusedKey[0].id;
             newKeyValue = unusedKey[0].keyValue;
-            await db.update(keys).set({ isUsed: true }).where(eq(keys.id, newKeyId));
+            await db.update(keys).set({ isUsed: true, isBanned: true }).where(eq(keys.id, newKeyId));
           } else {
             newKeyValue = "KEY-" + targetType.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-            await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true, isUsed: true });
+            await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true, isUsed: true, isBanned: true });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
             if (inserted.length > 0) newKeyId = inserted[0].id;
           }
@@ -889,7 +923,7 @@ export const appRouter = router({
         const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
 
         if (newKeyId) {
-          await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+          await db.update(keys).set({ isUsed: true, isBanned: targetType !== "ios", usedAt: renewalNow }).where(eq(keys.id, newKeyId));
         }
 
         // Atualizar cliente com a nova key mais recente e renovar validade por 24h

@@ -393,6 +393,7 @@ function ModeratorDashboard() {
             <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Revendedores</TabsTrigger>
             <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Clientes</TabsTrigger>
             <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Keys</TabsTrigger>
+            <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Keys Banidas / Usadas</TabsTrigger>
             <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
             <TabsTrigger value="tutorials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Tutoriais</TabsTrigger>
             <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs de Auditoria</TabsTrigger>
@@ -778,7 +779,7 @@ function ModeratorDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {keysList?.filter(k => k.type === "basic").map((k) => (
+                    {keysList?.filter(k => k.type === "basic" && !k.isBanned && !k.isUsed).map((k) => (
                       <TableRow key={k.id} className="border-neutral-800">
                         <TableCell className="font-mono text-white">#{k.id}</TableCell>
                         <TableCell className="font-mono text-red-500 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
@@ -835,7 +836,7 @@ function ModeratorDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {keysList?.filter(k => k.type === "advanced").map((k) => (
+                    {keysList?.filter(k => k.type === "advanced" && !k.isBanned && !k.isUsed).map((k) => (
                       <TableRow key={k.id} className="border-neutral-800">
                         <TableCell className="font-mono text-white">#{k.id}</TableCell>
                         <TableCell className="font-mono text-amber-400 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
@@ -948,6 +949,59 @@ function ModeratorDashboard() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* KEYS BANIDAS / USADAS */}
+        <TabsContent value="bannedKeys" className="space-y-4">
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader>
+              <CardTitle className="text-white">Histórico de Keys Banidas / Usadas do Estoque</CardTitle>
+              <p className="text-xs text-neutral-400">Estas chaves foram retiradas permanentemente do estoque ativo de Basic e Advanced após serem usadas por clientes, mas continuam ativas para os respectivos usuários.</p>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto"><Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-800">
+                    <TableHead className="text-white font-bold">ID</TableHead>
+                    <TableHead className="text-white font-bold">Chave</TableHead>
+                    <TableHead className="text-white font-bold">Tipo</TableHead>
+                    <TableHead className="text-white font-bold">Data/Hora de Uso</TableHead>
+                    <TableHead className="text-white font-bold text-right">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {keysList?.filter(k => k.isBanned || (k.isUsed && k.type !== 'ios')).map((k) => (
+                    <TableRow key={k.id} className="border-neutral-800">
+                      <TableCell className="font-mono text-white">#{k.id}</TableCell>
+                      <TableCell className="font-mono text-amber-400 font-bold">
+                        {keysRevealed ? k.keyValue : "••••••••••••••••"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-red-950 text-red-400 border-red-800 uppercase text-[10px]">
+                          {k.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-neutral-300 text-xs">
+                        {k.usedAt ? new Date(k.usedAt).toLocaleString() : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge className="bg-amber-950 text-amber-400 border-amber-800">
+                          Banida do Estoque (Em Uso)
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(!keysList || keysList.filter(k => k.isBanned || (k.isUsed && k.type !== 'ios')).length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-neutral-500 py-6">
+                        Nenhuma chave banida/usada no momento.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table></div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* DOWNLOADS */}
@@ -1327,11 +1381,11 @@ function ClientDashboard() {
 
   if (isExpired) {
     return (
-      <div className="max-w-xl mx-auto mt-20 p-6 bg-[#141414] border border-red-600 rounded-xl text-white text-center space-y-4 shadow-2xl">
+      <div className="max-w-xl mx-auto mt-20 p-6 bg-[#141414] border border-red-600 rounded-xl text-white text-center space-y-4 shadow-2xl select-none" style={{ WebkitUserSelect: 'none' }}>
         <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-bounce" />
         <h2 className="text-2xl font-bold text-red-500">Acesso Expirado</h2>
-        <p className="text-sm text-neutral-300">
-          Seu login e sua key expirou, contate o suporte ou compre outra key.
+        <p className="text-sm text-neutral-300 font-medium">
+          Seu login expirou, contate o suporte da Shelby para renovar.
         </p>
         <div className="pt-2">
           <a
@@ -1347,8 +1401,32 @@ function ClientDashboard() {
     );
   }
 
+  // Contagem regressiva em tempo real até expiresAt
+  const [timeLeft, setTimeLeft] = useState("");
+  useEffect(() => {
+    const calc = () => {
+      if (!data?.expiresAt) return;
+      const diff = new Date(data.expiresAt).getTime() - new Date().getTime();
+      if (diff <= 0) {
+        setTimeLeft("Expirado");
+        return;
+      }
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+    };
+    calc();
+    const interval = setInterval(calc, 1000);
+    return () => clearInterval(interval);
+  }, [data?.expiresAt]);
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto text-white">
+    <div className="space-y-6 max-w-4xl mx-auto text-white select-none relative" style={{ WebkitUserSelect: 'none' }}>
+      {/* Overlay anti-screen sharing / screenshot protection */}
+      <div className="absolute inset-0 pointer-events-none z-50 flex items-start justify-end p-2 opacity-10 font-mono text-[10px] text-white overflow-hidden">
+        SHELBY SECURE SESSION - NO SCREENSHARE
+      </div>
       {showAlert && (
         <Card className="bg-[#141414] border-red-600/50 text-white p-4 animate-fade-in shadow-xl">
           <div className="flex items-center gap-3 text-red-500 font-bold mb-2">
@@ -1393,12 +1471,13 @@ function ClientDashboard() {
                 ) : null}
               </div>
               {data?.keyUsedAt && (
-                <div className="text-[11px] text-neutral-400 border-t border-neutral-800 pt-2 mt-2">
-                  Ativada em: <span className="text-white">{new Date(data.keyUsedAt).toLocaleString()}</span>
+                <div className="text-[11px] text-neutral-400 border-t border-neutral-800 pt-2 mt-2 space-y-1">
+                  <div>Ativada em: <span className="text-white">{new Date(data.keyUsedAt).toLocaleString()}</span></div>
                   {data?.expiresAt && (
-                    <div className="text-red-400 mt-1 font-semibold">
-                      Expira em: {new Date(data.expiresAt).toLocaleString()}
-                    </div>
+                    <>
+                      <div className="text-amber-400">Expira em: <span className="text-white">{new Date(data.expiresAt).toLocaleString()}</span></div>
+                      <div className="text-red-400 font-bold">Tempo restante: {timeLeft}</div>
+                    </>
                   )}
                 </div>
               )}

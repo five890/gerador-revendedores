@@ -12,6 +12,7 @@ export const users = mysqlTable("users", {
   creditsBasic: int("creditsBasic").default(0).notNull(),
   creditsAdvanced: int("creditsAdvanced").default(0).notNull(),
   creditsIos: int("creditsIos").default(0).notNull(),
+  creditsAndroid: int("creditsAndroid").default(0).notNull(),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),
@@ -82,6 +83,14 @@ export const logs = mysqlTable("logs", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const userCredits = mysqlTable("user_credits", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  productName: varchar("productName", { length: 100 }).notNull(),
+  amount: int("amount").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Key = typeof keys.$inferSelect;
@@ -89,3 +98,4 @@ export type Download = typeof downloads.$inferSelect;
 export type Tutorial = typeof tutorials.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Log = typeof logs.$inferSelect;
+export type UserCredit = typeof userCredits.$inferSelect;

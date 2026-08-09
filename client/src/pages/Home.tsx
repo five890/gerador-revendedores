@@ -487,30 +487,26 @@ function ModeratorDashboard() {
                       <TableCell className="font-mono text-white">#{r.id}</TableCell>
                       <TableCell className="font-bold text-white">{r.username}</TableCell>
                       <TableCell className="space-y-1">
-                        <div className="text-xs font-mono text-white">Basic: <strong className="text-red-500">{r.creditsBasic}</strong> <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline" onClick={() => {
-                          const action = prompt(`Adicionar ou remover créditos Basic para ${r.username}? (add ou remove):`);
-                          if (action === "add" || action === "remove") {
-                            const val = prompt("Quantidade:");
-                            const num = parseInt(val || "0", 10);
-                            if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "basic", action, amount: num });
-                          }
-                        }}>±</Button></div>
-                        <div className="text-xs font-mono text-white">Advanced: <strong className="text-amber-400">{r.creditsAdvanced}</strong> <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline" onClick={() => {
-                          const action = prompt(`Adicionar ou remover créditos Advanced para ${r.username}? (add ou remove):`);
-                          if (action === "add" || action === "remove") {
-                            const val = prompt("Quantidade:");
-                            const num = parseInt(val || "0", 10);
-                            if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "advanced", action, amount: num });
-                          }
-                        }}>±</Button></div>
-                        <div className="text-xs font-mono text-white">iOS: <strong className="text-blue-400">{r.creditsIos}</strong> <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline" onClick={() => {
-                          const action = prompt(`Adicionar ou remover créditos iOS para ${r.username}? (add ou remove):`);
-                          if (action === "add" || action === "remove") {
-                            const val = prompt("Quantidade:");
-                            const num = parseInt(val || "0", 10);
-                            if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "ios", action, amount: num });
-                          }
-                        }}>±</Button></div>
+                        {productsList?.map((prod) => (
+                          <div key={prod.id} className="text-[10px] font-mono text-white flex items-center gap-1">
+                            <span className="opacity-70">{prod.displayName}:</span>
+                            <strong className={
+                              prod.type === 'ios' ? 'text-blue-400' : 
+                              prod.type === 'advanced' ? 'text-amber-400' : 
+                              prod.type === 'android' ? 'text-emerald-400' : 'text-red-500'
+                            }>
+                              {(r.credits as any)?.[prod.name] || 0}
+                            </strong>
+                            <Button size="sm" variant="ghost" className="text-white p-0 h-auto underline text-[10px]" onClick={() => {
+                              const action = prompt(`Adicionar ou remover créditos ${prod.displayName} para ${r.username}? (add ou remove):`);
+                              if (action === "add" || action === "remove") {
+                                const val = prompt("Quantidade:");
+                                const num = parseInt(val || "0", 10);
+                                if (!isNaN(num) && num > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: prod.name, action, amount: num });
+                              }
+                            }}>±</Button>
+                          </div>
+                        ))}
                       </TableCell>
                       <TableCell className="text-white">{r.clientCount}</TableCell>
                       <TableCell>
@@ -1351,18 +1347,22 @@ function ResellerDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-[#141414] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy Basic</CardTitle></CardHeader>
-          <CardContent><div className="text-4xl font-black text-red-600">{data?.creditsBasic || 0}</div></CardContent>
-        </Card>
-        <Card className="bg-[#141414] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy Advanced</CardTitle></CardHeader>
-          <CardContent><div className="text-4xl font-black text-amber-400">{data?.creditsAdvanced || 0}</div></CardContent>
-        </Card>
-        <Card className="bg-[#141414] border-neutral-800 text-white">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Créditos Proxy iOS</CardTitle></CardHeader>
-          <CardContent><div className="text-4xl font-black text-blue-400">{data?.creditsIos || 0}</div></CardContent>
-        </Card>
+        {productsList?.map((prod) => (
+          <Card key={prod.id} className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs uppercase text-white">Créditos {prod.displayName}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-4xl font-black ${
+                prod.type === 'ios' ? 'text-blue-400' : 
+                prod.type === 'advanced' ? 'text-amber-400' : 
+                prod.type === 'android' ? 'text-emerald-400' : 'text-red-600'
+              }`}>
+                {(data?.credits as any)?.[prod.name] || 0}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
         <Card className="bg-[#141414] border-neutral-800 text-white">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-white">Total Clientes Criados</CardTitle></CardHeader>
           <CardContent><div className="text-4xl font-bold text-white">{data?.clientsCount || 0}</div></CardContent>
@@ -1396,11 +1396,9 @@ function ResellerDashboard() {
             <div>
               <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
-                <option value="basic">Proxy Android Basic</option>
-                <option value="advanced">Proxy Android Advanced</option>
-                <option value="ios">Proxy iOS Geral</option>
-                <option value="ios_basic">Proxy iOS Basic</option>
-                <option value="ios_advanced">Proxy iOS Advanced</option>
+                {productsList?.map(p => (
+                  <option key={p.id} value={p.name}>{p.displayName}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -1435,11 +1433,9 @@ function ResellerDashboard() {
             <div>
               <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={renewType} onChange={(e: any) => setRenewType(e.target.value)}>
-                <option value="basic">Proxy Android Basic</option>
-                <option value="advanced">Proxy Android Advanced</option>
-                <option value="ios">Proxy iOS Geral</option>
-                <option value="ios_basic">Proxy iOS Basic</option>
-                <option value="ios_advanced">Proxy iOS Advanced</option>
+                {productsList?.map(p => (
+                  <option key={p.id} value={p.name}>{p.displayName}</option>
+                ))}
               </select>
             </div>
             <div className="flex gap-2 justify-end">

@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { users, keys, downloads, tutorials, products, sessions, logs } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, products, sessions, logs, userCredits } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
@@ -188,12 +188,19 @@ export const appRouter = router({
       const result = [];
       for (const r of resellers) {
         const clientCountRes = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.resellerId, r.id));
+        const credits = await db.select().from(userCredits).where(eq(userCredits.userId, r.id));
+        
         result.push({
           id: r.id,
           username: r.openId,
-          creditsBasic: r.creditsBasic || 0,
-          creditsAdvanced: r.creditsAdvanced || 0,
-          creditsIos: r.creditsIos || 0,
+          credits: credits.reduce((acc: any, c) => {
+            acc[c.productName] = c.amount;
+            return acc;
+          }, {}),
+          // Mantendo legados para compatibilidade se necessário, mas priorizando a lista
+          creditsBasic: credits.find(c => c.productName === 'basic')?.amount || 0,
+          creditsAdvanced: credits.find(c => c.productName === 'advanced')?.amount || 0,
+          creditsIos: credits.find(c => c.productName === 'ios')?.amount || 0,
           isActive: r.isActive,
           isPremium: r.isPremium || false,
           clientCount: Number(clientCountRes[0]?.count || 0),
@@ -210,7 +217,7 @@ export const appRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
         const passHash = hashPassword(input.password);
-        await db.insert(users).values({
+        const [res] = await db.insert(users).values({
           openId: input.username,
           role: "reseller",
           passwordHash: passHash as any,
@@ -220,6 +227,24 @@ export const appRouter = router({
           isActive: true,
           isPremium: input.isPremium,
         });
+
+        const newUserId = (res as any).insertId;
+        if (newUserId) {
+          const initialCredits = [
+            { name: 'basic', amount: input.creditsBasic },
+            { name: 'advanced', amount: input.creditsAdvanced },
+            { name: 'ios', amount: input.creditsIos }
+          ];
+          for (const c of initialCredits) {
+            if (c.amount > 0) {
+              await db.insert(userCredits).values({
+                userId: newUserId,
+                productName: c.name,
+                amount: c.amount
+              });
+            }
+          }
+        }
 
         await db.insert(logs).values({
           userId: ctx.user.id,
@@ -231,7 +256,7 @@ export const appRouter = router({
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios"]), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.string(), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -241,40 +266,28 @@ export const appRouter = router({
         if (resellerRes.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
         const reseller = resellerRes[0];
 
-        if (input.type === "basic") {
-          let newCredits = reseller.creditsBasic;
-          if (input.action === "add") newCredits += input.amount;
-          else newCredits = Math.max(0, newCredits - input.amount);
-          await db.update(users).set({ creditsBasic: newCredits }).where(eq(users.id, input.resellerId));
-          await db.insert(logs).values({
-            userId: ctx.user.id,
-            action: "UPDATE_CREDITS_BASIC",
-            details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.amount} créditos Basic do revendedor ${reseller.openId}. Saldo final: ${newCredits}`,
-          });
-          return { success: true, newCredits };
-        } else if (input.type === "advanced") {
-          let newCredits = reseller.creditsAdvanced;
-          if (input.action === "add") newCredits += input.amount;
-          else newCredits = Math.max(0, newCredits - input.amount);
-          await db.update(users).set({ creditsAdvanced: newCredits }).where(eq(users.id, input.resellerId));
-          await db.insert(logs).values({
-            userId: ctx.user.id,
-            action: "UPDATE_CREDITS_ADVANCED",
-            details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.amount} créditos Advanced do revendedor ${reseller.openId}. Saldo final: ${newCredits}`,
-          });
-          return { success: true, newCredits };
+        const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, input.resellerId), eq(userCredits.productName, input.type))).limit(1);
+        
+        let newAmount = 0;
+        if (currentCredit.length > 0) {
+          newAmount = input.action === "add" ? currentCredit[0].amount + input.amount : Math.max(0, currentCredit[0].amount - input.amount);
+          await db.update(userCredits).set({ amount: newAmount }).where(eq(userCredits.id, currentCredit[0].id));
         } else {
-          let newCredits = reseller.creditsIos;
-          if (input.action === "add") newCredits += input.amount;
-          else newCredits = Math.max(0, newCredits - input.amount);
-          await db.update(users).set({ creditsIos: newCredits }).where(eq(users.id, input.resellerId));
-          await db.insert(logs).values({
-            userId: ctx.user.id,
-            action: "UPDATE_CREDITS_IOS",
-            details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.amount} créditos iOS do revendedor ${reseller.openId}. Saldo final: ${newCredits}`,
+          newAmount = input.action === "add" ? input.amount : 0;
+          await db.insert(userCredits).values({
+            userId: input.resellerId,
+            productName: input.type,
+            amount: newAmount
           });
-          return { success: true, newCredits };
         }
+
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: `UPDATE_CREDITS_${input.type.toUpperCase()}`,
+          details: `Moderador ${input.action === "add" ? "adicionou" : "removeu"} ${input.amount} créditos ${input.type} do revendedor ${reseller.openId}. Saldo final: ${newAmount}`,
+        });
+
+        return { success: true, newCredits: newAmount };
       }),
 
     toggleResellerPremium: protectedProcedure
@@ -1029,12 +1042,9 @@ export const appRouter = router({
 
         // Descontar crédito apenas se for revendedor
         if (ctx.user.role === "reseller") {
-          if (targetType === "basic") {
-            await db.update(users).set({ creditsBasic: (reseller.creditsBasic || 0) - 1 }).where(eq(users.id, reseller.id));
-          } else if (targetType === "advanced") {
-            await db.update(users).set({ creditsAdvanced: (reseller.creditsAdvanced || 0) - 1 }).where(eq(users.id, reseller.id));
-          } else {
-            await db.update(users).set({ creditsIos: (reseller.creditsIos || 0) - 1 }).where(eq(users.id, reseller.id));
+          const currentCredit = await db.select().from(userCredits).where(and(eq(userCredits.userId, ctx.user.id), eq(userCredits.productName, targetType))).limit(1);
+          if (currentCredit.length > 0) {
+            await db.update(userCredits).set({ amount: Math.max(0, currentCredit[0].amount - 1) }).where(eq(userCredits.id, currentCredit[0].id));
           }
         }
 

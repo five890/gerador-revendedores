@@ -164,6 +164,29 @@ function ModeratorDashboard() {
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
   const [modRenewingClient, setModRenewingClient] = useState<{ id: number; username: string } | null>(null);
   const [modClientSearch, setModClientSearch] = useState("");
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductDisplayName, setNewProductDisplayName] = useState("");
+  const [newProductDesc, setNewProductDesc] = useState("");
+  const [newProductIsShared, setNewProductIsShared] = useState(false);
+
+  const { data: productsList, refetch: refetchProducts } = trpc.moderator.listProducts.useQuery();
+  const addProductMutation = trpc.moderator.addProduct.useMutation({
+    onSuccess: () => {
+      toast.success("Produto customizado criado com sucesso!");
+      setNewProductName("");
+      setNewProductDisplayName("");
+      setNewProductDesc("");
+      refetchProducts();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const deleteProductMutation = trpc.moderator.deleteProduct.useMutation({
+    onSuccess: () => {
+      toast.success("Produto excluído!");
+      refetchProducts();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const deleteExpiredKeysMutation = trpc.moderator.deleteExpiredKeys.useMutation({
     onSuccess: (data) => {
@@ -396,6 +419,7 @@ function ModeratorDashboard() {
             <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Keys Banidas / Usadas</TabsTrigger>
             <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
             <TabsTrigger value="tutorials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Tutoriais</TabsTrigger>
+            <TabsTrigger value="products" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Produtos</TabsTrigger>
             <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs de Auditoria</TabsTrigger>
           </TabsList>
         </div>
@@ -1121,6 +1145,74 @@ function ModeratorDashboard() {
                       <TableCell><a href={t.videoUrl} target="_blank" rel="noreferrer" className="text-blue-400 underline truncate max-w-xs block">{t.videoUrl}</a></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table></div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* GERENCIAR PRODUTOS */}
+        <TabsContent value="products" className="space-y-4">
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Adicionar Novo Produto / Tipo de Proxy</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex gap-4 items-end flex-wrap">
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Identificador (ex: vip_5g)</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="vip_5g" />
+                </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Nome de Exibição</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductDisplayName} onChange={(e) => setNewProductDisplayName(e.target.value)} placeholder="Proxy VIP 5G" />
+                </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Descrição</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductDesc} onChange={(e) => setNewProductDesc(e.target.value)} placeholder="Descrição do produto" />
+                </div>
+                <div className="flex items-center space-x-2 pt-2">
+                  <input type="checkbox" id="isSharedProd" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newProductIsShared} onChange={(e) => setNewProductIsShared(e.target.checked)} />
+                  <label htmlFor="isSharedProd" className="text-xs font-bold text-amber-400 cursor-pointer">Compartilhado / Rotativo (Estilo iOS)</label>
+                </div>
+                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => addProductMutation.mutate({ name: newProductName, displayName: newProductDisplayName, description: newProductDesc, isShared: newProductIsShared })}>
+                  Adicionar Produto
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Produtos Cadastrados no Sistema</CardTitle></CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto"><Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-800">
+                    <TableHead className="text-white font-bold">ID</TableHead>
+                    <TableHead className="text-white font-bold">Identificador</TableHead>
+                    <TableHead className="text-white font-bold">Nome Exibição</TableHead>
+                    <TableHead className="text-white font-bold">Tipo de Key</TableHead>
+                    <TableHead className="text-white font-bold text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {productsList?.map((p) => (
+                    <TableRow key={p.id} className="border-neutral-800">
+                      <TableCell className="font-mono text-white">#{p.id}</TableCell>
+                      <TableCell className="font-mono text-cyan-400">{p.name}</TableCell>
+                      <TableCell className="font-bold text-white">{p.displayName}</TableCell>
+                      <TableCell>
+                        <Badge className={p.isShared ? "bg-blue-950 text-blue-400 border-blue-800" : "bg-neutral-800 text-white"}>
+                          {p.isShared ? "Rotativo / Compartilhado" : "Single-Use (Exclusiva)"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="destructive" onClick={() => {
+                          if (confirm("Excluir produto?")) deleteProductMutation.mutate({ productId: p.id });
+                        }}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </TableCell>

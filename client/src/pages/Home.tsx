@@ -1302,14 +1302,48 @@ function ModeratorDashboard() {
 
 function ResellerDashboard() {
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
+  const { data: subResellers, refetch: refetchSubResellers } = trpc.moderator.listResellers.useQuery(undefined, {
+    enabled: !!data?.isPremium
+  });
+
   const [newClientUser, setNewClientUser] = useState("");
   const [newClientPass, setNewClientPass] = useState("");
-  const [newClientType, setNewClientType] = useState<"basic" | "advanced" | "ios" | "ios_basic" | "ios_advanced">("basic");
+  const [newClientType, setNewClientType] = useState<any>("basic");
   const [newClientMaxDevices, setNewClientMaxDevices] = useState(1);
   const [clientSearch, setClientSearch] = useState("");
   const [renewingClient, setRenewingClient] = useState<{ id: number; username: string } | null>(null);
-  const [renewType, setRenewType] = useState<"basic" | "advanced" | "ios" | "ios_basic" | "ios_advanced">("advanced");
+  const [renewType, setRenewType] = useState<any>("advanced");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
+
+  // Estados para criação de sub-revendedor (Premium Reseller)
+  const [newSubUser, setNewSubUser] = useState("");
+  const [newSubPass, setNewSubPass] = useState("");
+  const [newSubCreditsBasic, setNewSubCreditsBasic] = useState(0);
+  const [newSubCreditsAdvanced, setNewSubCreditsAdvanced] = useState(0);
+  const [newSubCreditsIos, setNewSubCreditsIos] = useState(0);
+
+  const createResellerMutation = trpc.moderator.createReseller.useMutation({
+    onSuccess: () => {
+      toast.success("Sub-revendedor criado com sucesso!");
+      setNewSubUser("");
+      setNewSubPass("");
+      setNewSubCreditsBasic(0);
+      setNewSubCreditsAdvanced(0);
+      setNewSubCreditsIos(0);
+      refetchSubResellers();
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateCreditsMutation = trpc.moderator.updateResellerCredits.useMutation({
+    onSuccess: () => {
+      toast.success("Créditos atualizados!");
+      refetchSubResellers();
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const createClientMutation = trpc.reseller.createClient.useMutation({
     onSuccess: (res) => {

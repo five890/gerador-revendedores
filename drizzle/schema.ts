@@ -40,7 +40,7 @@ export const downloads = mysqlTable("downloads", {
   description: text("description"),
   version: varchar("version", { length: 50 }).notNull(),
   fileUrl: text("fileUrl").notNull(),
-  type: mysqlEnum("type", ["basic", "advanced", "ios"]).default("advanced").notNull(),
+  type: varchar("type", { length: 50 }).default("advanced").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

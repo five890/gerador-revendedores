@@ -968,11 +968,6 @@ export const appRouter = router({
 
         const targetType = input.type;
 
-        // Liberar key antiga do cliente se houver
-        if (client.keyId) {
-          await db.update(keys).set({ isUsed: false }).where(eq(keys.id, client.keyId));
-        }
-
         // Verificar créditos do ator (se for revendedor)
         const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const reseller = resRes[0];
@@ -994,37 +989,39 @@ export const appRouter = router({
         }
 
         let newKeyId: number | null = null;
-        let newKeyValue = "DEFAULT-KEY-" + targetType.toUpperCase();
-
-        if (targetType === "ios") {
-          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
-          if (latestKey.length > 0) {
-            newKeyId = latestKey[0].id;
-            newKeyValue = latestKey[0].keyValue;
-          } else {
-            await db.insert(keys).values({ keyValue: newKeyValue, type: "ios", isActive: true });
-            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
-            if (inserted.length > 0) newKeyId = inserted[0].id;
-          }
-        } else {
-          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, targetType), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
-          if (unusedKey.length > 0) {
-            newKeyId = unusedKey[0].id;
-            newKeyValue = unusedKey[0].keyValue;
-            await db.update(keys).set({ isUsed: true, isBanned: true }).where(eq(keys.id, newKeyId));
-          } else {
-            newKeyValue = "KEY-" + targetType.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-            await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true, isUsed: true, isBanned: true });
-            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
-            if (inserted.length > 0) newKeyId = inserted[0].id;
-          }
-        }
+        let newKeyValue = "";
 
         const renewalNow = new Date();
         const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
 
-        if (newKeyId) {
-          await db.update(keys).set({ isUsed: true, isBanned: targetType !== "ios", usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+        if (targetType === "ios") {
+          // iOS compartilha a chave ativa mais recente
+          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
+          if (latestKey.length > 0) {
+            newKeyId = latestKey[0].id;
+            newKeyValue = latestKey[0].keyValue;
+            await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+          } else {
+            newKeyValue = "DEFAULT-KEY-IOS";
+            await db.insert(keys).values({ keyValue: newKeyValue, type: "ios", isActive: true, isUsed: true, usedAt: renewalNow });
+            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
+            if (inserted.length > 0) newKeyId = inserted[0].id;
+          }
+        } else {
+          // Basic e Advanced puxam obrigatoriamente uma chave NOVA (isUsed = false)
+          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, targetType), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
+          if (unusedKey.length > 0) {
+            newKeyId = unusedKey[0].id;
+            newKeyValue = unusedKey[0].keyValue;
+            // Marca como usada e banida do estoque ativo
+            await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+          } else {
+            // Se o estoque acabou, gera uma nova chave exclusiva
+            newKeyValue = "KEY-" + targetType.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+            await db.insert(keys).values({ keyValue: newKeyValue, type: targetType, isActive: true, isUsed: true, isBanned: true, usedAt: renewalNow });
+            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
+            if (inserted.length > 0) newKeyId = inserted[0].id;
+          }
         }
 
         // Atualizar cliente com a nova key mais recente e renovar validade por 24h

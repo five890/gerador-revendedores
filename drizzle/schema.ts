@@ -49,7 +49,16 @@ export const tutorials = mysqlTable("tutorials", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   videoUrl: text("videoUrl").notNull(),
-  type: mysqlEnum("type", ["basic", "advanced", "ios"]).default("advanced").notNull(),
+  type: varchar("type", { length: 50 }).default("advanced").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const products = mysqlTable("products", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  displayName: varchar("displayName", { length: 255 }).notNull(),
+  description: text("description"),
+  isShared: boolean("isShared").default(false).notNull(), // true para iOS rotativo, false para single-use Basic/Advanced
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

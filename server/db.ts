@@ -29,6 +29,32 @@ async function ensureTables(dbUrl: string) {
       )
     `);
 
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        displayName VARCHAR(255) NOT NULL,
+        description TEXT,
+        isShared BOOLEAN DEFAULT FALSE NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+
+    // Inserir produtos padrão se vazios
+    try {
+      const [rows]: any = await connection.query("SELECT COUNT(*) as cnt FROM products");
+      if (rows[0].cnt === 0) {
+        await connection.query(`
+          INSERT INTO products (name, displayName, description, isShared) VALUES
+          ('basic', 'Proxy Android Basic', 'Proxy Android básico single-use', FALSE),
+          ('advanced', 'Proxy Android Advanced', 'Proxy Android avançado single-use', FALSE),
+          ('ios', 'Proxy iOS Geral', 'Proxy iOS compartilhado com rotação', TRUE),
+          ('ios_basic', 'Proxy iOS Basic', 'Proxy iOS básico', TRUE),
+          ('ios_advanced', 'Proxy iOS Advanced', 'Proxy iOS avançado', TRUE)
+        `);
+      }
+    } catch (e) {}
+
     const alterQueries = [
       "ALTER TABLE users ADD COLUMN passwordHash VARCHAR(255)",
       "ALTER TABLE users ADD COLUMN credits INT DEFAULT 0",

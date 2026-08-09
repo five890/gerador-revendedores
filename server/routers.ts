@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { users, keys, downloads, tutorials, sessions, logs } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, products, sessions, logs } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
@@ -297,6 +297,58 @@ export const appRouter = router({
         });
 
         return { success: true, isPremium: newStatus };
+      }),
+
+    listProducts: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const prods = await db.select().from(products).orderBy(desc(products.id));
+      return prods;
+    }),
+
+    addProduct: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        displayName: z.string(),
+        description: z.string().optional(),
+        isShared: z.boolean().default(false)
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const cleanName = input.name.trim().toLowerCase().replace(/\s+/g, '_');
+        const existing = await db.select().from(products).where(eq(products.name, cleanName)).limit(1);
+        if (existing.length > 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Já existe um produto com este identificador." });
+        }
+
+        await db.insert(products).values({
+          name: cleanName,
+          displayName: input.displayName,
+          description: input.description || "",
+          isShared: input.isShared,
+        });
+
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "ADD_PRODUCT",
+          details: `Moderador criou novo produto: ${input.displayName} (${cleanName})`,
+        });
+
+        return { success: true };
+      }),
+
+    deleteProduct: protectedProcedure
+      .input(z.object({ productId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        await db.delete(products).where(eq(products.id, input.productId));
+        return { success: true };
       }),
 
     listClients: protectedProcedure.query(async ({ ctx }) => {

@@ -462,10 +462,9 @@ function ModeratorDashboard() {
                       <TableCell className="font-bold text-white">{r.username}</TableCell>
                       <TableCell className="space-y-1">
                         {[
-                          { name: 'basic', label: 'Basic', color: 'text-red-500' },
-                          { name: 'advanced', label: 'Advanced', color: 'text-amber-400' },
-                          { name: 'ios', label: 'iOS', color: 'text-blue-400' },
-                          { name: 'android', label: 'Android', color: 'text-emerald-400' }
+                          { name: 'basic', label: 'Android Basic', color: 'text-red-500' },
+                          { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
+                          { name: 'ios', label: 'Proxy iOS', color: 'text-blue-400' }
                         ].map((cat) => (
                           <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
                             <span className="opacity-70">{cat.label}:</span>
@@ -553,8 +552,8 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modRenewType} onChange={(e: any) => setModRenewType(e.target.value)}>
-                    <option value="basic">Proxy Android Basic</option>
-                    <option value="advanced">Proxy Android Advanced</option>
+                    <option value="basic">Android Basic</option>
+                    <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
                   </select>
                 </div>
@@ -578,8 +577,8 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modClientType} onChange={(e: any) => setModClientType(e.target.value)}>
-                    <option value="basic">Proxy Android Basic</option>
-                    <option value="advanced">Proxy Android Advanced</option>
+                    <option value="basic">Android Basic</option>
+                    <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
                   </select>
                 </div>
@@ -712,8 +711,8 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-1">Tipo de Proxy</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newKeyType} onChange={(e: any) => setNewKeyType(e.target.value)}>
-                    <option value="basic">Proxy Android Basic</option>
-                    <option value="advanced">Proxy Android Advanced</option>
+                    <option value="basic">Android Basic</option>
+                    <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
                   </select>
                 </div>
@@ -730,8 +729,8 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-1">Tipo de Proxy</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={batchKeyType} onChange={(e: any) => setBatchKeyType(e.target.value)}>
-                    <option value="basic">Proxy Android Basic</option>
-                    <option value="advanced">Proxy Android Advanced</option>
+                    <option value="basic">Android Basic</option>
+                    <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
                   </select>
                 </div>
@@ -753,7 +752,7 @@ function ModeratorDashboard() {
           <div className="space-y-6">
             <Card className="bg-[#141414] border-neutral-800 text-white">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white">Keys - Proxy Android Basic</CardTitle>
+                <CardTitle className="text-white">Keys - Proxy Basic</CardTitle>
                 <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
                   if (!keysList) return;
                   const text = keysList.filter(k => k.type === "basic").map((k) => k.keyValue).join("\n");
@@ -810,7 +809,7 @@ function ModeratorDashboard() {
 
             <Card className="bg-[#141414] border-neutral-800 text-white">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white">Keys - Proxy Android Advanced</CardTitle>
+                <CardTitle className="text-white">Keys - Proxy Advanced</CardTitle>
                 <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
                   if (!keysList) return;
                   const text = keysList.filter(k => k.type === "advanced").map((k) => k.keyValue).join("\n");
@@ -1012,8 +1011,8 @@ function ModeratorDashboard() {
               <div>
                 <label className="text-xs text-white font-semibold block mb-1">Tipo de Download</label>
                 <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={editingDownload ? editingDownload.type : dlType} onChange={(e: any) => editingDownload ? setEditingDownload({...editingDownload, type: e.target.value}) : setDlType(e.target.value)}>
-                  <option value="basic">Proxy Android Basic</option>
-                  <option value="advanced">Proxy Android Advanced</option>
+                  <option value="basic">Proxy Basic</option>
+                  <option value="advanced">Proxy Advanced</option>
                   <option value="ios">Proxy iOS</option>
                 </select>
               </div>
@@ -1087,8 +1086,8 @@ function ModeratorDashboard() {
               <div>
                 <label className="text-xs text-white font-semibold block mb-1">Tipo de Tutorial</label>
                 <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={tutType} onChange={(e: any) => setTutType(e.target.value)}>
-                  <option value="basic">Proxy Android Basic</option>
-                  <option value="advanced">Proxy Android Advanced</option>
+                  <option value="basic">Android Basic</option>
+                  <option value="advanced">Android Advanced</option>
                   <option value="ios">Proxy iOS</option>
                 </select>
               </div>
@@ -1247,12 +1246,11 @@ function ResellerDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { name: 'basic', label: 'Basic', color: 'text-red-600' },
-          { name: 'advanced', label: 'Advanced', color: 'text-amber-400' },
-          { name: 'ios', label: 'iOS', color: 'text-blue-400' },
-          { name: 'android', label: 'Android', color: 'text-emerald-400' }
+          { name: 'basic', label: 'Android Basic', color: 'text-red-600' },
+          { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
+          { name: 'ios', label: 'Proxy iOS', color: 'text-blue-400' }
         ].map((cat) => (
           <Card key={cat.name} className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader className="pb-2">
@@ -1308,10 +1306,9 @@ function ResellerDashboard() {
             <div>
               <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
-                <option value="basic">Proxy Android Basic</option>
-                <option value="advanced">Proxy Android Advanced</option>
+                <option value="basic">Android Basic</option>
+                <option value="advanced">Android Advanced</option>
                 <option value="ios">Proxy iOS</option>
-                <option value="android">Proxy Android</option>
               </select>
             </div>
             <div>
@@ -1346,10 +1343,9 @@ function ResellerDashboard() {
             <div>
               <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={renewType} onChange={(e: any) => setRenewType(e.target.value)}>
-                <option value="basic">Proxy Android Basic</option>
-                <option value="advanced">Proxy Android Advanced</option>
+                <option value="basic">Android Basic</option>
+                <option value="advanced">Android Advanced</option>
                 <option value="ios">Proxy iOS</option>
-                <option value="android">Proxy Android</option>
               </select>
             </div>
             <div className="flex gap-2 justify-end">
@@ -1474,10 +1470,9 @@ function ResellerDashboard() {
                         <TableCell className="font-bold text-white">{r.username}</TableCell>
                         <TableCell className="space-y-1">
                           {[
-                            { name: 'basic', label: 'Basic' },
-                            { name: 'advanced', label: 'Advanced' },
-                            { name: 'ios', label: 'iOS' },
-                            { name: 'android', label: 'Android' }
+                            { name: 'basic', label: 'Android Basic' },
+                            { name: 'advanced', label: 'Android Advanced' },
+                            { name: 'ios', label: 'Proxy iOS' }
                           ].map((cat) => (
                             <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
                               <span className="opacity-70">{cat.label}:</span>

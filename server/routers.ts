@@ -204,7 +204,6 @@ export const appRouter = router({
             basic: r.creditsBasic || 0,
             advanced: r.creditsAdvanced || 0,
             ios: r.creditsIos || 0,
-            android: r.creditsAndroid || 0,
           },
           isActive: r.isActive,
           isPremium: r.isPremium || false,
@@ -221,7 +220,6 @@ export const appRouter = router({
         creditsBasic: z.number().default(0), 
         creditsAdvanced: z.number().default(0), 
         creditsIos: z.number().default(0), 
-        creditsAndroid: z.number().default(0),
         isPremium: z.boolean().default(false) 
       }))
       .mutation(async ({ input, ctx }) => {
@@ -240,7 +238,6 @@ export const appRouter = router({
           if ((actor.creditsBasic || 0) < input.creditsBasic) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Basic insuficientes." });
           if ((actor.creditsAdvanced || 0) < input.creditsAdvanced) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Advanced insuficientes." });
           if ((actor.creditsIos || 0) < input.creditsIos) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos iOS insuficientes." });
-          if ((actor.creditsAndroid || 0) < input.creditsAndroid) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Android insuficientes." });
         } else if (!isMod) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
@@ -256,7 +253,6 @@ export const appRouter = router({
           creditsBasic: input.creditsBasic,
           creditsAdvanced: input.creditsAdvanced,
           creditsIos: input.creditsIos,
-          creditsAndroid: input.creditsAndroid,
         });
 
         if (isReseller) {
@@ -264,7 +260,6 @@ export const appRouter = router({
             creditsBasic: (actor.creditsBasic || 0) - input.creditsBasic,
             creditsAdvanced: (actor.creditsAdvanced || 0) - input.creditsAdvanced,
             creditsIos: (actor.creditsIos || 0) - input.creditsIos,
-            creditsAndroid: (actor.creditsAndroid || 0) - input.creditsAndroid,
           }).where(eq(users.id, ctx.user.id));
         }
 
@@ -278,7 +273,7 @@ export const appRouter = router({
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "android"]), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios"]), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
@@ -293,7 +288,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", android: "creditsAndroid" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos" };
         const col = colMap[input.type];
 
         if (isReseller) {
@@ -764,7 +759,6 @@ export const appRouter = router({
           basic: reseller.creditsBasic || 0,
           advanced: reseller.creditsAdvanced || 0,
           ios: reseller.creditsIos || 0,
-          android: reseller.creditsAndroid || 0,
         },
         isPremium,
         clientsCount: clientsFormatted.length,
@@ -773,7 +767,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "android"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -788,7 +782,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", android: "creditsAndroid" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {
@@ -901,7 +895,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "android"]) }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -919,7 +913,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", android: "creditsAndroid" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {

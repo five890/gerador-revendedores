@@ -1328,32 +1328,47 @@ function ResellerDashboard() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto"><Table>
-            <TableHeader>
-              <TableRow className="border-neutral-800">
-                <TableHead className="text-white font-bold">ID</TableHead>
-                <TableHead className="text-white font-bold">Usuário</TableHead>
-                <TableHead className="text-white font-bold text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.clients?.filter(c => c.username.toLowerCase().includes(clientSearch.toLowerCase())).map((c) => (
-                <TableRow key={c.id} className="border-neutral-800">
-                  <TableCell className="font-mono text-white">#{c.id}</TableCell>
-                  <TableCell className="font-bold text-white">{c.username}</TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => setRenewingClient({ id: c.id, username: c.username })}>Renovar</Button>
-                    <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
-                      const p = prompt("Nova senha:");
-                      if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });
-                    }}>Senha</Button>
-                    <Button size="sm" variant="destructive" onClick={() => {
-                      if (confirm("Excluir cliente?")) deleteClientMutation.mutate({ clientId: c.id });
-                    }}>
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+	                <TableHeader>
+	                  <TableRow className="border-neutral-800">
+	                    <TableHead className="text-white font-bold">ID</TableHead>
+	                    <TableHead className="text-white font-bold">Usuário</TableHead>
+	                    <TableHead className="text-white font-bold">Validade / Expiração</TableHead>
+	                    <TableHead className="text-white font-bold text-right">Ações</TableHead>
+	                  </TableRow>
+	                </TableHeader>
+	                <TableBody>
+	                  {data?.clients?.filter(c => c.username.toLowerCase().includes(clientSearch.toLowerCase())).map((c) => {
+	                    const expTime = c.expiresAt ? new Date(c.expiresAt).getTime() : null;
+	                    const isExp = expTime ? Date.now() > expTime : false;
+		                    return (
+		                    <TableRow key={c.id} className="border-neutral-800">
+		                      <TableCell className="font-mono text-white">#{c.id}</TableCell>
+		                      <TableCell className="font-bold text-white">{c.username}</TableCell>
+		                      <TableCell className="text-xs">
+		                        {expTime ? (
+		                          <span className={isExp ? "text-red-500 font-bold" : "text-emerald-400"}>
+		                            {isExp ? "Expirado" : new Date(expTime).toLocaleString()}
+		                          </span>
+		                        ) : (
+		                          <span className="text-neutral-500">Sem uso</span>
+		                        )}
+		                      </TableCell>
+			                      <TableCell className="text-right space-x-1">
+	                    <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => setRenewingClient({ id: c.id, username: c.username })}>Renovar</Button>
+	                    <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
+	                      const p = prompt("Nova senha:");
+	                      if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });
+	                    }}>Senha</Button>
+	                    <Button size="sm" variant="destructive" onClick={() => {
+	                      if (confirm("Excluir cliente?")) deleteClientMutation.mutate({ clientId: c.id });
+	                    }}>
+	                      <Trash2 className="w-3 h-3" />
+	                    </Button>
+	                  </TableCell>
+			                </TableRow>
+			              );
+			            })
+			          }
             </TableBody>
           </Table></div>
         </CardContent>

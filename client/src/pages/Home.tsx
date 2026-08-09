@@ -168,6 +168,9 @@ function ModeratorDashboard() {
   const [newProductDisplayName, setNewProductDisplayName] = useState("");
   const [newProductDesc, setNewProductDesc] = useState("");
   const [newProductIsShared, setNewProductIsShared] = useState(false);
+  const [newProductLink, setNewProductLink] = useState("");
+  const [newProductTutorialUrl, setNewProductTutorialUrl] = useState("");
+  const [newProductType, setNewProductType] = useState("advanced");
 
   const { data: productsList, refetch: refetchProducts } = trpc.moderator.listProducts.useQuery();
   const addProductMutation = trpc.moderator.addProduct.useMutation({
@@ -176,6 +179,8 @@ function ModeratorDashboard() {
       setNewProductName("");
       setNewProductDisplayName("");
       setNewProductDesc("");
+      setNewProductLink("");
+      setNewProductTutorialUrl("");
       refetchProducts();
     },
     onError: (e) => toast.error(e.message),
@@ -1174,11 +1179,40 @@ function ModeratorDashboard() {
                   <label className="text-xs text-white font-semibold block mb-1">Descrição</label>
                   <Input className="bg-[#222] border-neutral-700 text-white" value={newProductDesc} onChange={(e) => setNewProductDesc(e.target.value)} placeholder="Descrição do produto" />
                 </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Link do Produto</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductLink} onChange={(e) => setNewProductLink(e.target.value)} placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Link do Tutorial</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={newProductTutorialUrl} onChange={(e) => setNewProductTutorialUrl(e.target.value)} placeholder="https://youtube.com/..." />
+                </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Categoria</label>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    value={newProductType}
+                    onChange={(e) => setNewProductType(e.target.value)}
+                  >
+                    <option value="basic">Basic</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="ios">iOS</option>
+                    <option value="android">Android</option>
+                  </select>
+                </div>
                 <div className="flex items-center space-x-2 pt-2">
                   <input type="checkbox" id="isSharedProd" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newProductIsShared} onChange={(e) => setNewProductIsShared(e.target.checked)} />
                   <label htmlFor="isSharedProd" className="text-xs font-bold text-amber-400 cursor-pointer">Compartilhado / Rotativo (Estilo iOS)</label>
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => addProductMutation.mutate({ name: newProductName, displayName: newProductDisplayName, description: newProductDesc, isShared: newProductIsShared })}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => addProductMutation.mutate({ 
+                  name: newProductName, 
+                  displayName: newProductDisplayName, 
+                  description: newProductDesc, 
+                  isShared: newProductIsShared,
+                  link: newProductLink,
+                  tutorialUrl: newProductTutorialUrl,
+                  type: newProductType
+                })}>
                   Adicionar Produto
                 </Button>
               </div>
@@ -1194,7 +1228,9 @@ function ModeratorDashboard() {
                     <TableHead className="text-white font-bold">ID</TableHead>
                     <TableHead className="text-white font-bold">Identificador</TableHead>
                     <TableHead className="text-white font-bold">Nome Exibição</TableHead>
+                    <TableHead className="text-white font-bold">Categoria</TableHead>
                     <TableHead className="text-white font-bold">Tipo de Key</TableHead>
+                    <TableHead className="text-white font-bold">Links</TableHead>
                     <TableHead className="text-white font-bold text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1205,9 +1241,20 @@ function ModeratorDashboard() {
                       <TableCell className="font-mono text-cyan-400">{p.name}</TableCell>
                       <TableCell className="font-bold text-white">{p.displayName}</TableCell>
                       <TableCell>
+                        <Badge className="bg-red-950 text-red-400 border-red-800 uppercase text-[10px]">
+                          {p.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <Badge className={p.isShared ? "bg-blue-950 text-blue-400 border-blue-800" : "bg-neutral-800 text-white"}>
                           {p.isShared ? "Rotativo / Compartilhado" : "Single-Use (Exclusiva)"}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {p.link && <a href={p.link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 underline">Link</a>}
+                          {p.tutorialUrl && <a href={p.tutorialUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-green-400 underline">Tutorial</a>}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => {

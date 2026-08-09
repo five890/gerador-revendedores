@@ -311,7 +311,10 @@ export const appRouter = router({
         name: z.string(),
         displayName: z.string(),
         description: z.string().optional(),
-        isShared: z.boolean().default(false)
+        isShared: z.boolean().default(false),
+        link: z.string().optional(),
+        tutorialUrl: z.string().optional(),
+        type: z.string().default("advanced"),
       }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
@@ -329,12 +332,48 @@ export const appRouter = router({
           displayName: input.displayName,
           description: input.description || "",
           isShared: input.isShared,
+          link: input.link || null,
+          tutorialUrl: input.tutorialUrl || null,
+          type: input.type,
         });
 
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "ADD_PRODUCT",
           details: `Moderador criou novo produto: ${input.displayName} (${cleanName})`,
+        });
+
+        return { success: true };
+      }),
+
+    updateProduct: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        displayName: z.string(),
+        description: z.string().optional(),
+        isShared: z.boolean(),
+        link: z.string().optional(),
+        tutorialUrl: z.string().optional(),
+        type: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        await db.update(products).set({
+          displayName: input.displayName,
+          description: input.description || "",
+          isShared: input.isShared,
+          link: input.link || null,
+          tutorialUrl: input.tutorialUrl || null,
+          type: input.type,
+        }).where(eq(products.id, input.id));
+
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "UPDATE_PRODUCT",
+          details: `Moderador atualizou produto ID ${input.id}: ${input.displayName}`,
         });
 
         return { success: true };

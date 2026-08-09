@@ -59,6 +59,9 @@ export const products = mysqlTable("products", {
   displayName: varchar("displayName", { length: 255 }).notNull(),
   description: text("description"),
   isShared: boolean("isShared").default(false).notNull(), // true para iOS rotativo, false para single-use Basic/Advanced
+  link: text("link"),
+  tutorialUrl: text("tutorialUrl"),
+  type: varchar("type", { length: 50 }).default("advanced").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

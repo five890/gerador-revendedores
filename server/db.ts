@@ -36,6 +36,9 @@ async function ensureTables(dbUrl: string) {
         displayName VARCHAR(255) NOT NULL,
         description TEXT,
         isShared BOOLEAN DEFAULT FALSE NOT NULL,
+        link TEXT,
+        tutorialUrl TEXT,
+        type VARCHAR(50) DEFAULT 'advanced' NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);
@@ -73,7 +76,10 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE \`keys\` ADD COLUMN usedAt TIMESTAMP NULL",
       "ALTER TABLE \`keys\` ADD COLUMN isBanned BOOLEAN DEFAULT FALSE",
       "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
-      "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'"
+      "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
+      "ALTER TABLE products ADD COLUMN link TEXT",
+      "ALTER TABLE products ADD COLUMN tutorialUrl TEXT",
+      "ALTER TABLE products ADD COLUMN type VARCHAR(50) DEFAULT 'advanced'"
     ];
     for (const aq of alterQueries) {
       try {

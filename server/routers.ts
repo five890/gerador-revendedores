@@ -188,7 +188,7 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) return [];
 
-      const query = isMod 
+      const query = isMod || isPremiumReseller
         ? db.select().from(users).where(eq(users.role, "reseller"))
         : db.select().from(users).where(and(eq(users.role, "reseller"), eq(users.resellerId, ctx.user.id)));
 
@@ -224,7 +224,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
-        const isReseller = ctx.user.role === "reseller";
+
+        // A criação de revendedores permanece exclusiva do Moderador.
+        if (!isMod) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Moderador pode criar revendedores." });
+        }
         
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -232,13 +236,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        if (isReseller) {
-          if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas revendedores Premium podem criar outros revendedores." });
-          
-          if ((actor.creditsBasic || 0) < input.creditsBasic) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Basic insuficientes." });
-          if ((actor.creditsAdvanced || 0) < input.creditsAdvanced) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos Advanced insuficientes." });
-          if ((actor.creditsIos || 0) < input.creditsIos) throw new TRPCError({ code: "BAD_REQUEST", message: "Créditos iOS insuficientes." });
-        } else if (!isMod) {
+        if (!isMod) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
@@ -247,21 +245,13 @@ export const appRouter = router({
           openId: input.username,
           role: "reseller",
           passwordHash: passHash as any,
-          resellerId: isReseller ? ctx.user.id : null,
+          resellerId: null,
           isActive: true,
-          isPremium: isMod ? input.isPremium : false,
+          isPremium: input.isPremium,
           creditsBasic: input.creditsBasic,
           creditsAdvanced: input.creditsAdvanced,
           creditsIos: input.creditsIos,
         });
-
-        if (isReseller) {
-          await db.update(users).set({
-            creditsBasic: (actor.creditsBasic || 0) - input.creditsBasic,
-            creditsAdvanced: (actor.creditsAdvanced || 0) - input.creditsAdvanced,
-            creditsIos: (actor.creditsIos || 0) - input.creditsIos,
-          }).where(eq(users.id, ctx.user.id));
-        }
 
         await db.insert(logs).values({
           userId: ctx.user.id,
@@ -293,7 +283,9 @@ export const appRouter = router({
 
         if (isReseller) {
           if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN" });
-          if (sub.resellerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode gerenciar seus próprios revendedores." });
+          // Premium pode distribuir créditos entre os revendedores existentes, como o Moderador.
+          // Revendedor comum permanece limitado à própria hierarquia.
+          if (!actor.isPremium && sub.resellerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode gerenciar seus próprios revendedores." });
           
           if (input.action === "add") {
             const parentAmount = (actor as any)[col] || 0;
@@ -749,6 +741,7 @@ export const appRouter = router({
           isActive: c.isActive,
           maxDevices: c.maxDevices || 1,
           keyValue,
+          keyType: c.keyId ? ((await db.select({ type: keys.type }).from(keys).where(eq(keys.id, c.keyId)).limit(1))[0]?.type || null) : null,
           expiresAt: c.expiresAt ? new Date(c.expiresAt).getTime() : null,
           usedAt: usedAt ? new Date(usedAt).getTime() : null,
         });
@@ -978,6 +971,40 @@ export const appRouter = router({
         });
 
         return { success: true, newKeyValue };
+      }),
+
+    addHours: protectedProcedure
+      .input(z.object({ clientId: z.number(), hours: z.number().int().min(1).max(8760) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const clientRes = ctx.user.role === "moderator"
+          ? await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.role, "client"))).limit(1)
+          : await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.role, "client"), eq(users.resellerId, ctx.user.id))).limit(1);
+
+        if (clientRes.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado ou não pertence ao seu painel." });
+        }
+
+        const client = clientRes[0];
+        const now = Date.now();
+        const currentExpiry = client.expiresAt ? new Date(client.expiresAt).getTime() : 0;
+        const baseTime = Math.max(now, currentExpiry);
+        const newExpiresAt = new Date(baseTime + input.hours * 60 * 60 * 1000);
+
+        await db.update(users).set({ expiresAt: newExpiresAt, isActive: true }).where(eq(users.id, client.id));
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "ADD_CLIENT_HOURS",
+          details: `${ctx.user.role} adicionou ${input.hours} hora(s) ao cliente ${client.openId}, sem renovar key e sem consumir crédito.`,
+        });
+
+        return { success: true, expiresAt: newExpiresAt.getTime() };
       }),
   }),
 

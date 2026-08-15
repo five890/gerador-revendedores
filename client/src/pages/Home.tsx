@@ -197,6 +197,14 @@ function ModeratorDashboard() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const modAddHoursMutation = trpc.reseller.addHours.useMutation({
+    onSuccess: () => {
+      toast.success("Horas adicionadas sem renovar a key!");
+      refetchClients();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const updateClientMaxDevicesMutation = trpc.moderator.updateClientMaxDevices.useMutation({
     onSuccess: () => {
       toast.success("Limite de dispositivos atualizado!");
@@ -659,6 +667,13 @@ function ModeratorDashboard() {
                       <TableCell className="text-right space-x-1">
                         <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => setModRenewingClient({ id: c.id, username: c.username })}>
                           Renovar
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300 hover:bg-blue-900/50" onClick={() => {
+                          const raw = prompt(`Quantas horas adicionar ao cliente ${c.username}? A key não será renovada:`);
+                          const hours = Number(raw);
+                          if (Number.isInteger(hours) && hours > 0) modAddHoursMutation.mutate({ clientId: c.id, hours });
+                        }}>
+                          + Horas
                         </Button>
                         <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleStatusMutation.mutate({ userId: c.id })}>
                           {c.isActive ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
@@ -1179,6 +1194,7 @@ function ResellerDashboard() {
   const [clientSearch, setClientSearch] = useState("");
   const [renewingClient, setRenewingClient] = useState<{ id: number; username: string } | null>(null);
   const [renewType, setRenewType] = useState<any>("advanced");
+  const [iosClientSearch, setIosClientSearch] = useState("");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
 
   // Estados para criação de sub-revendedor (Premium Reseller)
@@ -1244,6 +1260,14 @@ function ResellerDashboard() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const addHoursMutation = trpc.reseller.addHours.useMutation({
+    onSuccess: () => {
+      toast.success("Horas adicionadas sem renovar a key!");
+      refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1272,6 +1296,7 @@ function ResellerDashboard() {
       <Tabs defaultValue="clients" className="space-y-4">
         <TabsList className="bg-[#141414] border border-neutral-800 p-1">
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Clientes</TabsTrigger>
+          <TabsTrigger value="ios" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
           {data?.isPremium && (
             <TabsTrigger value="subresellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Revendedores</TabsTrigger>
           )}
@@ -1399,8 +1424,12 @@ function ResellerDashboard() {
 		                        )}
 		                      </TableCell>
 			                      <TableCell className="text-right space-x-1">
-	                    <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => setRenewingClient({ id: c.id, username: c.username })}>Renovar</Button>
-	                    <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
+                    <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => setRenewingClient({ id: c.id, username: c.username })}>Renovar</Button>
+                    <Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300 hover:bg-blue-900/50" onClick={() => {
+                      const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}? A key não será renovada:`));
+                      if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours });
+                    }}>+ Horas</Button>
+                    <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
 	                      const p = prompt("Nova senha:");
 	                      if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });
 	                    }}>Senha</Button>
@@ -1420,41 +1449,28 @@ function ResellerDashboard() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="ios" className="space-y-4">
+          <Card className="bg-blue-950/30 border-blue-800 text-white">
+            <CardHeader><CardTitle className="text-white">Painel iOS / Proxy iOS</CardTitle></CardHeader>
+            <CardContent><p className="text-sm text-blue-100">Este painel usa o mesmo fluxo do painel principal. Renovar troca a key; <strong>+ Horas</strong> apenas estende a validade, sem trocar a key e sem consumir crédito.</p></CardContent>
+          </Card>
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Proxy iOS</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente iOS..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader>
+            <CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
+              {data?.clients?.filter((c: any) => c.type === "ios" || c.keyType === "ios" || c.keyValue?.toLowerCase().includes("ios"))?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1"><Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("ios"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button><Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}
+            </TableBody></Table></div></CardContent>
+          </Card>
+        </TabsContent>
+
         {data?.isPremium && (
           <TabsContent value="subresellers" className="space-y-4">
-            <Card className="bg-[#141414] border-neutral-800 text-white">
-              <CardHeader><CardTitle className="text-white">Criar Novo Sub-Revendedor (Consome seus créditos)</CardTitle></CardHeader>
-              <CardContent>
-                <div className="flex gap-4 items-end flex-wrap">
-                  <div>
-                    <label className="text-xs text-white font-semibold block mb-1">Usuário</label>
-                    <Input className="bg-[#222] border-neutral-700 text-white" value={newSubUser} onChange={(e) => setNewSubUser(e.target.value)} placeholder="revendedor1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-white font-semibold block mb-1">Senha</label>
-                    <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newSubPass} onChange={(e) => setNewSubPass(e.target.value)} placeholder="••••••" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-white font-semibold block mb-1">Créditos Basic</label>
-                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newSubCreditsBasic} onChange={(e) => setNewSubCreditsBasic(Number(e.target.value))} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-white font-semibold block mb-1">Créditos Advanced</label>
-                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newSubCreditsAdvanced} onChange={(e) => setNewSubCreditsAdvanced(Number(e.target.value))} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-white font-semibold block mb-1">Créditos iOS</label>
-                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newSubCreditsIos} onChange={(e) => setNewSubCreditsIos(Number(e.target.value))} />
-                  </div>
-                  <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => createResellerMutation.mutate({ username: newSubUser, password: newSubPass, creditsBasic: newSubCreditsBasic, creditsAdvanced: newSubCreditsAdvanced, creditsIos: newSubCreditsIos })}>
-                    <UserPlus className="w-4 h-4 mr-1" /> Criar Sub-Revendedor
-                  </Button>
-                </div>
-              </CardContent>
+            <Card className="bg-blue-950/30 border-blue-800 text-white">
+              <CardHeader><CardTitle className="text-white">Revendedor Premium — somente distribuição de créditos</CardTitle></CardHeader>
+              <CardContent><p className="text-sm text-blue-100">A criação de revendedores é exclusiva do Moderador. Nesta área, você pode apenas adicionar ou remover créditos dos revendedores existentes.</p></CardContent>
             </Card>
 
             <Card className="bg-[#141414] border-neutral-800 text-white">
-              <CardHeader><CardTitle className="text-white">Seus Sub-Revendedores</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-white">Revendedores sob sua gestão — créditos</CardTitle></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto"><Table>
                   <TableHeader>

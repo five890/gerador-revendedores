@@ -92,6 +92,12 @@ export default function Home() {
               Entrar na Plataforma
             </Button>
           </form>
+          <div className="border-t border-neutral-800 pt-4 text-center space-y-2">
+            <p className="text-xs text-neutral-400">Entre no nosso Discord oficial</p>
+            <a href="https://discord.gg/shelbys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-full rounded-md border border-indigo-700 bg-indigo-950/40 px-4 py-2 text-sm font-bold text-indigo-300 hover:bg-indigo-900/60 hover:text-white transition-colors">
+              Entrar no Discord Oficial
+            </a>
+          </div>
         </div>
       </div>
     );

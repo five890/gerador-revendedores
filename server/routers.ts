@@ -728,9 +728,13 @@ export const appRouter = router({
       const clientsFormatted = [];
       for (const c of clientsList) {
         let ownerIsPremium = false;
+        let ownerId: number | null = c.resellerId || null;
+        let ownerRole: string | null = null;
         if (c.resellerId) {
-          const ownerRes = await db.select({ isPremium: users.isPremium }).from(users).where(eq(users.id, c.resellerId)).limit(1);
+          const ownerRes = await db.select({ id: users.id, isPremium: users.isPremium, role: users.role }).from(users).where(eq(users.id, c.resellerId)).limit(1);
+          ownerId = ownerRes[0]?.id || null;
           ownerIsPremium = ownerRes[0]?.isPremium || false;
+          ownerRole = ownerRes[0]?.role || null;
         }
         let keyValue = "Nenhuma";
         if (c.keyId) {
@@ -753,6 +757,8 @@ export const appRouter = router({
           expiresAt: c.expiresAt ? new Date(c.expiresAt).getTime() : null,
           usedAt: usedAt ? new Date(usedAt).getTime() : null,
           ownerIsPremium,
+          ownerId,
+          ownerRole,
         });
       }
 
@@ -917,12 +923,13 @@ export const appRouter = router({
         const actor = actorRes[0];
 
         if (ctx.user.role === "reseller" && actor.isPremium) {
-          if (!client.resellerId) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "Premium só pode renovar clientes de revendedores comuns." });
+          if (!client.resellerId || client.resellerId === actor.id) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode renovar clientes de revendedores Basic." });
           }
-          const ownerRes = await db.select({ isPremium: users.isPremium }).from(users).where(eq(users.id, client.resellerId)).limit(1);
-          if (ownerRes[0]?.isPremium) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "Você não pode renovar clientes de outro revendedor Premium." });
+          const ownerRes = await db.select({ isPremium: users.isPremium, role: users.role }).from(users).where(eq(users.id, client.resellerId)).limit(1);
+          const owner = ownerRes[0];
+          if (!owner || owner.role !== "reseller" || owner.isPremium) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode renovar clientes de revendedores Basic." });
           }
         }
 

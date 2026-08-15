@@ -727,6 +727,11 @@ export const appRouter = router({
 
       const clientsFormatted = [];
       for (const c of clientsList) {
+        let ownerIsPremium = false;
+        if (c.resellerId) {
+          const ownerRes = await db.select({ isPremium: users.isPremium }).from(users).where(eq(users.id, c.resellerId)).limit(1);
+          ownerIsPremium = ownerRes[0]?.isPremium || false;
+        }
         let keyValue = "Nenhuma";
         if (c.keyId) {
           const kRes = await db.select().from(keys).where(eq(keys.id, c.keyId)).limit(1);
@@ -747,6 +752,7 @@ export const appRouter = router({
           keyType: c.keyId ? ((await db.select({ type: keys.type }).from(keys).where(eq(keys.id, c.keyId)).limit(1))[0]?.type || null) : null,
           expiresAt: c.expiresAt ? new Date(c.expiresAt).getTime() : null,
           usedAt: usedAt ? new Date(usedAt).getTime() : null,
+          ownerIsPremium,
         });
       }
 
@@ -909,6 +915,16 @@ export const appRouter = router({
 
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
+
+        if (ctx.user.role === "reseller" && actor.isPremium) {
+          if (!client.resellerId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Premium só pode renovar clientes de revendedores comuns." });
+          }
+          const ownerRes = await db.select({ isPremium: users.isPremium }).from(users).where(eq(users.id, client.resellerId)).limit(1);
+          if (ownerRes[0]?.isPremium) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Você não pode renovar clientes de outro revendedor Premium." });
+          }
+        }
 
         const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos" };
         const col = colMap[input.type];

@@ -996,6 +996,22 @@ function ModeratorDashboard() {
               </CardContent>
             </Card>
           </div>
+          <Card className="bg-[#141414] border-blue-800 text-white">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div><CardTitle className="text-white">Keys - Painel iOS</CardTitle><p className="text-xs text-neutral-400 mt-1">Controle separado das Keys disponíveis e já usadas pelo Painel iOS.</p></div>
+              <Button size="sm" className="bg-blue-800 hover:bg-blue-700 text-white" onClick={() => {
+                const available = (keysList || []).filter(k => k.type === "panel_ios" && !k.isUsed && !k.isBanned).map(k => k.keyValue).join("\\n");
+                const used = (keysList || []).filter(k => k.type === "panel_ios" && (k.isUsed || k.isBanned)).map(k => k.keyValue).join("\\n");
+                const text = `PAINEL IOS - DISPONIVEIS\\n${available}\\n\\nPAINEL IOS - USADAS\\n${used}`;
+                const url = URL.createObjectURL(new Blob([text], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = "keys_painel_ios.txt"; a.click(); URL.revokeObjectURL(url);
+              }}>Exportar Painel iOS</Button>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3"><Card className="bg-emerald-950/30 border-emerald-800"><CardContent className="p-4"><p className="text-xs text-emerald-300 uppercase font-bold">Disponíveis</p><p className="text-2xl text-emerald-400 font-black">{keysList?.filter(k => k.type === "panel_ios" && !k.isUsed && !k.isBanned).length || 0}</p></CardContent></Card><Card className="bg-amber-950/30 border-amber-800"><CardContent className="p-4"><p className="text-xs text-amber-300 uppercase font-bold">Já usadas</p><p className="text-2xl text-amber-400 font-black">{keysList?.filter(k => k.type === "panel_ios" && (k.isUsed || k.isBanned)).length || 0}</p></CardContent></Card></div>
+              <div><h4 className="text-sm text-emerald-400 font-bold mb-2">Keys disponíveis</h4><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white">ID</TableHead><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Estado</TableHead><TableHead className="text-white text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{keysList?.filter(k => k.type === "panel_ios" && !k.isUsed && !k.isBanned).map(k => <TableRow key={k.id} className="border-neutral-800"><TableCell>#{k.id}</TableCell><TableCell className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className="bg-emerald-950 text-emerald-400 border-emerald-800">Disponível</Badge></TableCell><TableCell className="text-right space-x-1"><Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}><Power className="w-3 h-3" /></Button><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></div>
+              <div><h4 className="text-sm text-amber-400 font-bold mb-2">Keys já usadas</h4><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white">ID</TableHead><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Estado</TableHead><TableHead className="text-white">Usada em</TableHead><TableHead className="text-white text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{keysList?.filter(k => k.type === "panel_ios" && (k.isUsed || k.isBanned)).map(k => <TableRow key={k.id} className="border-neutral-800"><TableCell>#{k.id}</TableCell><TableCell className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className="bg-amber-950 text-amber-400 border-amber-800">Usada</Badge></TableCell><TableCell className="text-xs text-neutral-400">{k.usedAt ? new Date(k.usedAt).toLocaleString() : "—"}</TableCell><TableCell className="text-right"><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* KEYS BANIDAS / USADAS */}

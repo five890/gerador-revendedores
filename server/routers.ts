@@ -285,10 +285,10 @@ export const appRouter = router({
         const col = colMap[input.type];
 
         if (isReseller) {
-          if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN" });
-          // Premium pode distribuir créditos entre os revendedores existentes, como o Moderador.
-          // Revendedor comum permanece limitado à própria hierarquia.
-          if (!actor.isPremium && sub.resellerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode gerenciar seus próprios revendedores." });
+          if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Somente revendedores Premium podem gerenciar créditos de outros revendedores." });
+          if (sub.role !== "reseller" || sub.isPremium) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode adicionar ou remover créditos de revendedores Basic." });
+          }
           
           if (input.action === "add") {
             const parentAmount = (actor as any)[col] || 0;
@@ -673,6 +673,21 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) return [];
       return await db.select().from(logs).orderBy(desc(logs.id)).limit(100);
+    }),
+
+    listResellerLogs: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) return [];
+      const resellerRows = await db.select({ id: users.id, username: users.openId, isPremium: users.isPremium }).from(users).where(eq(users.role, "reseller"));
+      const resellerMap = new Map(resellerRows.map((r) => [r.id, r]));
+      const allLogs = await db.select().from(logs).orderBy(desc(logs.id)).limit(500);
+      return allLogs
+        .filter((log) => log.userId !== null && resellerMap.has(log.userId))
+        .map((log) => {
+          const reseller = resellerMap.get(log.userId as number)!;
+          return { ...log, resellerUsername: reseller.username, resellerIsPremium: reseller.isPremium || false };
+        });
     }),
 
     listTutorials: protectedProcedure.query(async ({ ctx }) => {

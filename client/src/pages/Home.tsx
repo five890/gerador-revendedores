@@ -131,6 +131,7 @@ function ModeratorDashboard() {
   const { data: downloadsList, refetch: refetchDownloads } = trpc.moderator.listDownloads.useQuery();
   const { data: tutorialsList, refetch: refetchTutorials } = trpc.moderator.listTutorials.useQuery();
   const { data: logsList } = trpc.moderator.listLogs.useQuery();
+  const { data: resellerLogsList } = trpc.moderator.listResellerLogs.useQuery();
 
   const utils = trpc.useUtils();
 
@@ -1182,6 +1183,14 @@ function ModeratorDashboard() {
 
         {/* LOGS */}
         <TabsContent value="logs" className="space-y-4">
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Logs separados dos revendedores</CardTitle></CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Data</TableHead><TableHead className="text-white font-bold">Revendedor</TableHead><TableHead className="text-white font-bold">Plano</TableHead><TableHead className="text-white font-bold">Ação</TableHead><TableHead className="text-white font-bold">Detalhes</TableHead></TableRow></TableHeader><TableBody>
+                {resellerLogsList?.map((log: any) => <TableRow key={log.id} className="border-neutral-800"><TableCell className="text-xs text-neutral-400">{new Date(log.createdAt).toLocaleString()}</TableCell><TableCell className="font-bold text-white">{log.resellerUsername}</TableCell><TableCell className={log.resellerIsPremium ? "text-amber-400" : "text-emerald-400"}>{log.resellerIsPremium ? "Premium" : "Basic"}</TableCell><TableCell className="text-blue-300 font-mono text-xs">{log.action}</TableCell><TableCell className="text-xs text-neutral-300 max-w-xl">{log.details}</TableCell></TableRow>)}
+              </TableBody></Table></div>
+            </CardContent>
+          </Card>
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">Logs de Auditoria do Sistema</CardTitle></CardHeader>
             <CardContent>

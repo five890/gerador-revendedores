@@ -403,6 +403,7 @@ function ModeratorDashboard() {
           <TabsList className="bg-[#141414] border border-neutral-800 p-1 flex w-max sm:w-full">
             <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Revendedores</TabsTrigger>
             <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Clientes</TabsTrigger>
+            <TabsTrigger value="iosPanel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
             <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Keys</TabsTrigger>
             <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Keys Banidas / Usadas</TabsTrigger>
             <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
@@ -697,6 +698,29 @@ function ModeratorDashboard() {
               </Table></div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* PAINEL IOS */}
+        <TabsContent value="iosPanel" className="space-y-4">
+          <Card className="bg-blue-950/30 border-blue-800 text-white">
+            <CardHeader><CardTitle className="text-white">Administração completa do Painel iOS</CardTitle></CardHeader>
+            <CardContent><p className="text-sm text-blue-100">Tudo cadastrado nesta aba fica vinculado ao tipo <strong>ios</strong>. Os clientes iOS recebem estes Downloads e Tutoriais no painel deles.</p></CardContent>
+          </Card>
+
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader><CardTitle className="text-white">Créditos do Painel iOS por revendedor</CardTitle></CardHeader>
+            <CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Revendedor</TableHead><TableHead className="text-white font-bold">Créditos iOS</TableHead><TableHead className="text-white font-bold text-right">Ação</TableHead></TableRow></TableHeader><TableBody>
+              {resellers?.map((r: any) => <TableRow key={r.id} className="border-neutral-800"><TableCell className="font-bold text-white">{r.username}</TableCell><TableCell className="text-blue-400 font-black">{r.credits?.ios || 0}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const action = prompt(`Para ${r.username}, digite add ou remove:`); if (action === "add" || action === "remove") { const amount = Number(prompt("Quantidade de créditos iOS:")); if (Number.isInteger(amount) && amount > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "ios", action, amount }); } }}>Adicionar/Remover créditos</Button></TableCell></TableRow>)}
+            </TableBody></Table></div></CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Key iOS</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Cole a Key iOS" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} /><Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal, type: "ios" })}>Adicionar Key iOS</Button><textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Uma Key iOS por linha" value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} /><Button className="w-full bg-blue-800 hover:bg-blue-900 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: "ios" })}>Importar Keys iOS</Button></CardContent></Card>
+            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Download iOS</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título do download iOS" value={dlTitle} onChange={(e) => setDlTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Versão" value={dlVersion} onChange={(e) => setDlVersion(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="URL do download" value={dlUrl} onChange={(e) => setDlUrl(e.target.value)} /><textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" placeholder="Descrição" value={dlDesc} onChange={(e) => setDlDesc(e.target.value)} /><Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl, type: "ios" })}>Cadastrar Download iOS</Button></CardContent></Card>
+            <Card className="bg-[#141414] border-neutral-800 text-white lg:col-span-2"><CardHeader><CardTitle className="text-white">Cadastrar Tutorial iOS</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título do tutorial iOS" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Link do tutorial ou vídeo" value={tutUrl} onChange={(e) => setTutUrl(e.target.value)} /><textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" placeholder="Descrição ou instruções" value={tutDesc} onChange={(e) => setTutDesc(e.target.value)} /><Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => addTutorialMutation.mutate({ title: tutTitle, description: tutDesc, videoUrl: tutUrl, type: "ios" })}>Cadastrar Tutorial iOS</Button></CardContent></Card>
+          </div>
+
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Conteúdo iOS cadastrado</CardTitle></CardHeader><CardContent className="space-y-4"><div><h4 className="text-sm font-bold text-blue-400 mb-2">Downloads iOS</h4>{downloadsList?.filter((d: any) => d.type === "ios").map((d: any) => <div key={d.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-sm"><span>{d.title} — v{d.version}</span><Button size="sm" variant="destructive" onClick={() => deleteDownloadMutation.mutate({ downloadId: d.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div><div><h4 className="text-sm font-bold text-blue-400 mb-2">Tutoriais iOS</h4>{tutorialsList?.filter((t: any) => t.type === "ios").map((t: any) => <div key={t.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-sm"><span>{t.title}</span><Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div></CardContent></Card>
         </TabsContent>
 
         {/* GERENCIAR KEYS */}
@@ -1074,7 +1098,7 @@ function ModeratorDashboard() {
                   {downloadsList?.map((d) => (
                     <TableRow key={d.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{d.title}</TableCell>
-                      <TableCell><Badge className={d.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-neutral-800 text-white"}>{d.type === "advanced" ? "Advanced" : "Basic"}</Badge></TableCell>
+                      <TableCell><Badge className={d.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : d.type === "ios" ? "bg-blue-950 text-blue-400 border-blue-800" : "bg-neutral-800 text-white"}>{d.type === "advanced" ? "Advanced" : d.type === "ios" ? "iOS" : "Basic"}</Badge></TableCell>
                       <TableCell className="text-white">{d.version}</TableCell>
                       <TableCell className="text-blue-400 truncate max-w-xs">{d.fileUrl}</TableCell>
                       <TableCell className="text-right space-x-1">
@@ -1131,7 +1155,7 @@ function ModeratorDashboard() {
                   {tutorialsList?.map((t) => (
                     <TableRow key={t.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{t.title}</TableCell>
-                      <TableCell><Badge className={t.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-neutral-800 text-white"}>{t.type === "advanced" ? "Advanced" : "Basic"}</Badge></TableCell>
+                      <TableCell><Badge className={t.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : t.type === "ios" ? "bg-blue-950 text-blue-400 border-blue-800" : "bg-neutral-800 text-white"}>{t.type === "advanced" ? "Advanced" : t.type === "ios" ? "iOS" : "Basic"}</Badge></TableCell>
                       <TableCell><a href={t.videoUrl} target="_blank" rel="noreferrer" className="text-blue-400 underline truncate max-w-xs block">{t.videoUrl}</a></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}>

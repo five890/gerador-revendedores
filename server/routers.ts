@@ -204,6 +204,7 @@ export const appRouter = router({
             basic: r.creditsBasic || 0,
             advanced: r.creditsAdvanced || 0,
             ios: r.creditsIos || 0,
+            panel_ios: r.creditsPanelIos || 0,
           },
           isActive: r.isActive,
           isPremium: r.isPremium || false,
@@ -219,7 +220,8 @@ export const appRouter = router({
         password: z.string(), 
         creditsBasic: z.number().default(0), 
         creditsAdvanced: z.number().default(0), 
-        creditsIos: z.number().default(0), 
+        creditsIos: z.number().default(0),
+        creditsPanelIos: z.number().default(0),
         isPremium: z.boolean().default(false) 
       }))
       .mutation(async ({ input, ctx }) => {
@@ -251,6 +253,7 @@ export const appRouter = router({
           creditsBasic: input.creditsBasic,
           creditsAdvanced: input.creditsAdvanced,
           creditsIos: input.creditsIos,
+          creditsPanelIos: input.creditsPanelIos,
         });
 
         await db.insert(logs).values({
@@ -263,7 +266,7 @@ export const appRouter = router({
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios"]), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
@@ -278,7 +281,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos" };
         const col = colMap[input.type];
 
         if (isReseller) {
@@ -496,7 +499,7 @@ export const appRouter = router({
     }),
 
     addKey: protectedProcedure
-      .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced", "ios"]) }))
+      .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -507,7 +510,7 @@ export const appRouter = router({
       }),
 
     importKeysBatch: protectedProcedure
-      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios"]) }))
+      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -752,6 +755,7 @@ export const appRouter = router({
           basic: reseller.creditsBasic || 0,
           advanced: reseller.creditsAdvanced || 0,
           ios: reseller.creditsIos || 0,
+          panel_ios: reseller.creditsPanelIos || 0,
         },
         isPremium,
         clientsCount: clientsFormatted.length,
@@ -760,7 +764,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -775,7 +779,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {
@@ -791,15 +795,15 @@ export const appRouter = router({
         const now = new Date();
         const expiresAtDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
 
-        if (input.type === "ios") {
-          // iOS compartilha a chave ativa mais recente
-          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
+        if (input.type === "ios" || input.type === "panel_ios") {
+          // Cada painel usa sua própria chave ativa mais recente.
+          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
           if (latestKey.length > 0) {
             keyId = latestKey[0].id;
             keyValueUsed = latestKey[0].keyValue;
             await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
           } else {
-            await db.insert(keys).values({ keyValue: keyValueUsed, type: "ios", isActive: true, isUsed: true, usedAt: now });
+            await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true, usedAt: now });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
             if (inserted.length > 0) keyId = inserted[0].id;
           }
@@ -888,7 +892,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios"]) }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -906,7 +910,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {
@@ -922,16 +926,16 @@ export const appRouter = router({
         const renewalNow = new Date();
         const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
 
-        if (input.type === "ios") {
-          // iOS compartilha a chave ativa mais recente
-          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
+        if (input.type === "ios" || input.type === "panel_ios") {
+          // Cada painel usa sua própria chave ativa mais recente.
+          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
           if (latestKey.length > 0) {
             newKeyId = latestKey[0].id;
             newKeyValue = latestKey[0].keyValue;
             await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
           } else {
-            newKeyValue = "DEFAULT-KEY-IOS";
-            await db.insert(keys).values({ keyValue: newKeyValue, type: "ios", isActive: true, isUsed: true, usedAt: renewalNow });
+            newKeyValue = "DEFAULT-KEY-" + input.type.toUpperCase();
+            await db.insert(keys).values({ keyValue: newKeyValue, type: input.type, isActive: true, isUsed: true, usedAt: renewalNow });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
             if (inserted.length > 0) newKeyId = inserted[0].id;
           }

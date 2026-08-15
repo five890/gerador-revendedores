@@ -11,7 +11,10 @@ export const users = mysqlTable("users", {
   credits: int("credits").default(0).notNull(), // general / legacy
   creditsBasic: int("creditsBasic").default(0).notNull(),
   creditsAdvanced: int("creditsAdvanced").default(0).notNull(),
+  // Saldo do Proxy iOS existente (tipo ios)
   creditsIos: int("creditsIos").default(0).notNull(),
+  // Saldo independente do novo Painel iOS (tipo panel_ios)
+  creditsPanelIos: int("creditsPanelIos").default(0).notNull(),
   creditsAndroid: int("creditsAndroid").default(0).notNull(),
   resellerId: int("resellerId"),
   keyId: int("keyId"),

@@ -829,6 +829,8 @@ export const appRouter = router({
             keyId = latestKey[0].id;
             keyValueUsed = latestKey[0].keyValue;
             await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
+          } else if (input.type === "panel_ios") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key exclusiva disponível para o Painel iOS. Cadastre uma Key panel_ios no painel do Moderador." });
           } else {
             await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true, usedAt: now });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
@@ -971,6 +973,8 @@ export const appRouter = router({
             newKeyId = latestKey[0].id;
             newKeyValue = latestKey[0].keyValue;
             await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+          } else if (input.type === "panel_ios") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key exclusiva disponível para o Painel iOS. Cadastre uma Key panel_ios no painel do Moderador." });
           } else {
             newKeyValue = "DEFAULT-KEY-" + input.type.toUpperCase();
             await db.insert(keys).values({ keyValue: newKeyValue, type: input.type, isActive: true, isUsed: true, usedAt: renewalNow });

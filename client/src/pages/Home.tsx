@@ -147,12 +147,13 @@ function ModeratorDashboard() {
   const [newResellerCreditsAdvanced, setNewResellerCreditsAdvanced] = useState(10);
   const [newResellerCreditsIos, setNewResellerCreditsIos] = useState(10);
   const [newResellerCreditsPanelIos, setNewResellerCreditsPanelIos] = useState(0);
+  const [newResellerCreditsPanelLegitimo, setNewResellerCreditsPanelLegitimo] = useState(0);
   const [newResellerIsPremium, setNewResellerIsPremium] = useState(false);
 
   const [newKeyVal, setNewKeyVal] = useState("");
-  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced" | "ios">("advanced");
+  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
   const [batchKeysText, setBatchKeysText] = useState("");
-  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced" | "ios">("advanced");
+  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
 
   const [dlTitle, setDlTitle] = useState("");
   const [dlDesc, setDlDesc] = useState("");
@@ -168,7 +169,7 @@ function ModeratorDashboard() {
 
   const [modClientUser, setModClientUser] = useState("");
   const [modClientPass, setModClientPass] = useState("");
-  const [modClientType, setModClientType] = useState<"basic" | "advanced" | "ios" | "panel_ios">("advanced");
+  const [modClientType, setModClientType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
   const [modClientMaxDevices, setModClientMaxDevices] = useState(1);
   const [keysRevealed, setKeysRevealed] = useState(false);
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
@@ -451,11 +452,15 @@ function ModeratorDashboard() {
                     <label className="text-xs text-white font-semibold block mb-1">Créditos Painel iOS</label>
                     <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsPanelIos} onChange={(e) => setNewResellerCreditsPanelIos(Number(e.target.value))} />
                   </div>
+                  <div>
+                    <label className="text-xs text-white font-semibold block mb-1">Créditos Painel Legítimo</label>
+                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsPanelLegitimo} onChange={(e) => setNewResellerCreditsPanelLegitimo(Number(e.target.value))} />
+                  </div>
                 <div className="flex items-center space-x-2 pt-2">
                   <input type="checkbox" id="isPremiumCheck" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newResellerIsPremium} onChange={(e) => setNewResellerIsPremium(e.target.checked)} />
                   <label htmlFor="isPremiumCheck" className="text-xs font-bold text-amber-400 cursor-pointer">Revendedor Premium (★)</label>
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, isPremium: newResellerIsPremium })}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, creditsPanelLegitimo: newResellerCreditsPanelLegitimo, isPremium: newResellerIsPremium })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>

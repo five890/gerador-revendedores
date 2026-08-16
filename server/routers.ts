@@ -223,6 +223,7 @@ export const appRouter = router({
         creditsAdvanced: z.number().default(0), 
         creditsIos: z.number().default(0),
         creditsPanelIos: z.number().default(0),
+        creditsPanelLegitimo: z.number().default(0),
         isPremium: z.boolean().default(false) 
       }))
       .mutation(async ({ input, ctx }) => {
@@ -255,6 +256,7 @@ export const appRouter = router({
           creditsAdvanced: input.creditsAdvanced,
           creditsIos: input.creditsIos,
           creditsPanelIos: input.creditsPanelIos,
+          creditsPanelLegitimo: input.creditsPanelLegitimo,
         });
 
         await db.insert(logs).values({
@@ -831,10 +833,10 @@ export const appRouter = router({
           if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key ativa do Proxy iOS cadastrada." });
           keyId = latestProxyKey[0].id;
           keyValueUsed = latestProxyKey[0].keyValue;
-        } else if (input.type === "panel_ios") {
-          // Painel iOS usa uma Key panel_ios própria, ativa e ainda não usada.
-          const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "panel_ios"), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
-          if (unusedPanelKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key exclusiva disponível para o Painel iOS. Cadastre uma Key panel_ios nova." });
+        } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
+          const panelType = input.type;
+          const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+          if (unusedPanelKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
           keyId = unusedPanelKey[0].id;
           keyValueUsed = unusedPanelKey[0].keyValue;
           await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
@@ -970,10 +972,10 @@ export const appRouter = router({
           if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key ativa do Proxy iOS cadastrada." });
           newKeyId = latestProxyKey[0].id;
           newKeyValue = latestProxyKey[0].keyValue;
-        } else if (input.type === "panel_ios") {
-          // Painel iOS troca para uma Key panel_ios própria ainda não usada.
-          const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "panel_ios"), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
-          if (unusedPanelKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key exclusiva disponível para o Painel iOS. Cadastre uma Key panel_ios nova." });
+        } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
+          const panelType = input.type;
+          const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+          if (unusedPanelKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
           newKeyId = unusedPanelKey[0].id;
           newKeyValue = unusedPanelKey[0].keyValue;
           await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));

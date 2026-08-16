@@ -412,6 +412,7 @@ function ModeratorDashboard() {
             <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Revendedores</TabsTrigger>
             <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Clientes</TabsTrigger>
             <TabsTrigger value="iosPanel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
+            <TabsTrigger value="legitPanel" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Painel Legítimo</TabsTrigger>
             <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Keys</TabsTrigger>
             <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Keys Banidas / Usadas</TabsTrigger>
             <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
@@ -486,7 +487,8 @@ function ModeratorDashboard() {
                           { name: 'basic', label: 'Android Basic', color: 'text-red-500' },
                           { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
                           { name: 'ios', label: 'Proxy iOS', color: 'text-blue-400' },
-                          { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' }
+                          { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
+                          { name: 'panel_legitimo', label: 'Painel Legítimo', color: 'text-teal-400' }
                         ].map((cat) => (
                           <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
                             <span className="opacity-70">{cat.label}:</span>
@@ -719,7 +721,7 @@ function ModeratorDashboard() {
         <TabsContent value="iosPanel" className="space-y-4">
           <Card className="bg-blue-950/30 border-blue-800 text-white">
             <CardHeader><CardTitle className="text-white">Administração completa do Painel iOS</CardTitle></CardHeader>
-            <CardContent><p className="text-sm text-blue-100">Tudo cadastrado nesta aba fica vinculado ao tipo <strong>ios</strong>. Os clientes iOS recebem estes Downloads e Tutoriais no painel deles.</p></CardContent>
+            <CardContent><p className="text-sm text-blue-100">Tudo cadastrado nesta aba fica vinculado ao tipo <strong>panel_ios</strong>. Os clientes do Painel iOS recebem estes Downloads e Tutoriais no painel deles.</p></CardContent>
           </Card>
 
           <Card className="bg-[#141414] border-neutral-800 text-white">
@@ -736,6 +738,19 @@ function ModeratorDashboard() {
           </div>
 
           <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Conteúdo iOS cadastrado</CardTitle></CardHeader><CardContent className="space-y-4"><div><h4 className="text-sm font-bold text-blue-400 mb-2">Downloads iOS</h4>{downloadsList?.filter((d: any) => d.type === "panel_ios").map((d: any) => <div key={d.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-sm"><span>{d.title} — v{d.version}</span><Button size="sm" variant="destructive" onClick={() => deleteDownloadMutation.mutate({ downloadId: d.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div><div><h4 className="text-sm font-bold text-blue-400 mb-2">Tutoriais iOS</h4>{tutorialsList?.filter((t: any) => t.type === "panel_ios").map((t: any) => <div key={t.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-sm"><span>{t.title}</span><Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div></CardContent></Card>
+        </TabsContent>
+
+        {/* PAINEL LEGÍTIMO */}
+        <TabsContent value="legitPanel" className="space-y-4">
+          <Card className="bg-cyan-950/30 border-cyan-800 text-white"><CardHeader><CardTitle className="text-white">Administração completa do Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-sm text-cyan-100">Este painel usa o tipo <strong>panel_legitimo</strong>, com créditos, Keys e conteúdos totalmente separados.</p></CardContent></Card>
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Créditos do Painel Legítimo por revendedor</CardTitle></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Revendedor</TableHead><TableHead className="text-white font-bold">Créditos</TableHead><TableHead className="text-white font-bold text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{resellers?.map((r: any) => <TableRow key={r.id} className="border-neutral-800"><TableCell className="font-bold text-white">{r.username}</TableCell><TableCell className="text-cyan-400 font-black">{r.credits?.panel_legitimo || 0}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" className="border-cyan-700 bg-cyan-950/40 text-cyan-300" onClick={() => { const action = prompt(`Para ${r.username}, digite add ou remove:`); if (action === "add" || action === "remove") { const amount = Number(prompt("Quantidade de créditos Painel Legítimo:")); if (Number.isInteger(amount) && amount > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "panel_legitimo", action, amount }); } }}>Adicionar/Remover créditos</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Key Painel Legítimo</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Cole a Key do Painel Legítimo" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} /><Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal, type: "panel_legitimo" })}>Adicionar Key</Button><textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Uma Key por linha" value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} /><Button className="w-full bg-cyan-800 hover:bg-cyan-900 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\\n"), type: "panel_legitimo" })}>Importar Keys</Button></CardContent></Card>
+            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Keys Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-emerald-400 font-bold">Disponíveis: {keysList?.filter(k => k.type === "panel_legitimo" && !k.isUsed && !k.isBanned).length || 0}</p><p className="text-amber-400 font-bold">Já usadas: {keysList?.filter(k => k.type === "panel_legitimo" && (k.isUsed || k.isBanned)).length || 0}</p><div className="mt-3 max-h-64 overflow-y-auto space-y-1">{keysList?.filter(k => k.type === "panel_legitimo").map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-xs"><span className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{k.isUsed ? "Usada" : "Disponível"}</Badge></div>)}</div></CardContent></Card>
+            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Download Painel Legítimo</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={dlTitle} onChange={(e) => setDlTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Versão" value={dlVersion} onChange={(e) => setDlVersion(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="URL" value={dlUrl} onChange={(e) => setDlUrl(e.target.value)} /><Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl, type: "panel_legitimo" })}>Cadastrar Download</Button></CardContent></Card>
+            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Tutorial Painel Legítimo</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Link do tutorial" value={tutUrl} onChange={(e) => setTutUrl(e.target.value)} /><Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" onClick={() => addTutorialMutation.mutate({ title: tutTitle, description: tutDesc, videoUrl: tutUrl, type: "panel_legitimo" })}>Cadastrar Tutorial</Button></CardContent></Card>
+          </div>
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Conteúdo Painel Legítimo cadastrado</CardTitle></CardHeader><CardContent className="space-y-3"><div><h4 className="text-sm font-bold text-cyan-400">Downloads</h4>{downloadsList?.filter((d: any) => d.type === "panel_legitimo").map((d: any) => <div key={d.id} className="flex justify-between border-b border-neutral-800 py-2 text-sm"><span>{d.title} — v{d.version}</span><Button size="sm" variant="destructive" onClick={() => deleteDownloadMutation.mutate({ downloadId: d.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div><div><h4 className="text-sm font-bold text-cyan-400">Tutoriais</h4>{tutorialsList?.filter((t: any) => t.type === "panel_legitimo").map((t: any) => <div key={t.id} className="flex justify-between border-b border-neutral-800 py-2 text-sm"><span>{t.title}</span><Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div></CardContent></Card>
         </TabsContent>
 
         {/* GERENCIAR KEYS */}
@@ -768,6 +783,8 @@ function ModeratorDashboard() {
                     <option value="basic">Android Basic</option>
                     <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
+                    <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_legitimo">Painel Legítimo</option>
                   </select>
                 </div>
                 <Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Ex: SHELBY-XXXX-YYYY" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} />
@@ -786,6 +803,8 @@ function ModeratorDashboard() {
                     <option value="basic">Android Basic</option>
                     <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
+                    <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_legitimo">Painel Legítimo</option>
                   </select>
                 </div>
                 <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
@@ -1361,6 +1380,7 @@ function ResellerDashboard() {
         <TabsList className="bg-[#141414] border border-neutral-800 p-1">
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Clientes</TabsTrigger>
           <TabsTrigger value="ios" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
+          <TabsTrigger value="legitimo" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Painel Legítimo</TabsTrigger>
           {data?.isPremium && (
             <TabsTrigger value="subresellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Revendedores</TabsTrigger>
           )}
@@ -1399,6 +1419,7 @@ function ResellerDashboard() {
                 <option value="advanced">Android Advanced</option>
                 <option value="ios">Proxy iOS</option>
                 <option value="panel_ios">Painel iOS</option>
+                <option value="panel_legitimo">Painel Legítimo</option>
               </select>
             </div>
             <div>
@@ -1437,6 +1458,7 @@ function ResellerDashboard() {
                 <option value="advanced">Android Advanced</option>
                 <option value="ios">Proxy iOS</option>
                 <option value="panel_ios">Painel iOS</option>
+                <option value="panel_legitimo">Painel Legítimo</option>
               </select>
             </div>
             <div className="flex gap-2 justify-end">
@@ -1526,6 +1548,11 @@ function ResellerDashboard() {
               {data?.clients?.filter((c: any) => c.keyType === "panel_ios")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{(!data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium)) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("panel_ios"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}
             </TableBody></Table></div></CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="legitimo" className="space-y-4">
+          <Card className="bg-cyan-950/30 border-cyan-800 text-white"><CardHeader><CardTitle className="text-white">Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-sm text-cyan-100">Clientes deste painel usam Keys, créditos e conteúdos exclusivos do tipo <strong>panel_legitimo</strong>.</p></CardContent></Card>
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Painel Legítimo</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{data?.clients?.filter((c: any) => c.keyType === "panel_legitimo")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{(!data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium)) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("panel_legitimo"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
         </TabsContent>
 
         {data?.isPremium && (

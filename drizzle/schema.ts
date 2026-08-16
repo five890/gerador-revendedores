@@ -15,6 +15,8 @@ export const users = mysqlTable("users", {
   creditsIos: int("creditsIos").default(0).notNull(),
   // Saldo independente do novo Painel iOS (tipo panel_ios)
   creditsPanelIos: int("creditsPanelIos").default(0).notNull(),
+  // Saldo independente do Painel Legítimo (tipo panel_legitimo)
+  creditsPanelLegitimo: int("creditsPanelLegitimo").default(0).notNull(),
   creditsAndroid: int("creditsAndroid").default(0).notNull(),
   resellerId: int("resellerId"),
   keyId: int("keyId"),

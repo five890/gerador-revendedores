@@ -205,6 +205,7 @@ export const appRouter = router({
             advanced: r.creditsAdvanced || 0,
             ios: r.creditsIos || 0,
             panel_ios: r.creditsPanelIos || 0,
+            panel_legitimo: r.creditsPanelLegitimo || 0,
           },
           isActive: r.isActive,
           isPremium: r.isPremium || false,
@@ -266,7 +267,7 @@ export const appRouter = router({
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
@@ -281,12 +282,12 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo" };
         const col = colMap[input.type];
 
         if (isReseller) {
           if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Somente revendedores Premium podem gerenciar créditos de outros revendedores." });
-          if (input.type === "panel_ios") throw new TRPCError({ code: "FORBIDDEN", message: "Revendedores Premium não podem distribuir créditos do Painel iOS." });
+          if (input.type === "panel_ios" || input.type === "panel_legitimo") throw new TRPCError({ code: "FORBIDDEN", message: "Revendedores Premium não podem distribuir créditos de Painéis." });
           if (sub.role !== "reseller" || sub.isPremium) {
             throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode adicionar ou remover créditos de revendedores Basic." });
           }
@@ -500,7 +501,7 @@ export const appRouter = router({
     }),
 
     addKey: protectedProcedure
-      .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]) }))
+      .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -511,7 +512,7 @@ export const appRouter = router({
       }),
 
     importKeysBatch: protectedProcedure
-      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios"]) }))
+      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -784,6 +785,7 @@ export const appRouter = router({
           advanced: reseller.creditsAdvanced || 0,
           ios: reseller.creditsIos || 0,
           panel_ios: reseller.creditsPanelIos || 0,
+          panel_legitimo: reseller.creditsPanelLegitimo || 0,
         },
         isPremium,
         clientsCount: clientsFormatted.length,
@@ -792,7 +794,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -807,7 +809,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {
@@ -917,7 +919,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios"]) }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -946,7 +948,7 @@ export const appRouter = router({
           }
         }
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {

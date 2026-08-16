@@ -611,6 +611,7 @@ function ModeratorDashboard() {
                     <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
                     <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_legitimo">Painel Legítimo</option>
                   </select>
                 </div>
                 <div>

@@ -1554,8 +1554,7 @@ function ResellerDashboard() {
                           {[
                             { name: 'basic', label: 'Android Basic' },
                             { name: 'advanced', label: 'Android Advanced' },
-                            { name: 'ios', label: 'Proxy iOS' },
-                            { name: 'panel_ios', label: 'Painel iOS' }
+                            { name: 'ios', label: 'Proxy iOS' }
                           ].map((cat) => (
                             <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
                               <span className="opacity-70">{cat.label}:</span>

@@ -286,6 +286,7 @@ export const appRouter = router({
 
         if (isReseller) {
           if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Somente revendedores Premium podem gerenciar créditos de outros revendedores." });
+          if (input.type === "panel_ios") throw new TRPCError({ code: "FORBIDDEN", message: "Revendedores Premium não podem distribuir créditos do Painel iOS." });
           if (sub.role !== "reseller" || sub.isPremium) {
             throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode adicionar ou remover créditos de revendedores Basic." });
           }
@@ -845,11 +846,7 @@ export const appRouter = router({
             // Ao ser usada em Basic/Advanced, a chave é banida/removida do estoque ativo, mas preservada no usuário
             await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: now }).where(eq(keys.id, keyId));
           } else {
-            // Se o estoque acabou, gera uma nova chave exclusiva que já nasce usada/banida do estoque ativo
-            keyValueUsed = "KEY-" + input.type.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-            await db.insert(keys).values({ keyValue: keyValueUsed, type: input.type, isActive: true, isUsed: true, isBanned: true, usedAt: now });
-            const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
-            if (inserted.length > 0) keyId = inserted[0].id;
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key ${input.type.toUpperCase()} disponível. Cadastre uma Key nova e não usada no painel do Moderador.` });
           }
         }
 
@@ -990,11 +987,7 @@ export const appRouter = router({
             // Marca como usada e banida do estoque ativo
             await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
           } else {
-            // Se o estoque acabou, gera uma nova chave exclusiva
-            newKeyValue = "KEY-" + input.type.toUpperCase() + "-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-            await db.insert(keys).values({ keyValue: newKeyValue, type: input.type, isActive: true, isUsed: true, isBanned: true, usedAt: renewalNow });
-            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
-            if (inserted.length > 0) newKeyId = inserted[0].id;
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key ${input.type.toUpperCase()} disponível. Cadastre uma Key nova e não usada no painel do Moderador.` });
           }
         }
 

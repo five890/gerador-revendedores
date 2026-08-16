@@ -152,11 +152,6 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden select-none" aria-hidden="true">
-        <div className="absolute -inset-[20%] grid rotate-[-18deg] grid-cols-2 gap-24 opacity-[0.09] text-neutral-300 text-sm font-bold">
-          {Array.from({ length: 18 }).map((_, index) => <span key={index} className="whitespace-nowrap">SHELBY • {user.username} • {new Date().toLocaleString()}</span>)}
-        </div>
-      </div>
       {securityHidden && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] text-center p-6">
           <div><Shield className="mx-auto mb-3 h-10 w-10 text-red-500" /><p className="text-lg font-bold text-white">Conteúdo protegido</p><p className="mt-1 text-sm text-neutral-400">Retorne a esta janela para continuar visualizando o painel.</p></div>

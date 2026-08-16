@@ -1406,7 +1406,8 @@ function ResellerDashboard() {
           { name: 'basic', label: 'Android Basic', color: 'text-red-600' },
           { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
           { name: 'ios', label: 'Proxy iOS', color: 'text-blue-400' },
-          { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' }
+          { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
+          { name: 'panel_legitimo', label: 'Painel Legítimo', color: 'text-emerald-400' }
         ].map((cat) => (
           <Card key={cat.name} className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader className="pb-2">
@@ -1630,7 +1631,9 @@ function ResellerDashboard() {
                           {[
                             { name: 'basic', label: 'Android Basic' },
                             { name: 'advanced', label: 'Android Advanced' },
-                            { name: 'ios', label: 'Proxy iOS' }
+                            { name: 'ios', label: 'Proxy iOS' },
+                            { name: 'panel_ios', label: 'Painel iOS' },
+                            { name: 'panel_legitimo', label: 'Painel Legítimo' }
                           ].map((cat) => (
                             <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
                               <span className="opacity-70">{cat.label}:</span>

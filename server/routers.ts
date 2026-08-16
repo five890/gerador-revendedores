@@ -562,14 +562,15 @@ export const appRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
         let added = 0;
-        for (const k of input.keysList) {
-          const trimmed = k.trim();
-          if (trimmed) {
-            try {
+        const normalizedKeys = input.keysList.flatMap((value) => value.split(/\r?\n/).map((key) => key.trim())).filter(Boolean);
+        for (const trimmed of normalizedKeys) {
+          try {
+            const exists = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.keyValue, trimmed), eq(keys.type, input.type))).limit(1);
+            if (exists.length === 0) {
               await db.insert(keys).values({ keyValue: trimmed, type: input.type });
               added++;
-            } catch (e) {}
-          }
+            }
+          } catch (e) {}
         }
         return { success: true, added };
       }),

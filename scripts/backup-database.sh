@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${BACKUP_DATABASE_URL:?Defina BACKUP_DATABASE_URL no ambiente do hospedador}"
+OUT_DIR="${1:-./backup-runs/$(date -u +%Y%m%d-%H%M%S)}"
+mkdir -p "$OUT_DIR"
+
+if [[ "${BACKUP_DATABASE_URL}" == postgres://* || "${BACKUP_DATABASE_URL}" == postgresql://* ]]; then
+  command -v pg_dump >/dev/null 2>&1 || { echo "pg_dump não instalado" >&2; exit 1; }
+  pg_dump --no-owner --no-privileges --format=custom "$BACKUP_DATABASE_URL" > "$OUT_DIR/database.dump"
+  echo "postgresql" > "$OUT_DIR/database-engine.txt"
+elif [[ "${BACKUP_DATABASE_URL}" == mysql://* || "${BACKUP_DATABASE_URL}" == mariadb://* ]]; then
+  command -v mysqldump >/dev/null 2>&1 || { echo "mysqldump não instalado" >&2; exit 1; }
+  mysqldump --single-transaction --routines --triggers "$BACKUP_DATABASE_URL" > "$OUT_DIR/database.sql"
+  echo "mysql" > "$OUT_DIR/database-engine.txt"
+else
+  echo "BACKUP_DATABASE_URL deve começar com postgres://, postgresql://, mysql:// ou mariadb://" >&2
+  exit 1
+fi
+
+sha256sum "$OUT_DIR"/* > "$OUT_DIR/SHA256SUMS"
+printf 'Backup criado em %s\n' "$OUT_DIR"

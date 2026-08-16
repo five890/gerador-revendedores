@@ -1,0 +1,35 @@
+name: Database backup
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+env:
+  BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+
+jobs:
+  backup:
+    if: ${{ env.BACKUP_DATABASE_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install database clients
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client mysql-client
+
+      - name: Create database dump
+        run: bash scripts/backup-database.sh backup-run
+
+      - name: Upload private backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shelby-panel-database-${{ github.run_id }}
+          path: backup-run/
+          retention-days: 90

@@ -184,7 +184,7 @@ function ModeratorDashboard() {
     },
     onError: (err) => toast.error(err.message),
   });
-  const [modRenewType, setModRenewType] = useState<"basic" | "advanced" | "ios" | "panel_ios">("advanced");
+  const [modRenewType, setModRenewType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
 
   const modCreateClientMutation = trpc.reseller.createClient.useMutation({
     onSuccess: (res) => {

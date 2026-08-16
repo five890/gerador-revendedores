@@ -836,10 +836,17 @@ export const appRouter = router({
         } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
           const panelType = input.type;
           const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
-          if (unusedPanelKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
-          keyId = unusedPanelKey[0].id;
+          if (unusedPanelKey.length === 0) {
+            if (ctx.user.role !== "moderator" || panelType !== "panel_legitimo") throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
+            keyValueUsed = `KEY-PANEL-LEGITIMO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+            await db.insert(keys).values({ keyValue: keyValueUsed, type: panelType, isActive: true, isUsed: true, usedAt: now });
+            const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
+            if (inserted.length > 0) keyId = inserted[0].id;
+          } else {
+            keyId = unusedPanelKey[0].id;
           keyValueUsed = unusedPanelKey[0].keyValue;
-          await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
+            await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
+          }
         } else {
           // Basic e Advanced puxam obrigatoriamente uma chave NÃO UTILIZADA (isUsed = false)
           const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
@@ -975,10 +982,17 @@ export const appRouter = router({
         } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
           const panelType = input.type;
           const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
-          if (unusedPanelKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
-          newKeyId = unusedPanelKey[0].id;
+          if (unusedPanelKey.length === 0) {
+            if (ctx.user.role !== "moderator" || panelType !== "panel_legitimo") throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
+            newKeyValue = `KEY-PANEL-LEGITIMO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+            await db.insert(keys).values({ keyValue: newKeyValue, type: panelType, isActive: true, isUsed: true, usedAt: renewalNow });
+            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
+            if (inserted.length > 0) newKeyId = inserted[0].id;
+          } else {
+            newKeyId = unusedPanelKey[0].id;
           newKeyValue = unusedPanelKey[0].keyValue;
-          await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+            await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+          }
         } else {
           // Basic e Advanced puxam obrigatoriamente uma chave NOVA (isUsed = false)
           const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);

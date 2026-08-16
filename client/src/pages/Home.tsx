@@ -21,6 +21,37 @@ export default function Home() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [securityHidden, setSecurityHidden] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const blockInteraction = (event: MouseEvent) => event.preventDefault();
+    const blockShortcuts = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const blocked = event.key === "PrintScreen" || event.key === "F12" ||
+        ((event.ctrlKey || event.metaKey) && ["p", "s", "u", "c"].includes(key)) ||
+        ((event.ctrlKey || event.metaKey) && event.shiftKey && ["i", "j", "c"].includes(key));
+      if (blocked) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    const onVisibility = () => setSecurityHidden(document.visibilityState !== "visible");
+    const onBlur = () => setSecurityHidden(true);
+    const onFocus = () => setSecurityHidden(false);
+    document.addEventListener("contextmenu", blockInteraction);
+    document.addEventListener("keydown", blockShortcuts, true);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("contextmenu", blockInteraction);
+      document.removeEventListener("keydown", blockShortcuts, true);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [user?.id]);
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
@@ -121,6 +152,16 @@ export default function Home() {
         </div>
       </header>
 
+      <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden select-none" aria-hidden="true">
+        <div className="absolute -inset-[20%] grid rotate-[-18deg] grid-cols-2 gap-24 opacity-[0.09] text-neutral-300 text-sm font-bold">
+          {Array.from({ length: 18 }).map((_, index) => <span key={index} className="whitespace-nowrap">SHELBY • {user.username} • {new Date().toLocaleString()}</span>)}
+        </div>
+      </div>
+      {securityHidden && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] text-center p-6">
+          <div><Shield className="mx-auto mb-3 h-10 w-10 text-red-500" /><p className="text-lg font-bold text-white">Conteúdo protegido</p><p className="mt-1 text-sm text-neutral-400">Retorne a esta janela para continuar visualizando o painel.</p></div>
+        </div>
+      )}
       <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full">
         {user.role === "moderator" && <ModeratorDashboard />}
         {user.role === "reseller" && <ResellerDashboard />}

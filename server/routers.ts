@@ -823,8 +823,8 @@ export const appRouter = router({
         const expiresAtDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
 
         if (input.type === "ios" || input.type === "panel_ios") {
-          // Cada painel usa sua própria chave ativa mais recente.
-          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
+          // Cada painel consome uma Key própria, ativa e ainda não usada.
+          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
           if (latestKey.length > 0) {
             keyId = latestKey[0].id;
             keyValueUsed = latestKey[0].keyValue;
@@ -967,8 +967,8 @@ export const appRouter = router({
         const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
 
         if (input.type === "ios" || input.type === "panel_ios") {
-          // Cada painel usa sua própria chave ativa mais recente.
-          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
+          // Cada painel consome uma Key própria, ativa e ainda não usada.
+          const latestKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
           if (latestKey.length > 0) {
             newKeyId = latestKey[0].id;
             newKeyValue = latestKey[0].keyValue;

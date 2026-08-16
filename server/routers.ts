@@ -215,6 +215,47 @@ export const appRouter = router({
       return result;
     }),
 
+    createClient: protectedProcedure
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]), maxDevices: z.number().default(1) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Moderador pode usar esta rota." });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const cleanUsername = input.username.trim();
+        const existing = await db.select().from(users).where(eq(users.openId, cleanUsername)).limit(1);
+        if (existing.length > 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Este nome de usuário já está em uso." });
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        let keyId: number | null = null;
+        let keyValue = "";
+        if (input.type === "ios") {
+          const found = await db.select().from(keys).where(and(eq(keys.type, "ios"), eq(keys.isActive, true))).orderBy(desc(keys.id)).limit(1);
+          if (!found.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Cadastre uma Key ativa do Proxy iOS." });
+          keyId = found[0].id; keyValue = found[0].keyValue;
+        } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
+          const found = await db.select().from(keys).where(and(eq(keys.type, input.type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+          if (found.length) {
+            keyId = found[0].id; keyValue = found[0].keyValue;
+            await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
+          } else if (input.type === "panel_legitimo") {
+            keyValue = `KEY-PANEL-LEGITIMO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+            await db.insert(keys).values({ keyValue, type: input.type, isActive: true, isUsed: true, usedAt: now });
+            const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValue)).limit(1);
+            if (inserted.length) keyId = inserted[0].id;
+          } else {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Cadastre uma Key panel_ios nova e não usada." });
+          }
+        } else {
+          const found = await db.select().from(keys).where(and(eq(keys.type, input.type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+          if (!found.length) throw new TRPCError({ code: "BAD_REQUEST", message: `Cadastre uma Key ${input.type} nova e não usada.` });
+          keyId = found[0].id; keyValue = found[0].keyValue;
+          await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: now }).where(eq(keys.id, keyId));
+        }
+        await db.insert(users).values({ openId: cleanUsername, role: "client", passwordHash: hashPassword(input.password) as any, resellerId: null, keyId, maxDevices: input.maxDevices || 1, credits: 0, isActive: true, expiresAt });
+        await db.insert(logs).values({ userId: ctx.user.id, action: "MODERATOR_CREATE_CLIENT", details: `Moderador ${ctx.user.username} criou ${cleanUsername} (${input.type}) com a Key ${keyValue}.` });
+        return { success: true, createdUsername: cleanUsername, createdPassword: input.password };
+      }),
+
     createReseller: protectedProcedure
       .input(z.object({ 
         username: z.string(), 

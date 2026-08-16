@@ -186,7 +186,7 @@ function ModeratorDashboard() {
   });
   const [modRenewType, setModRenewType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
 
-  const modCreateClientMutation = trpc.reseller.createClient.useMutation({
+  const modCreateClientMutation = trpc.moderator.createClient.useMutation({
     onSuccess: (res) => {
       toast.success(`Cliente ${res.createdUsername} criado com sucesso pelo Moderador!`);
       setModCreatedCredentials({ username: res.createdUsername, password: res.createdPassword });

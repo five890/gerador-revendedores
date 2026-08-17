@@ -175,6 +175,7 @@ function ModeratorDashboard() {
   const { data: tutorialsList, refetch: refetchTutorials } = trpc.moderator.listTutorials.useQuery();
   const { data: logsList } = trpc.moderator.listLogs.useQuery();
   const { data: resellerLogsList } = trpc.moderator.listResellerLogs.useQuery();
+  const { data: resellerKeyAudit } = trpc.moderator.keyAuditByReseller.useQuery();
 
   const utils = trpc.useUtils();
 
@@ -457,6 +458,7 @@ function ModeratorDashboard() {
             <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
             <TabsTrigger value="tutorials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Tutoriais</TabsTrigger>
             <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs de Auditoria</TabsTrigger>
+            <TabsTrigger value="keyAudit" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white text-white">Keys por Revendedor</TabsTrigger>
           </TabsList>
         </div>
 
@@ -1270,6 +1272,33 @@ function ModeratorDashboard() {
         </TabsContent>
 
 
+
+        <TabsContent value="keyAudit" className="space-y-4">
+          <Card className="bg-[#141414] border-neutral-800 text-white">
+            <CardHeader>
+              <CardTitle className="text-white">Keys geradas por revendedor</CardTitle>
+              <p className="text-xs text-neutral-400">Mostra as Keys atualmente atribuídas aos clientes criados por cada revendedor.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {resellerKeyAudit?.map((audit: any) => (
+                <Card key={audit.resellerId} className="bg-[#1b1b1b] border-neutral-700 text-white">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <CardTitle className="text-base text-white">{audit.resellerUsername} <span className={audit.resellerIsPremium ? "text-amber-400 text-xs" : "text-emerald-400 text-xs"}>({audit.resellerIsPremium ? "Premium" : "Basic"})</span></CardTitle>
+                      <Badge className="bg-amber-950/50 text-amber-300 border-amber-800">{audit.totalKeys} Key(s)</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[11px] text-neutral-300">
+                      {Object.entries(audit.counts || {}).map(([type, count]) => <span key={type} className="rounded border border-neutral-700 px-2 py-1">{type}: {String(count)}</span>)}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {audit.keys.length === 0 ? <p className="text-sm text-neutral-400">Nenhuma Key atribuída ainda.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-700"><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Tipo</TableHead><TableHead className="text-white">Cliente</TableHead><TableHead className="text-white">Status</TableHead><TableHead className="text-white">Usada em</TableHead></TableRow></TableHeader><TableBody>{audit.keys.map((item: any) => <TableRow key={`${audit.resellerId}-${item.clientId}-${item.keyId}`} className="border-neutral-700"><TableCell className="font-mono text-xs text-cyan-300">{item.keyValue}</TableCell><TableCell className="text-xs text-white">{item.keyType}</TableCell><TableCell className="text-xs text-white">{item.clientUsername}</TableCell><TableCell className="text-xs"><span className={item.keyIsBanned ? "text-red-400" : item.keyIsUsed ? "text-amber-400" : "text-emerald-400"}>{item.keyIsBanned ? "Banida" : item.keyIsUsed ? "Usada" : "Disponível"}</span></TableCell><TableCell className="text-xs text-neutral-400">{item.keyUsedAt ? new Date(item.keyUsedAt).toLocaleString() : "-"}</TableCell></TableRow>)}</TableBody></Table></div>}
+                  </CardContent>
+                </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* LOGS */}
         <TabsContent value="logs" className="space-y-4">

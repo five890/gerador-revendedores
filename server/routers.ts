@@ -179,6 +179,47 @@ export const appRouter = router({
       };
     }),
 
+    keyAuditByReseller: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) return [];
+
+      const resellerRows = await db.select({ id: users.id, username: users.openId, isPremium: users.isPremium }).from(users).where(eq(users.role, "reseller"));
+      const clientRows = await db.select({ id: users.id, username: users.openId, resellerId: users.resellerId, keyId: users.keyId, createdAt: users.createdAt }).from(users).where(eq(users.role, "client"));
+      const keyRows = await db.select().from(keys);
+      const keyById = new Map(keyRows.map((key) => [key.id, key]));
+
+      return resellerRows.map((reseller) => {
+        const assigned = clientRows.filter((client) => client.resellerId === reseller.id && client.keyId);
+        const details = assigned.map((client) => {
+          const key = keyById.get(client.keyId as number);
+          return {
+            clientId: client.id,
+            clientUsername: client.username,
+            keyId: client.keyId,
+            keyValue: key?.keyValue || "Key não encontrada",
+            keyType: key?.type || "unknown",
+            keyIsUsed: key?.isUsed || false,
+            keyIsBanned: key?.isBanned || false,
+            keyUsedAt: key?.usedAt || null,
+            clientCreatedAt: client.createdAt,
+          };
+        });
+        const counts = details.reduce((acc: Record<string, number>, item) => {
+          acc[item.keyType] = (acc[item.keyType] || 0) + 1;
+          return acc;
+        }, {});
+        return {
+          resellerId: reseller.id,
+          resellerUsername: reseller.username,
+          resellerIsPremium: reseller.isPremium || false,
+          totalKeys: details.length,
+          counts,
+          keys: details,
+        };
+      });
+    }),
+
     listResellers: protectedProcedure.query(async ({ ctx }) => {
       const isMod = ctx.user.role === "moderator";
       const isPremiumReseller = ctx.user.role === "reseller";

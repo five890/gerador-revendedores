@@ -772,6 +772,38 @@ export const appRouter = router({
   }),
 
   reseller: router({
+    resetClientSession: protectedProcedure
+      .input(z.object({ clientId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        const actor = actorRes[0];
+        if (!actor) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.role, "client"))).limit(1);
+        const client = clientRes[0];
+        if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
+
+        if (actor.isPremium) {
+          if (!client.resellerId) throw new TRPCError({ code: "FORBIDDEN", message: "Premium só pode resetar clientes de revendedores Basic." });
+          const ownerRes = await db.select({ id: users.id, isPremium: users.isPremium }).from(users).where(eq(users.id, client.resellerId)).limit(1);
+          if (!ownerRes[0] || ownerRes[0].isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Premium só pode resetar clientes de revendedores Basic." });
+        } else if (client.resellerId !== actor.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cliente não pertence ao seu painel." });
+        }
+
+        await db.delete(sessions).where(eq(sessions.userId, client.id));
+        await db.insert(logs).values({
+          userId: actor.id,
+          action: "RESET_SESSION",
+          details: `Revendedor ${actor.openId} resetou a sessão do cliente ${client.openId}.`,
+        });
+        return { success: true };
+      }),
+
     dashboard: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "reseller") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();

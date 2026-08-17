@@ -1383,6 +1383,11 @@ function ResellerDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
+  const resetClientSessionMutation = trpc.reseller.resetClientSession.useMutation({
+    onSuccess: () => toast.success("Sessão do cliente resetada! Ele poderá entrar novamente em outro navegador/dispositivo."),
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const renewClientMutation = trpc.reseller.renewClient.useMutation({
     onSuccess: (res) => {
       toast.success(`Cliente renovado com sucesso! Nova Key atribuída: ${res.newKeyValue}`);
@@ -1571,6 +1576,9 @@ function ResellerDashboard() {
 	                      const p = prompt("Nova senha:");
 	                      if (p) resetPassMutation.mutate({ clientId: c.id, newPassword: p });
 	                    }}>Senha</Button>
+                    <Button size="sm" variant="outline" className="border-amber-700 bg-amber-950/40 text-amber-300 hover:bg-amber-900/50" onClick={() => {
+                      if (confirm(`Resetar a sessão de ${c.username}? O cliente poderá entrar novamente em outro navegador/dispositivo.`)) resetClientSessionMutation.mutate({ clientId: c.id });
+                    }}>Resetar sessão</Button>
 	                    <Button size="sm" variant="destructive" onClick={() => {
 	                      if (confirm("Excluir cliente?")) deleteClientMutation.mutate({ clientId: c.id });
 	                    }}>

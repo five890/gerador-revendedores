@@ -1441,6 +1441,11 @@ function ResellerDashboard() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const resetResellerSessionMutation = trpc.moderator.resetUserSession.useMutation({
+    onSuccess: () => toast.success("Sessão do revendedor Basic resetada!"),
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const renewClientMutation = trpc.reseller.renewClient.useMutation({
     onSuccess: (res) => {
       toast.success(`Cliente renovado com sucesso! Nova Key atribuída: ${res.newKeyValue}`);
@@ -1710,11 +1715,14 @@ function ResellerDashboard() {
                             </div>
                           ))}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-1">
                           <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => {
                             const p = prompt("Nova senha:");
                             if (p) resetPassMutation.mutate({ clientId: r.id, newPassword: p });
                           }}>Senha</Button>
+                          {!r.isPremium && <Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300 hover:bg-blue-900/50" onClick={() => {
+                            if (confirm(`Resetar a sessão do revendedor Basic ${r.username}?`)) resetResellerSessionMutation.mutate({ userId: r.id });
+                          }}>Resetar sessão</Button>}
                         </TableCell>
                       </TableRow>
                     ))}

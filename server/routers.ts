@@ -498,12 +498,21 @@ export const appRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
         if (ctx.user.role === "reseller") {
-          // Verifica se o revendedor é o dono ou se é premium
-          const resRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-          const isPremium = resRes[0]?.isPremium || false;
-          if (!isPremium) {
-            const clientRes = await db.select().from(users).where(and(eq(users.id, input.userId), eq(users.resellerId, ctx.user.id))).limit(1);
-            if (clientRes.length === 0) throw new TRPCError({ code: "FORBIDDEN", message: "Cliente não pertence ao seu painel." });
+          const actorRes = await db.select({ id: users.id, isPremium: users.isPremium }).from(users).where(eq(users.id, ctx.user.id)).limit(1);
+          const actor = actorRes[0];
+          if (!actor) throw new TRPCError({ code: "FORBIDDEN" });
+
+          const targetRes = await db.select({ id: users.id, role: users.role, resellerId: users.resellerId, isPremium: users.isPremium }).from(users).where(eq(users.id, input.userId)).limit(1);
+          const target = targetRes[0];
+          if (!target || target.role === "moderator") throw new TRPCError({ code: "FORBIDDEN", message: "Esse usuário não pode ter a sessão resetada por um revendedor." });
+
+          if (actor.isPremium) {
+            if (target.role === "reseller" && target.isPremium) {
+              throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium não pode resetar outro revendedor Premium." });
+            }
+            // Premium pode resetar qualquer cliente e qualquer revendedor Basic.
+          } else if (target.role !== "client" || target.resellerId !== actor.id) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Somente Premium pode resetar usuários de outros painéis." });
           }
         }
 

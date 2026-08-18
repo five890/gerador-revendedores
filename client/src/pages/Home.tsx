@@ -447,6 +447,7 @@ function ModeratorDashboard() {
       </div>
 
       {(() => {
+        if (!stats) return null;
         const stockLabels: Record<string, string> = { basic: "Proxy Basic", advanced: "Proxy Advanced", ios: "Proxy iOS", panel_ios: "Painel iOS", panel_legitimo: "Painel Legítimo" };
         const lowStock = Object.entries(stockLabels).filter(([type]) => Number((stats?.stock as any)?.[type] || 0) <= 3);
         return lowStock.length > 0 ? <Card className="bg-red-950/40 border-red-700 text-white"><CardContent className="p-4"><div className="flex items-start gap-3"><AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 shrink-0" /><div><p className="font-black text-red-300">ATENÇÃO: estoque de Keys acabando</p><p className="text-xs text-red-200/80 mt-1">Reponha os tipos abaixo. O alerta aparece quando restam <strong>3 Keys ou menos</strong> disponíveis.</p><div className="flex flex-wrap gap-2 mt-3">{lowStock.map(([type, label]) => <Badge key={type} className="bg-red-900/70 border-red-600 text-red-100">{label}: {Number((stats?.stock as any)?.[type] || 0)} disponíveis</Badge>)}</div></div></div></CardContent></Card> : null;

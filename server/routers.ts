@@ -1087,18 +1087,8 @@ export const appRouter = router({
         if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado ou não autorizado." });
         const client = clientRes[0];
 
-        if (ctx.user.role === "reseller" && actor.isPremium) {
-          if (client.resellerId === actor.id) {
-            // Premium pode renovar os próprios clientes usando seus créditos.
-          } else {
-            if (!client.resellerId) throw new TRPCError({ code: "FORBIDDEN", message: "Cliente sem revendedor responsável." });
-            const ownerRes = await db.select({ isPremium: users.isPremium, role: users.role }).from(users).where(eq(users.id, client.resellerId)).limit(1);
-            const owner = ownerRes[0];
-            if (!owner || owner.role !== "reseller" || owner.isPremium) {
-              throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode renovar clientes próprios ou de revendedores Basic." });
-            }
-          }
-        }
+        // O Premium pode renovar qualquer cliente listado, inclusive expirado.
+        // O Basic continua restrito aos próprios clientes pela consulta acima.
 
         const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo" };
         const col = colMap[input.type];

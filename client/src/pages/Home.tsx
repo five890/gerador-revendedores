@@ -1641,7 +1641,7 @@ function ResellerDashboard() {
 		                        )}
 		                      </TableCell>
 			                      <TableCell className="text-right space-x-1">
-                    {(!data?.isPremium || c.ownerId === data?.resellerId || (c.ownerRole === "reseller" && !c.ownerIsPremium)) ? <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => setRenewingClient({ id: c.id, username: c.username })}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}
+                    {(data?.isPremium || c.ownerId === data?.resellerId || (c.ownerRole === "reseller" && !c.ownerIsPremium)) ? <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50" onClick={() => setRenewingClient({ id: c.id, username: c.username })}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de outro painel</span>}
                     <Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300 hover:bg-blue-900/50" onClick={() => {
                       const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}? A key não será renovada:`));
                       if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours });

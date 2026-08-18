@@ -461,19 +461,27 @@ function ModeratorDashboard() {
 
       <Tabs defaultValue="resellers" className="space-y-4">
         <div className="overflow-x-auto pb-2">
-          <TabsList className="bg-[#141414] border border-neutral-800 p-1 flex w-max sm:w-full">
+          <div className="mb-2"><h2 className="text-sm font-black uppercase tracking-wider text-white">Centro de Controle do Moderador</h2><p className="text-xs text-neutral-500">Gerencie usuários, painéis, estoque, conteúdo e auditoria em seções separadas.</p></div>
+          <TabsList className="bg-[#141414] border border-neutral-800 p-2 flex flex-wrap items-center gap-1 w-full h-auto">
+            <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Operação</span>
             <TabsTrigger value="resellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Revendedores</TabsTrigger>
             <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Clientes</TabsTrigger>
+            <span className="mx-1 h-5 w-px bg-neutral-700" />
+            <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Painéis</span>
             <TabsTrigger value="iosPanel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
             <TabsTrigger value="legitPanel" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Painel Legítimo</TabsTrigger>
             <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>
+            <span className="mx-1 h-5 w-px bg-neutral-700" />
+            <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Keys</span>
             <TabsTrigger value="androidKeys" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Keys Android</TabsTrigger>
             <TabsTrigger value="legitKeys" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Keys Legítimo</TabsTrigger>
             <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Keys</TabsTrigger>
-            <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Keys Banidas / Usadas</TabsTrigger>
+            <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Banidas / Usadas</TabsTrigger>
+            <span className="mx-1 h-5 w-px bg-neutral-700" />
+            <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Conteúdo e auditoria</span>
             <TabsTrigger value="downloads" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Downloads</TabsTrigger>
             <TabsTrigger value="tutorials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Tutoriais</TabsTrigger>
-            <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs de Auditoria</TabsTrigger>
+            <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs</TabsTrigger>
             <TabsTrigger value="keyAudit" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white text-white">Keys por Revendedor</TabsTrigger>
           </TabsList>
         </div>

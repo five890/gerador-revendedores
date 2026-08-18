@@ -283,6 +283,11 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
+  const updateResellerProductsMutation = trpc.moderator.updateResellerProducts.useMutation({
+    onSuccess: () => { toast.success("Produtos do revendedor atualizados!"); refetchResellers(); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const toggleStatusMutation = trpc.moderator.toggleUserStatus.useMutation({
     onSuccess: () => {
       toast.success("Status alterado!");
@@ -559,7 +564,9 @@ function ModeratorDashboard() {
                           { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
                           { name: 'ios', label: 'Proxy iOS', color: 'text-blue-400' },
                           { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
-                          { name: 'panel_legitimo', label: 'Painel Legítimo', color: 'text-teal-400' }
+                          { name: 'panel_legitimo', label: 'Painel Legítimo', color: 'text-teal-400' },
+                          { name: 'panel_android', label: 'Painel Android', color: 'text-orange-400' },
+                          { name: 'ios_ipa', label: 'Proxy iOS IPA', color: 'text-violet-400' }
                         ].map((cat) => (
                           <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
                             <span className="opacity-70">{cat.label}:</span>
@@ -589,6 +596,15 @@ function ModeratorDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="outline" className="border-violet-700 text-violet-300 bg-violet-950/30" title="Produtos habilitados" onClick={() => {
+                          const current = (r.enabledProducts || ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]).join(", ");
+                          const value = prompt(`Produtos liberados para ${r.username}. Use: basic, advanced, ios, panel_ios, panel_legitimo, panel_android, ios_ipa`, current);
+                          if (value !== null) {
+                            const allowed = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"];
+                            const products = value.split(",").map((p) => p.trim()).filter((p) => allowed.includes(p)) as any;
+                            updateResellerProductsMutation.mutate({ resellerId: r.id, products });
+                          }
+                        }}>Produtos</Button>
                         <Button size="sm" variant="outline" className={r.isPremium ? "border-amber-500 text-amber-400 bg-amber-950/30" : "border-neutral-700 bg-transparent text-white hover:bg-neutral-800"} title="Alternar Premium" onClick={() => toggleResellerPremiumMutation.mutate({ resellerId: r.id })}>
                           ★
                         </Button>
@@ -1457,6 +1473,9 @@ function ResellerDashboard() {
   const [renewType, setRenewType] = useState<any>("advanced");
   const [iosClientSearch, setIosClientSearch] = useState("");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
+  const allResellerProducts = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"];
+  const enabledResellerProducts = data?.enabledProducts || allResellerProducts;
+  const canUseProduct = (type: string) => enabledResellerProducts.includes(type);
 
   // Estados para criação de sub-revendedor (Premium Reseller)
   const [newSubUser, setNewSubUser] = useState("");
@@ -1550,7 +1569,7 @@ function ResellerDashboard() {
           { name: 'panel_legitimo', label: 'Painel Legítimo', color: 'text-emerald-400' },
           { name: 'panel_android', label: 'Painel Android', color: 'text-orange-400' },
           { name: 'ios_ipa', label: 'Proxy iOS IPA', color: 'text-violet-400' }
-        ].map((cat) => (
+        ].filter((cat) => canUseProduct(cat.name)).map((cat) => (
           <Card key={cat.name} className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs uppercase text-white">Créditos {cat.label}</CardTitle>
@@ -1569,12 +1588,12 @@ function ResellerDashboard() {
       </div>
 
       <Tabs defaultValue="clients" className="space-y-4">
-        <TabsList className="bg-[#141414] border border-neutral-800 p-1">
+                  <TabsList className="bg-[#141414] border border-neutral-800 p-1">
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Clientes</TabsTrigger>
-          <TabsTrigger value="ios" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
-          <TabsTrigger value="legitimo" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Painel Legítimo</TabsTrigger>
-          <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>
-          <TabsTrigger value="iosIpaPanel" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Proxy iOS IPA</TabsTrigger>
+          {canUseProduct("ios") && <TabsTrigger value="ios" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>}
+          {canUseProduct("panel_legitimo") && <TabsTrigger value="legitimo" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Painel Legítimo</TabsTrigger>}
+          {canUseProduct("panel_android") && <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>}
+          {canUseProduct("ios_ipa") && <TabsTrigger value="iosIpaPanel" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Proxy iOS IPA</TabsTrigger>}
           {data?.isPremium && (
             <TabsTrigger value="subresellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Revendedores</TabsTrigger>
           )}

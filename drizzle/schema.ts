@@ -22,6 +22,8 @@ export const users = mysqlTable("users", {
   creditsPanelAndroid: int("creditsPanelAndroid").default(0).notNull(),
   // Saldo independente do Proxy iOS IPA (tipo ios_ipa)
   creditsIosIpa: int("creditsIosIpa").default(0).notNull(),
+  // JSON com os tipos de produto liberados para este revendedor; nulo = todos os produtos legados
+  enabledProducts: text("enabledProducts"),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),

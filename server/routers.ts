@@ -9,6 +9,19 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 
+const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"] as const;
+const productTypeSchema = z.enum(ALL_PRODUCT_TYPES);
+
+function getEnabledProducts(value: unknown): string[] {
+  if (!value) return [...ALL_PRODUCT_TYPES];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed.filter((p): p is string => ALL_PRODUCT_TYPES.includes(p as any)) : [...ALL_PRODUCT_TYPES];
+  } catch {
+    return [...ALL_PRODUCT_TYPES];
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
 
@@ -269,6 +282,7 @@ export const appRouter = router({
             panel_android: r.creditsPanelAndroid || 0,
             ios_ipa: r.creditsIosIpa || 0,
           },
+          enabledProducts: getEnabledProducts(r.enabledProducts),
           isActive: r.isActive,
           isPremium: r.isPremium || false,
           clientCount: Number(clientCountRes[0]?.count || 0),
@@ -421,8 +435,20 @@ export const appRouter = router({
         });
 
         return { success: true, newCredits: newAmount };
+            }),
+    updateResellerProducts: protectedProcedure
+      .input(z.object({ resellerId: z.number(), products: z.array(productTypeSchema) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const resellerRes = await db.select().from(users).where(and(eq(users.id, input.resellerId), eq(users.role, "reseller"))).limit(1);
+        if (!resellerRes.length) throw new TRPCError({ code: "NOT_FOUND", message: "Revendedor não encontrado." });
+        const products = Array.from(new Set(input.products));
+        await db.update(users).set({ enabledProducts: JSON.stringify(products) }).where(eq(users.id, input.resellerId));
+        await db.insert(logs).values({ userId: ctx.user.id, action: "UPDATE_RESELLER_PRODUCTS", details: `Moderador configurou os produtos do revendedor ${resellerRes[0].openId}: ${products.join(", ") || "nenhum"}.` });
+        return { success: true, products };
       }),
-
     toggleResellerPremium: protectedProcedure
       .input(z.object({ resellerId: z.number() }))
       .mutation(async ({ input, ctx }) => {
@@ -941,7 +967,10 @@ export const appRouter = router({
           ios: reseller.creditsIos || 0,
           panel_ios: reseller.creditsPanelIos || 0,
           panel_legitimo: reseller.creditsPanelLegitimo || 0,
+          panel_android: reseller.creditsPanelAndroid || 0,
+          ios_ipa: reseller.creditsIosIpa || 0,
         },
+        enabledProducts: getEnabledProducts(reseller.enabledProducts),
         isPremium,
         clientsCount: clientsFormatted.length,
         clients: clientsFormatted,
@@ -966,6 +995,10 @@ export const appRouter = router({
 
         const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", ios_ipa: "creditsIosIpa" };
         const col = colMap[input.type];
+
+        if (ctx.user.role === "reseller" && !getEnabledProducts(actor.enabledProducts).includes(input.type)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `O produto ${input.type.toUpperCase()} não está habilitado para este revendedor.` });
+        }
 
         if (ctx.user.role === "reseller") {
           const currentAmount = (actor as any)[col] || 0;
@@ -1115,6 +1148,10 @@ export const appRouter = router({
 
         const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", ios_ipa: "creditsIosIpa" };
         const col = colMap[input.type];
+
+        if (ctx.user.role === "reseller" && !getEnabledProducts(actor.enabledProducts).includes(input.type)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `O produto ${input.type.toUpperCase()} não está habilitado para este revendedor.` });
+        }
 
         if (ctx.user.role === "reseller") {
           const currentAmount = (actor as any)[col] || 0;

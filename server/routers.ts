@@ -22,6 +22,20 @@ function getEnabledProducts(value: unknown): string[] {
   }
 }
 
+async function resolveMediaFireUrl(videoUrl: string): Promise<string> {
+  try {
+    const parsed = new URL(videoUrl);
+    if (!parsed.hostname.toLowerCase().endsWith("mediafire.com")) return videoUrl;
+    const response = await fetch(videoUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!response.ok) return videoUrl;
+    const html = await response.text();
+    const match = html.match(/href="(https:\/\/download[^" ]+)"/i);
+    return match?.[1]?.replace(/&amp;/g, "&") || videoUrl;
+  } catch {
+    return videoUrl;
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
 
@@ -1287,6 +1301,10 @@ export const appRouter = router({
 
       const filteredDownloads = allDownloads.filter(d => targetTypes.includes(d.type || "advanced"));
       const filteredTutorials = allTutorials.filter(t => targetTypes.includes(t.type || "advanced"));
+      const resolvedTutorials = await Promise.all(filteredTutorials.map(async (tutorial) => ({
+        ...tutorial,
+        videoUrl: await resolveMediaFireUrl(tutorial.videoUrl),
+      })));
 
       return {
         username: client.openId,
@@ -1295,7 +1313,7 @@ export const appRouter = router({
         keyUsedAt,
         expiresAt: client.expiresAt || null,
         downloads: filteredDownloads,
-        tutorials: filteredTutorials,
+        tutorials: resolvedTutorials,
       };
     }),
   }),

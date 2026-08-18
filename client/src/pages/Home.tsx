@@ -23,7 +23,7 @@ function getVideoEmbedUrl(rawUrl: string): { kind: "iframe" | "video"; url: stri
       const id = parsed.pathname.split("/").filter(Boolean)[0];
       if (id) return { kind: "iframe", url: `https://player.vimeo.com/video/${id}` };
     }
-    if (/\.(mp4|webm|ogg)(?:\?.*)?$/i.test(parsed.pathname)) return { kind: "video", url: parsed.toString() };
+    if (/\.(mp4|webm|ogg|mov)(?:\?.*)?$/i.test(parsed.pathname)) return { kind: "video", url: parsed.toString() };
   } catch {
     return null;
   }

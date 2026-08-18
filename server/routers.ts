@@ -162,13 +162,18 @@ export const appRouter = router({
     dashboardStats: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
-      if (!db) return { totalClients: 0, totalResellers: 0, totalKeys: 0, usedKeys: 0, activeSessions: 0 };
+      if (!db) return { totalClients: 0, totalResellers: 0, totalKeys: 0, usedKeys: 0, activeSessions: 0, stock: {} };
 
       const clientsRes = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.role, "client"));
       const resellersRes = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.role, "reseller"));
       const keysRes = await db.select({ count: sql`count(*)` }).from(keys);
       const usedKeysRes = await db.select({ count: sql`count(*)` }).from(keys).where(eq(keys.isUsed, true));
       const sessionsRes = await db.select({ count: sql`count(*)` }).from(sessions);
+      const availableKeys = await db.select({ type: keys.type }).from(keys).where(and(eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false)));
+      const stock = availableKeys.reduce((acc: Record<string, number>, key) => {
+        acc[key.type] = (acc[key.type] || 0) + 1;
+        return acc;
+      }, {});
 
       return {
         totalClients: Number(clientsRes[0]?.count || 0),
@@ -176,6 +181,7 @@ export const appRouter = router({
         totalKeys: Number(keysRes[0]?.count || 0),
         usedKeys: Number(usedKeysRes[0]?.count || 0),
         activeSessions: Number(sessionsRes[0]?.count || 0),
+        stock,
       };
     }),
 

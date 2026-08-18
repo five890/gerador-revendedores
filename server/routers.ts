@@ -266,6 +266,7 @@ export const appRouter = router({
             ios: r.creditsIos || 0,
             panel_ios: r.creditsPanelIos || 0,
             panel_legitimo: r.creditsPanelLegitimo || 0,
+            panel_android: r.creditsPanelAndroid || 0,
           },
           isActive: r.isActive,
           isPremium: r.isPremium || false,
@@ -276,7 +277,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Moderador pode usar esta rota." });
         const db = await getDb();
@@ -292,7 +293,7 @@ export const appRouter = router({
           const found = await db.select().from(keys).where(and(eq(keys.type, "ios"), eq(keys.isActive, true))).orderBy(desc(keys.id)).limit(1);
           if (!found.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Cadastre uma Key ativa do Proxy iOS." });
           keyId = found[0].id; keyValue = found[0].keyValue;
-        } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
+        } else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") {
           const found = await db.select().from(keys).where(and(eq(keys.type, input.type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
           if (found.length) {
             keyId = found[0].id; keyValue = found[0].keyValue;
@@ -370,7 +371,7 @@ export const appRouter = router({
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android"]), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
@@ -385,12 +386,12 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid" };
         const col = colMap[input.type];
 
         if (isReseller) {
           if (!actor.isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Somente revendedores Premium podem gerenciar créditos de outros revendedores." });
-          if (input.type === "panel_ios" || input.type === "panel_legitimo") throw new TRPCError({ code: "FORBIDDEN", message: "Revendedores Premium não podem distribuir créditos de Painéis." });
+          if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") throw new TRPCError({ code: "FORBIDDEN", message: "Revendedores Premium não podem distribuir créditos de Painéis." });
           if (sub.role !== "reseller" || sub.isPremium) {
             throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode adicionar ou remover créditos de revendedores Basic." });
           }
@@ -613,7 +614,7 @@ export const appRouter = router({
     }),
 
     addKey: protectedProcedure
-      .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]) }))
+      .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -628,7 +629,7 @@ export const appRouter = router({
       }),
 
     importKeysBatch: protectedProcedure
-      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]) }))
+      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -945,7 +946,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -960,7 +961,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {
@@ -982,11 +983,11 @@ export const appRouter = router({
           if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key ativa do Proxy iOS cadastrada." });
           keyId = latestProxyKey[0].id;
           keyValueUsed = latestProxyKey[0].keyValue;
-        } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
+        } else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") {
           const panelType = input.type;
           const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
           if (unusedPanelKey.length === 0) {
-            if (ctx.user.role !== "moderator" || panelType !== "panel_legitimo") throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
+            if (ctx.user.role !== "moderator" || panelType !== "panel_legitimo") throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : panelType === "panel_android" ? "o Painel Android" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
             keyValueUsed = `KEY-PANEL-LEGITIMO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
             await db.insert(keys).values({ keyValue: keyValueUsed, type: panelType, isActive: true, isUsed: true, usedAt: now });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, keyValueUsed)).limit(1);
@@ -1083,7 +1084,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo"]) }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -1109,7 +1110,7 @@ export const appRouter = router({
         // O Premium pode renovar qualquer cliente listado, inclusive expirado.
         // O Basic continua restrito aos próprios clientes pela consulta acima.
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller") {
@@ -1131,11 +1132,11 @@ export const appRouter = router({
           if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key ativa do Proxy iOS cadastrada." });
           newKeyId = latestProxyKey[0].id;
           newKeyValue = latestProxyKey[0].keyValue;
-        } else if (input.type === "panel_ios" || input.type === "panel_legitimo") {
+        } else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") {
           const panelType = input.type;
           const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
           if (unusedPanelKey.length === 0) {
-            if (ctx.user.role !== "moderator" || panelType !== "panel_legitimo") throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
+            if (ctx.user.role !== "moderator" || panelType !== "panel_legitimo") throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : panelType === "panel_android" ? "o Painel Android" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
             newKeyValue = `KEY-PANEL-LEGITIMO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
             await db.insert(keys).values({ keyValue: newKeyValue, type: panelType, isActive: true, isUsed: true, usedAt: renewalNow });
             const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);

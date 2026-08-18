@@ -18,6 +18,8 @@ export const users = mysqlTable("users", {
   // Saldo independente do Painel Legítimo (tipo panel_legitimo)
   creditsPanelLegitimo: int("creditsPanelLegitimo").default(0).notNull(),
   creditsAndroid: int("creditsAndroid").default(0).notNull(),
+  // Saldo independente do Painel Android (tipo panel_android)
+  creditsPanelAndroid: int("creditsPanelAndroid").default(0).notNull(),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),

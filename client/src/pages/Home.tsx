@@ -10,6 +10,26 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Lock, Unlock, RefreshCcw, Trash2, Power, UserPlus, Copy, Download as DownloadIcon, Edit, LogOut, Shield, Users, KeyRound, FileDown, BookOpen, AlertTriangle, Video } from "lucide-react";
 
+function getVideoEmbedUrl(rawUrl: string): { kind: "iframe" | "video"; url: string } | null {
+  try {
+    const parsed = new URL(rawUrl);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "youtu.be") return { kind: "iframe", url: `https://www.youtube.com/embed/${parsed.pathname.slice(1).split("/")[0]}` };
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      const id = parsed.searchParams.get("v") || parsed.pathname.match(/\/(?:shorts|embed)\/([^/?]+)/)?.[1];
+      if (id) return { kind: "iframe", url: `https://www.youtube.com/embed/${id}` };
+    }
+    if (host === "vimeo.com") {
+      const id = parsed.pathname.split("/").filter(Boolean)[0];
+      if (id) return { kind: "iframe", url: `https://player.vimeo.com/video/${id}` };
+    }
+    if (/\.(mp4|webm|ogg)(?:\?.*)?$/i.test(parsed.pathname)) return { kind: "video", url: parsed.toString() };
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export default function Home() {
   const utils = trpc.useUtils();
   const { data: user, isLoading: authLoading } = trpc.auth.me.useQuery(undefined, {
@@ -2025,19 +2045,19 @@ function ClientDashboard() {
             {data?.tutorials?.length === 0 ? (
               <p className="text-sm text-white">Nenhum tutorial cadastrado no momento.</p>
             ) : (
-              data?.tutorials?.map((t) => (
-                <div key={t.id} className="bg-[#1f1f1f] border border-neutral-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              data?.tutorials?.map((t) => {
+                const video = getVideoEmbedUrl(t.videoUrl);
+                return <div key={t.id} className="bg-[#1f1f1f] border border-neutral-800 p-4 rounded-lg space-y-3">
                   <div className="space-y-1">
                     <strong className="text-white font-bold text-base">{t.title}</strong>
                     {t.description && <p className="text-xs text-white">{t.description}</p>}
                   </div>
-                  <a href={t.videoUrl} target="_blank" rel="noopener noreferrer">
-                    <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto">
-                      <Video className="w-4 h-4 mr-2" /> Assistir / Acessar Tutorial
-                    </Button>
-                  </a>
-                </div>
-              ))
+                  {video?.kind === "iframe" && <div className="relative w-full overflow-hidden rounded-lg border border-neutral-700 bg-black aspect-video"><iframe src={video.url} title={t.title} className="absolute inset-0 h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div>}
+                  {video?.kind === "video" && <video src={video.url} controls preload="metadata" className="w-full max-h-[520px] rounded-lg border border-neutral-700 bg-black" />}
+                  {!video && <p className="text-xs text-amber-300">Este link não pode ser incorporado automaticamente.</p>}
+                  <a href={t.videoUrl} target="_blank" rel="noopener noreferrer"><Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"><Video className="w-4 h-4 mr-2" /> Abrir vídeo em nova aba</Button></a>
+                </div>;
+              })
             )}
           </div>
         </CardContent>

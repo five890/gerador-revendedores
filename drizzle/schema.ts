@@ -20,6 +20,8 @@ export const users = mysqlTable("users", {
   creditsAndroid: int("creditsAndroid").default(0).notNull(),
   // Saldo independente do Painel Android (tipo panel_android)
   creditsPanelAndroid: int("creditsPanelAndroid").default(0).notNull(),
+  // Saldo independente do Proxy iOS IPA (tipo ios_ipa)
+  creditsIosIpa: int("creditsIosIpa").default(0).notNull(),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),

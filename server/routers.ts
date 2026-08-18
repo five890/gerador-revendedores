@@ -1065,17 +1065,22 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
+        const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        const actor = actorRes[0];
+        if (!actor) throw new TRPCError({ code: "FORBIDDEN" });
+
         let clientRes;
         if (ctx.user.role === "moderator") {
           clientRes = await db.select().from(users).where(eq(users.id, input.clientId)).limit(1);
+        } else if (actor.isPremium) {
+          // Premium pode localizar clientes próprios e clientes de revendedores Basic;
+          // a validação abaixo impede clientes pertencentes a outro Premium.
+          clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.role, "client"))).limit(1);
         } else {
-          clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.resellerId, ctx.user.id))).limit(1);
+          clientRes = await db.select().from(users).where(and(eq(users.id, input.clientId), eq(users.role, "client"), eq(users.resellerId, ctx.user.id))).limit(1);
         }
-        if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
+        if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado ou não autorizado." });
         const client = clientRes[0];
-
-        const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-        const actor = actorRes[0];
 
         if (ctx.user.role === "reseller" && actor.isPremium) {
           if (client.resellerId === actor.id) {

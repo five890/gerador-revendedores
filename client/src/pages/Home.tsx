@@ -1501,6 +1501,15 @@ function ResellerDashboard() {
   const allResellerProducts = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"];
   const enabledResellerProducts = data?.enabledProducts || allResellerProducts;
   const canUseProduct = (type: string) => enabledResellerProducts.includes(type);
+  const resellerProductOptions = [
+    { value: "basic", label: "Android Basic" },
+    { value: "advanced", label: "Android Advanced" },
+    { value: "ios", label: "Proxy iOS" },
+    { value: "panel_ios", label: "Painel iOS" },
+    { value: "panel_legitimo", label: "Painel Legítimo" },
+    { value: "panel_android", label: "Painel Android" },
+    { value: "ios_ipa", label: "Proxy iOS IPA" },
+  ].filter((product) => canUseProduct(product.value));
 
   // Estados para criação de sub-revendedor (Premium Reseller)
   const [newSubUser, setNewSubUser] = useState("");
@@ -1692,15 +1701,9 @@ function ResellerDashboard() {
           <CardHeader className="p-0"><CardTitle className="text-white text-base">Renovar Cliente: <span className="text-red-500">{renewingClient.username}</span></CardTitle></CardHeader>
           <CardContent className="p-0 space-y-4">
             <div>
-              <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
+              <label className="text-xs text-white font-semibold block mb-2">Selecione o produto para renovar este cliente:</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={renewType} onChange={(e: any) => setRenewType(e.target.value)}>
-                <option value="basic">Android Basic</option>
-                <option value="advanced">Android Advanced</option>
-                <option value="ios">Proxy iOS</option>
-                <option value="panel_ios">Painel iOS</option>
-                <option value="panel_legitimo">Painel Legítimo</option>
-                <option value="panel_android">Painel Android</option>
-                <option value="ios_ipa">Proxy iOS IPA</option>
+                {resellerProductOptions.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}
               </select>
             </div>
             <div className="flex gap-2 justify-end">

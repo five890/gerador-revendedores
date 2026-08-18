@@ -314,20 +314,22 @@ function ModeratorDashboard() {
 
   const addKeyMutation = trpc.moderator.addKey.useMutation({
     onSuccess: () => {
-      toast.success("Key adicionada!");
+      toast.success("Key adicionada ao estoque!");
       setNewKeyVal("");
       refetchKeys();
+      utils.moderator.dashboardStats.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(`Não foi possível adicionar: ${e.message}`),
   });
 
   const batchAddKeysMutation = trpc.moderator.importKeysBatch.useMutation({
     onSuccess: (res) => {
-      toast.success(`${res.added} keys importadas com sucesso!`);
+      toast.success(`${res.added} Key(s) adicionada(s). ${res.skipped || 0} duplicada(s) ignorada(s).`);
       setBatchKeysText("");
       refetchKeys();
+      utils.moderator.dashboardStats.invalidate();
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(`Não foi possível importar: ${e.message}`),
   });
 
   const toggleKeyMutation = trpc.moderator.toggleKeyStatus.useMutation({
@@ -848,7 +850,10 @@ function ModeratorDashboard() {
                   </select>
                 </div>
                 <Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Ex: SHELBY-XXXX-YYYY" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} />
-                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal, type: newKeyType })}>
+                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => {
+                  if (!newKeyVal.trim()) { toast.error("Digite uma Key antes de adicionar."); return; }
+                  addKeyMutation.mutate({ keyValue: newKeyVal.trim(), type: newKeyType });
+                }}>
                   Adicionar Key
                 </Button>
               </CardContent>
@@ -868,7 +873,10 @@ function ModeratorDashboard() {
                   </select>
                 </div>
                 <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
-                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: batchKeyType })}>
+                <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => {
+                  if (!batchKeysText.trim()) { toast.error("Cole pelo menos uma Key antes de importar."); return; }
+                  batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: batchKeyType });
+                }}>
                   Importar em Lote
                 </Button>
                 <Button className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold mt-2" onClick={() => {

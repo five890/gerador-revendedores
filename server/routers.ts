@@ -606,7 +606,11 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        await db.insert(keys).values({ keyValue: input.keyValue, type: input.type });
+        const keyValue = input.keyValue.trim();
+        if (!keyValue) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe uma Key válida." });
+        const existing = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.keyValue, keyValue), eq(keys.type, input.type))).limit(1);
+        if (existing.length > 0) throw new TRPCError({ code: "CONFLICT", message: "Esta Key já está cadastrada neste tipo." });
+        await db.insert(keys).values({ keyValue, type: input.type });
         return { success: true };
       }),
 
@@ -618,17 +622,18 @@ export const appRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
         let added = 0;
+        let skipped = 0;
         const normalizedKeys = input.keysList.flatMap((value) => value.split(/\r?\n/).map((key) => key.trim())).filter(Boolean);
         for (const trimmed of normalizedKeys) {
-          try {
-            const exists = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.keyValue, trimmed), eq(keys.type, input.type))).limit(1);
-            if (exists.length === 0) {
-              await db.insert(keys).values({ keyValue: trimmed, type: input.type });
-              added++;
-            }
-          } catch (e) {}
+          const exists = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.keyValue, trimmed), eq(keys.type, input.type))).limit(1);
+          if (exists.length > 0) {
+            skipped++;
+            continue;
+          }
+          await db.insert(keys).values({ keyValue: trimmed, type: input.type });
+          added++;
         }
-        return { success: true, added };
+        return { success: true, added, skipped, received: normalizedKeys.length };
       }),
 
     toggleKeyStatus: protectedProcedure

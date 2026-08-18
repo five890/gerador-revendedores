@@ -213,7 +213,10 @@ function ModeratorDashboard() {
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
   const [modRenewingClient, setModRenewingClient] = useState<{ id: number; username: string } | null>(null);
   const [modClientSearch, setModClientSearch] = useState("");
-  const [keyAuditType, setKeyAuditType] = useState<"all" | "basic" | "advanced" | "ios" | "panel_legitimo">("all");
+  const [keyAuditType, setKeyAuditType] = useState<"all" | "basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("all");
+  const [keyAuditSearch, setKeyAuditSearch] = useState("");
+  const [keyAuditFrom, setKeyAuditFrom] = useState("");
+  const [keyAuditTo, setKeyAuditTo] = useState("");
 
 
   const deleteExpiredKeysMutation = trpc.moderator.deleteExpiredKeys.useMutation({
@@ -1298,27 +1301,41 @@ function ModeratorDashboard() {
                   <CardTitle className="text-white">Keys geradas por revendedor</CardTitle>
                   <p className="text-xs text-neutral-400">Filtre por tipo para ver quantas Keys foram atribuídas e quais clientes receberam cada uma.</p>
                 </div>
-                <select value={keyAuditType} onChange={(e) => setKeyAuditType(e.target.value as any)} className="bg-[#222] border border-neutral-700 rounded px-3 py-2 text-xs text-white">
-                  <option value="all">Todos os tipos</option>
-                  <option value="ios">Proxy iOS</option>
-                  <option value="advanced">Proxy Advanced</option>
-                  <option value="basic">Proxy Basic</option>
-                  <option value="panel_legitimo">Painel Legítimo</option>
-                </select>
+                <div className="flex flex-wrap gap-2">
+                  <Input value={keyAuditSearch} onChange={(e) => setKeyAuditSearch(e.target.value)} placeholder="Pesquisar Key ou cliente" className="bg-[#222] border-neutral-700 text-white text-xs w-48" />
+                  <input type="date" value={keyAuditFrom} onChange={(e) => setKeyAuditFrom(e.target.value)} className="bg-[#222] border border-neutral-700 rounded px-2 py-2 text-xs text-white" title="Data inicial" />
+                  <input type="date" value={keyAuditTo} onChange={(e) => setKeyAuditTo(e.target.value)} className="bg-[#222] border border-neutral-700 rounded px-2 py-2 text-xs text-white" title="Data final" />
+                  <select value={keyAuditType} onChange={(e) => setKeyAuditType(e.target.value as any)} className="bg-[#222] border border-neutral-700 rounded px-3 py-2 text-xs text-white">
+                    <option value="all">Todos os tipos</option>
+                    <option value="ios">Proxy iOS</option>
+                    <option value="advanced">Proxy Advanced</option>
+                    <option value="basic">Proxy Basic</option>
+                    <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_legitimo">Painel Legítimo</option>
+                  </select>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 {[
                   { type: "all", label: "Total" },
                   { type: "ios", label: "Proxy iOS" },
                   { type: "advanced", label: "Proxy Advanced" },
                   { type: "basic", label: "Proxy Basic" },
+                  { type: "panel_ios", label: "Painel iOS" },
                   { type: "panel_legitimo", label: "Legítimo" },
                 ].map((item) => <div key={item.type} className="rounded border border-neutral-800 bg-[#1b1b1b] p-2"><p className="text-[10px] text-neutral-400">{item.label}</p><p className="text-xl font-black text-amber-400">{resellerKeyAudit?.reduce((sum: number, audit: any) => sum + (item.type === "all" ? audit.totalKeys : Number(audit.counts?.[item.type] || 0)), 0) || 0}</p></div>)}
               </div>
               {resellerKeyAudit?.map((audit: any) => {
-                const filteredKeys = keyAuditType === "all" ? audit.keys : audit.keys.filter((item: any) => item.keyType === keyAuditType);
+                const search = keyAuditSearch.trim().toLowerCase();
+                const fromTime = keyAuditFrom ? new Date(`${keyAuditFrom}T00:00:00`).getTime() : null;
+                const toTime = keyAuditTo ? new Date(`${keyAuditTo}T23:59:59`).getTime() : null;
+                const filteredKeys = audit.keys.filter((item: any) => {
+                  const dateValue = item.deletedAt || item.keyUsedAt || item.clientCreatedAt;
+                  const dateTime = dateValue ? new Date(dateValue).getTime() : null;
+                  return (keyAuditType === "all" || item.keyType === keyAuditType) && (!search || `${item.keyValue} ${item.clientUsername}`.toLowerCase().includes(search)) && (fromTime === null || (dateTime !== null && dateTime >= fromTime)) && (toTime === null || (dateTime !== null && dateTime <= toTime));
+                });
                 if (keyAuditType !== "all" && filteredKeys.length === 0) return null;
                 return (
                 <Card key={audit.resellerId} className="bg-[#1b1b1b] border-neutral-700 text-white">
@@ -1332,7 +1349,7 @@ function ModeratorDashboard() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {filteredKeys.length === 0 ? <p className="text-sm text-neutral-400">Nenhuma Key deste tipo atribuída a este revendedor.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-700"><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Tipo</TableHead><TableHead className="text-white">Cliente</TableHead><TableHead className="text-white">Status</TableHead><TableHead className="text-white">Usada em</TableHead></TableRow></TableHeader><TableBody>{filteredKeys.map((item: any) => <TableRow key={`${audit.resellerId}-${item.clientId}-${item.keyId}`} className="border-neutral-700"><TableCell className="font-mono text-xs text-cyan-300">{item.keyValue}</TableCell><TableCell className="text-xs text-white">{item.keyType}</TableCell><TableCell className="text-xs text-white">{item.clientUsername}</TableCell><TableCell className="text-xs"><span className={item.keyIsBanned ? "text-red-400" : item.keyIsUsed ? "text-amber-400" : "text-emerald-400"}>{item.keyIsBanned ? "Banida" : item.keyIsUsed ? "Usada" : "Disponível"}</span></TableCell><TableCell className="text-xs text-neutral-400">{item.keyUsedAt ? new Date(item.keyUsedAt).toLocaleString() : "-"}</TableCell></TableRow>)}</TableBody></Table></div>}
+                    {filteredKeys.length === 0 ? <p className="text-sm text-neutral-400">Nenhuma Key deste tipo atribuída a este revendedor.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-700"><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Tipo</TableHead><TableHead className="text-white">Cliente</TableHead><TableHead className="text-white">Status</TableHead><TableHead className="text-white">Usada em</TableHead></TableRow></TableHeader><TableBody>{filteredKeys.map((item: any) => <TableRow key={`${audit.resellerId}-${item.clientId}-${item.keyId}`} className="border-neutral-700"><TableCell className="font-mono text-xs text-cyan-300">{item.keyValue}</TableCell><TableCell className="text-xs text-white">{item.keyType}</TableCell><TableCell className="text-xs text-white">{item.clientUsername}</TableCell><TableCell className="text-xs"><span className={item.isDeleted ? "text-red-400" : item.keyIsBanned ? "text-red-400" : item.keyIsUsed ? "text-amber-400" : "text-emerald-400"}>{item.isDeleted ? "Login excluído" : item.keyIsBanned ? "Banida" : item.keyIsUsed ? "Usada" : "Disponível"}</span></TableCell><TableCell className="text-xs text-neutral-400">{(item.deletedAt || item.keyUsedAt || item.clientCreatedAt) ? new Date(item.deletedAt || item.keyUsedAt || item.clientCreatedAt).toLocaleString() : "-"}</TableCell></TableRow>)}</TableBody></Table></div>}
                   </CardContent>
                 </Card>
                               )

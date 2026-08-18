@@ -194,6 +194,17 @@ export const appRouter = router({
       const clientRows = await db.select({ id: users.id, username: users.openId, resellerId: users.resellerId, keyId: users.keyId, createdAt: users.createdAt }).from(users).where(eq(users.role, "client"));
       const keyRows = await db.select().from(keys);
       const keyById = new Map(keyRows.map((key) => [key.id, key]));
+      const deletionLogs = await db.select().from(logs).where(eq(logs.action, "RESELLER_DELETE_CLIENT"));
+      const deletedByReseller = new Map<number, any[]>();
+      for (const log of deletionLogs) {
+        if (!log.userId || !log.details) continue;
+        const match = log.details.match(/clientId=(\d+)\|clientUsername=([^|]*)\|keyId=([^|]*)\|keyValue=([^|]*)\|keyType=([^|]*)/);
+        if (!match) continue;
+        const [, clientId, clientUsername, keyId, keyValue, keyType] = match;
+        const list = deletedByReseller.get(log.userId) || [];
+        list.push({ clientId: Number(clientId), clientUsername, keyId: keyId === "null" ? null : Number(keyId), keyValue, keyType, keyIsUsed: true, keyIsBanned: false, keyUsedAt: null, clientCreatedAt: log.createdAt, deletedAt: log.createdAt, isDeleted: true });
+        deletedByReseller.set(log.userId, list);
+      }
 
       return resellerRows.map((reseller) => {
         const assigned = clientRows.filter((client) => client.resellerId === reseller.id && client.keyId);
@@ -211,7 +222,9 @@ export const appRouter = router({
             clientCreatedAt: client.createdAt,
           };
         });
-        const counts = details.reduce((acc: Record<string, number>, item) => {
+        const historical = deletedByReseller.get(reseller.id) || [];
+        const allDetails = [...details, ...historical];
+        const counts = allDetails.reduce((acc: Record<string, number>, item) => {
           acc[item.keyType] = (acc[item.keyType] || 0) + 1;
           return acc;
         }, {});
@@ -219,9 +232,9 @@ export const appRouter = router({
           resellerId: reseller.id,
           resellerUsername: reseller.username,
           resellerIsPremium: reseller.isPremium || false,
-          totalKeys: details.length,
+          totalKeys: allDetails.length,
           counts,
-          keys: details,
+          keys: allDetails,
         };
       });
     }),
@@ -1053,6 +1066,12 @@ export const appRouter = router({
         if (clientRes.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
 
         const client = clientRes[0];
+        const clientKey = client.keyId ? (await db.select().from(keys).where(eq(keys.id, client.keyId)).limit(1))[0] : null;
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "RESELLER_DELETE_CLIENT",
+          details: `clientId=${client.id}|clientUsername=${client.openId}|keyId=${client.keyId || "null"}|keyValue=${clientKey?.keyValue || "Nenhuma"}|keyType=${clientKey?.type || "unknown"}`,
+        });
         if (client.keyId) {
           await db.update(keys).set({ isUsed: false }).where(eq(keys.id, client.keyId));
         }

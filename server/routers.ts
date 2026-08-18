@@ -911,8 +911,9 @@ export const appRouter = router({
         });
       }
 
-      return {
-        credits: {
+        return {
+          resellerId: reseller.id,
+          credits: {
           basic: reseller.creditsBasic || 0,
           advanced: reseller.creditsAdvanced || 0,
           ios: reseller.creditsIos || 0,
@@ -1077,13 +1078,15 @@ export const appRouter = router({
         const actor = actorRes[0];
 
         if (ctx.user.role === "reseller" && actor.isPremium) {
-          if (!client.resellerId || client.resellerId === actor.id) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode renovar clientes de revendedores Basic." });
-          }
-          const ownerRes = await db.select({ isPremium: users.isPremium, role: users.role }).from(users).where(eq(users.id, client.resellerId)).limit(1);
-          const owner = ownerRes[0];
-          if (!owner || owner.role !== "reseller" || owner.isPremium) {
-            throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode renovar clientes de revendedores Basic." });
+          if (client.resellerId === actor.id) {
+            // Premium pode renovar os próprios clientes usando seus créditos.
+          } else {
+            if (!client.resellerId) throw new TRPCError({ code: "FORBIDDEN", message: "Cliente sem revendedor responsável." });
+            const ownerRes = await db.select({ isPremium: users.isPremium, role: users.role }).from(users).where(eq(users.id, client.resellerId)).limit(1);
+            const owner = ownerRes[0];
+            if (!owner || owner.role !== "reseller" || owner.isPremium) {
+              throw new TRPCError({ code: "FORBIDDEN", message: "Revendedor Premium só pode renovar clientes próprios ou de revendedores Basic." });
+            }
           }
         }
 

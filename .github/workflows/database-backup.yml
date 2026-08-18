@@ -2,9 +2,8 @@ name: Database backup
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
   schedule:
+    # 03:17 UTC todos os dias
     - cron: "17 3 * * *"
 
 permissions:
@@ -15,9 +14,15 @@ env:
 
 jobs:
   backup:
-    if: ${{ env.BACKUP_DATABASE_URL != '' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Fail clearly when the database secret is missing
+        if: ${{ env.BACKUP_DATABASE_URL == '' }}
+        run: |
+          echo "BACKUP_DATABASE_URL não está configurado." >&2
+          echo "Adicione o secret em Settings > Secrets and variables > Actions." >&2
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -27,9 +32,16 @@ jobs:
       - name: Create database dump
         run: bash scripts/backup-database.sh backup-run
 
+      - name: Verify backup files and checksums
+        run: |
+          test -s backup-run/database-engine.txt
+          test -s backup-run/SHA256SUMS
+          sha256sum --check backup-run/SHA256SUMS
+
       - name: Upload private backup artifact
         uses: actions/upload-artifact@v4
         with:
           name: shelby-panel-database-${{ github.run_id }}
           path: backup-run/
+          if-no-files-found: error
           retention-days: 90

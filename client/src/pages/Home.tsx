@@ -45,28 +45,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!user) return;
-    const blockInteraction = (event: MouseEvent) => event.preventDefault();
-    const blockShortcuts = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase();
-      const blocked = event.key === "PrintScreen" || event.key === "F12" ||
-        ((event.ctrlKey || event.metaKey) && ["p", "s", "u", "c"].includes(key)) ||
-        ((event.ctrlKey || event.metaKey) && event.shiftKey && ["i", "j", "c"].includes(key));
-      if (blocked) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
+    // A proteção contra compartilhamento continua apenas como aviso visual.
+    // Copiar, colar, selecionar texto, menu contextual e atalhos ficam liberados.
     const onVisibility = () => setSecurityHidden(document.visibilityState !== "visible");
     const onBlur = () => setSecurityHidden(true);
     const onFocus = () => setSecurityHidden(false);
-    document.addEventListener("contextmenu", blockInteraction);
-    document.addEventListener("keydown", blockShortcuts, true);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
     window.addEventListener("focus", onFocus);
     return () => {
-      document.removeEventListener("contextmenu", blockInteraction);
-      document.removeEventListener("keydown", blockShortcuts, true);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", onFocus);

@@ -1027,12 +1027,19 @@ export const appRouter = router({
         const now = new Date();
         const expiresAtDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
 
-        if (input.type === "ios" || input.type === "ios_ipa") {
-          // Proxy iOS usa a última Key ios ativa cadastrada; novos clientes recebem a Key atual.
-          const latestProxyKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
-          if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key ativa do ${input.type === "ios_ipa" ? "Proxy iOS IPA" : "Proxy iOS"} cadastrada.` });
+        if (input.type === "ios") {
+          // Proxy iOS comum usa a última Key ativa cadastrada.
+          const latestProxyKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
+          if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key ativa do Proxy iOS cadastrada." });
           keyId = latestProxyKey[0].id;
           keyValueUsed = latestProxyKey[0].keyValue;
+        } else if (input.type === "ios_ipa") {
+          // Proxy iOS IPA usa uma Key exclusiva não utilizada por cliente.
+          const unusedIpaKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios_ipa"), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+          if (unusedIpaKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key IPA disponível. Cadastre uma Key IPA nova e não utilizada." });
+          keyId = unusedIpaKey[0].id;
+          keyValueUsed = unusedIpaKey[0].keyValue;
+          await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: now }).where(eq(keys.id, keyId));
         } else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") {
           const panelType = input.type;
           const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
@@ -1180,12 +1187,19 @@ export const appRouter = router({
         const renewalNow = new Date();
         const newExpiresAt = new Date(renewalNow.getTime() + 24 * 60 * 60 * 1000);
 
-        if (input.type === "ios" || input.type === "ios_ipa") {
-          // Proxy iOS também troca para a última Key ios ativa ao renovar.
-          const latestProxyKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type))).orderBy(desc(keys.id)).limit(1);
-          if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key ativa do ${input.type === "ios_ipa" ? "Proxy iOS IPA" : "Proxy iOS"} cadastrada.` });
+        if (input.type === "ios") {
+          // Proxy iOS comum troca para a última Key ativa.
+          const latestProxyKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
+          if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key ativa do Proxy iOS cadastrada." });
           newKeyId = latestProxyKey[0].id;
           newKeyValue = latestProxyKey[0].keyValue;
+        } else if (input.type === "ios_ipa") {
+          // Proxy iOS IPA troca para uma Key exclusiva não utilizada.
+          const unusedIpaKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios_ipa"), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+          if (unusedIpaKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key IPA disponível. Cadastre uma Key IPA nova e não utilizada." });
+          newKeyId = unusedIpaKey[0].id;
+          newKeyValue = unusedIpaKey[0].keyValue;
+          await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
         } else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") {
           const panelType = input.type;
           const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);

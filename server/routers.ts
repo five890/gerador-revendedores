@@ -977,13 +977,7 @@ export const appRouter = router({
         const client = clientRes[0];
         if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente não encontrado." });
 
-        if (actor.isPremium) {
-          // Premium pode resetar os próprios clientes e clientes de revendedores Basic.
-          if (client.resellerId && client.resellerId !== actor.id) {
-            const ownerRes = await db.select({ id: users.id, isPremium: users.isPremium }).from(users).where(eq(users.id, client.resellerId)).limit(1);
-            if (!ownerRes[0] || ownerRes[0].isPremium) throw new TRPCError({ code: "FORBIDDEN", message: "Premium não pode resetar clientes de outro revendedor Premium." });
-          }
-        } else if (client.resellerId !== actor.id) {
+        if (!actor.isPremium && client.resellerId !== actor.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Cliente não pertence ao seu painel." });
         }
 

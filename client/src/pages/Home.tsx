@@ -240,7 +240,7 @@ function ModeratorDashboard() {
     },
     onError: (err) => toast.error(err.message),
   });
-  const [modRenewType, setModRenewType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
+  const [modRenewType, setModRenewType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo" | "panel_android" | "ios_ipa">("advanced");
 
   const modCreateClientMutation = trpc.moderator.createClient.useMutation({
     onSuccess: (res) => {
@@ -743,6 +743,9 @@ function ModeratorDashboard() {
                     <option value="advanced">Android Advanced</option>
                     <option value="ios">Proxy iOS</option>
                     <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_legitimo">Painel Legítimo</option>
+                    <option value="panel_android">Painel Android</option>
+                    <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -849,7 +852,7 @@ function ModeratorDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => setModRenewingClient({ id: c.id, username: c.username })}>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => { setModRenewType((c.keyType === "ios_basic" || c.keyType === "ios_advanced" ? "ios" : c.keyType || "advanced") as any); setModRenewingClient({ id: c.id, username: c.username }); }}>
                           Renovar
                         </Button>
                         <Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300 hover:bg-blue-900/50" onClick={() => {

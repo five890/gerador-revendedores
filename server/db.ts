@@ -96,6 +96,18 @@ async function ensureTables(dbUrl: string) {
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);
+    // Keys IPA já atribuídas a clientes não podem permanecer disponíveis no estoque.
+    try {
+      await connection.query(`
+        UPDATE keys k
+        INNER JOIN users u ON u.keyId = k.id
+        SET k.isUsed = TRUE,
+            k.isBanned = TRUE,
+            k.usedAt = COALESCE(k.usedAt, u.updatedAt, CURRENT_TIMESTAMP)
+        WHERE k.type = 'ios_ipa' AND u.role = 'client'
+      `);
+    } catch (e) {}
+
     await connection.query(`
       CREATE TABLE IF NOT EXISTS downloads (
         id INT AUTO_INCREMENT PRIMARY KEY,

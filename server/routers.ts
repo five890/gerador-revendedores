@@ -318,10 +318,15 @@ export const appRouter = router({
         const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         let keyId: number | null = null;
         let keyValue = "";
-        if (input.type === "ios" || input.type === "ios_ipa") {
-          const found = await db.select().from(keys).where(and(eq(keys.type, input.type), eq(keys.isActive, true))).orderBy(desc(keys.id)).limit(1);
-          if (!found.length) throw new TRPCError({ code: "BAD_REQUEST", message: `Cadastre uma Key ativa do ${input.type === "ios_ipa" ? "Proxy iOS IPA" : "Proxy iOS"}.` });
+        if (input.type === "ios") {
+          const found = await db.select().from(keys).where(and(eq(keys.type, "ios"), eq(keys.isActive, true))).orderBy(desc(keys.id)).limit(1);
+          if (!found.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Cadastre uma Key ativa do Proxy iOS." });
           keyId = found[0].id; keyValue = found[0].keyValue;
+        } else if (input.type === "ios_ipa") {
+          const found = await db.select().from(keys).where(and(eq(keys.type, "ios_ipa"), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+          if (!found.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key IPA disponível. Cadastre uma Key IPA nova e não utilizada." });
+          keyId = found[0].id; keyValue = found[0].keyValue;
+          await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: now }).where(eq(keys.id, keyId));
         } else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") {
           const found = await db.select().from(keys).where(and(eq(keys.type, input.type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
           if (found.length) {
@@ -518,6 +523,7 @@ export const appRouter = router({
           isActive: c.isActive,
           maxDevices: c.maxDevices || 1,
           keyValue,
+          keyType: c.keyId ? ((await db.select({ type: keys.type }).from(keys).where(eq(keys.id, c.keyId)).limit(1))[0]?.type || "advanced") : "advanced",
           resellerName,
           expiresAt: c.expiresAt ? new Date(c.expiresAt).getTime() : null,
           usedAt: usedAt ? new Date(usedAt).getTime() : null,

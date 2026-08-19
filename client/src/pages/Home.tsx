@@ -566,8 +566,34 @@ function ModeratorDashboard() {
             <TabsTrigger value="tutorials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Tutoriais</TabsTrigger>
             <TabsTrigger value="logs" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Logs</TabsTrigger>
             <TabsTrigger value="keyAudit" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white text-white">Keys por Revendedor</TabsTrigger>
+            <TabsTrigger value="announcements" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Avisos</TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="announcements" className="space-y-4">
+          <Card className="bg-[#141414] border-red-800 text-white">
+            <CardHeader><CardTitle className="text-white">Gerenciar avisos pós-login</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-neutral-300">Cadastre uma mensagem para aparecer aos clientes do produto selecionado após o login.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Input value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} placeholder="Título do aviso" className="bg-[#222] border-neutral-700 text-white" />
+                <select value={announcementProductType} onChange={(e) => setAnnouncementProductType(e.target.value)} className="h-10 rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white">
+                  <option value="all">Todos os produtos</option><option value="basic">Proxy Basic</option><option value="advanced">Proxy Advanced</option><option value="ios">Proxy iOS</option><option value="panel_ios">Painel iOS</option><option value="panel_legitimo">Painel Legítimo</option><option value="panel_android">Painel Android</option><option value="ios_ipa">Proxy iOS IPA</option>
+                </select>
+              </div>
+              <textarea value={announcementMessage} onChange={(e) => setAnnouncementMessage(e.target.value)} placeholder="Mensagem do aviso" rows={4} className="w-full rounded-md border border-neutral-700 bg-[#222] p-3 text-sm text-white" />
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm text-neutral-300">Duração:</label><Input type="number" min={1} max={300} value={announcementDuration} onChange={(e) => setAnnouncementDuration(Math.max(1, Math.min(300, Number(e.target.value) || 1)))} className="w-24 bg-[#222] border-neutral-700 text-white" /><span className="text-sm text-neutral-400">segundos</span>
+                <label className="flex items-center gap-2 text-sm text-neutral-300"><input type="checkbox" checked={announcementIsActive} onChange={(e) => setAnnouncementIsActive(e.target.checked)} /> Ativo</label>
+                <Button onClick={() => addAnnouncementMutation.mutate({ title: announcementTitle, message: announcementMessage, productType: announcementProductType as any, durationSeconds: announcementDuration, isActive: announcementIsActive })} disabled={addAnnouncementMutation.isPending || !announcementTitle.trim() || !announcementMessage.trim()} className="bg-red-600 hover:bg-red-700">Criar aviso</Button>
+              </div>
+              <div className="space-y-2">
+                {(announcementsList || []).map((announcement: any) => <div key={announcement.id} className="border border-neutral-700 rounded-md bg-[#1b1b1b] p-3"><div className="flex items-center justify-between gap-3"><div><strong>{announcement.title}</strong><span className="ml-2 text-xs text-neutral-400">{announcement.productType === "all" ? "Todos" : announcement.productType} · {announcement.durationSeconds}s</span></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => toggleAnnouncementMutation.mutate({ announcementId: announcement.id, isActive: !announcement.isActive })}>{announcement.isActive ? "Desativar" : "Ativar"}</Button><Button size="sm" variant="destructive" onClick={() => deleteAnnouncementMutation.mutate({ announcementId: announcement.id })}><Trash2 className="h-3 w-3" /></Button></div></div><p className="mt-2 whitespace-pre-wrap text-sm text-neutral-300">{announcement.message}</p><Badge className={announcement.isActive ? "mt-2 bg-emerald-700" : "mt-2 bg-neutral-700"}>{announcement.isActive ? "Ativo" : "Inativo"}</Badge></div>)}
+                {announcementsList?.length === 0 && <p className="text-sm text-neutral-500">Nenhum aviso cadastrado.</p>}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* REVENDEDORES */}
         <TabsContent value="resellers" className="space-y-4">

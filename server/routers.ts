@@ -720,8 +720,21 @@ export const appRouter = router({
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
+        const existing = await db.select({ id: keys.id }).from(keys).where(eq(keys.id, input.keyId)).limit(1);
+        if (!existing.length) throw new TRPCError({ code: "NOT_FOUND", message: "Key não encontrada." });
         await db.delete(keys).where(eq(keys.id, input.keyId));
+        return { success: true };
+      }),
+
+    deleteAndroidKey: protectedProcedure
+      .input(z.object({ keyId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const existing = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.id, input.keyId), eq(keys.type, "panel_android"))).limit(1);
+        if (!existing.length) throw new TRPCError({ code: "NOT_FOUND", message: "Key do Painel Android não encontrada." });
+        await db.delete(keys).where(and(eq(keys.id, input.keyId), eq(keys.type, "panel_android")));
         return { success: true };
       }),
 

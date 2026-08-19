@@ -368,6 +368,11 @@ function ModeratorDashboard() {
     },
   });
 
+  const deleteAndroidKeyMutation = trpc.moderator.deleteAndroidKey.useMutation({
+    onSuccess: () => { toast.success("Key do Painel Android removida!"); refetchKeys(); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const deleteHgKeysMutation = trpc.moderator.deleteHgKeys.useMutation({
     onSuccess: (res) => {
       toast.success(`${res.deletedCount} keys iniciadas com 'HG' foram removidas com sucesso!`);
@@ -975,9 +980,8 @@ function ModeratorDashboard() {
 
         {/* KEYS PAINEL ANDROID */}
         <TabsContent value="androidKeys" className="space-y-4">
-          <Card className="bg-orange-950/30 border-orange-800 text-white"><CardHeader><CardTitle className="text-white">Keys do Painel Android</CardTitle></CardHeader><CardContent><p className="text-sm text-orange-100">Disponíveis: <strong>{keysList?.filter(k => k.type === "panel_android" && !k.isUsed && !k.isBanned).length || 0}</strong> · Usadas: <strong>{keysList?.filter(k => k.type === "panel_android" && (k.isUsed || k.isBanned)).length || 0}</strong></p><div className="mt-3 max-h-80 overflow-y-auto space-y-1">{keysList?.filter(k => k.type === "panel_android").map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-xs"><span className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><div className="flex items-center gap-2"><Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{k.isUsed ? "Usada" : "Disponível"}</Badge><Button size="sm" variant="destructive" title="Excluir Key do Painel Android" onClick={() => { if (confirm(`Excluir a Key ${k.keyValue}? O login existente continuará salvo, mas esta Key será removida da lista.`)) deleteKeyMutation.mutate({ keyId: k.id }); }}><Trash2 className="w-3 h-3" /></Button></div></div>)}</div></CardContent></Card>
+          <Card className="bg-orange-950/30 border-orange-800 text-white"><CardHeader><CardTitle className="text-white">Keys do Painel Android</CardTitle></CardHeader><CardContent><p className="text-sm text-orange-100">Disponíveis: <strong>{keysList?.filter(k => k.type === "panel_android" && !k.isUsed && !k.isBanned).length || 0}</strong> · Usadas: <strong>{keysList?.filter(k => k.type === "panel_android" && (k.isUsed || k.isBanned)).length || 0}</strong></p><div className="mt-3 max-h-80 overflow-y-auto space-y-1">{keysList?.filter(k => k.type === "panel_android").map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-xs"><span className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><div className="flex items-center gap-2"><Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{k.isUsed ? "Usada" : "Disponível"}</Badge><Button size="sm" variant="destructive" title="Excluir Key do Painel Android" onClick={() => { if (confirm(`Excluir a Key ${k.keyValue}? O login existente continuará salvo, mas esta Key será removida da lista.`)) deleteAndroidKeyMutation.mutate({ keyId: k.id }); }}><Trash2 className="w-3 h-3" /></Button></div></div>)}</div></CardContent></Card>
         </TabsContent>
-
         {/* PAINEL LEGÍTIMO */}
         <TabsContent value="legitPanel" className="space-y-4">
           <Card className="bg-cyan-950/30 border-cyan-800 text-white"><CardHeader><CardTitle className="text-white">Administração completa do Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-sm text-cyan-100">Este painel usa o tipo <strong>panel_legitimo</strong>, com créditos, Keys e conteúdos totalmente separados.</p></CardContent></Card>

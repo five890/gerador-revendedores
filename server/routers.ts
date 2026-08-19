@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { users, keys, downloads, tutorials, sessions, logs } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, sessions, logs, announcements } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
@@ -854,6 +854,49 @@ export const appRouter = router({
         });
     }),
 
+    listAnnouncements: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) return [];
+      return await db.select().from(announcements).orderBy(desc(announcements.id));
+    }),
+
+    addAnnouncement: protectedProcedure
+      .input(z.object({
+        title: z.string().trim().min(1).max(255),
+        message: z.string().trim().min(1),
+        productType: z.enum(["all", ...ALL_PRODUCT_TYPES]),
+        durationSeconds: z.number().int().min(1).max(300),
+        isActive: z.boolean().default(true),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.insert(announcements).values(input);
+        return { success: true };
+      }),
+
+    toggleAnnouncement: protectedProcedure
+      .input(z.object({ announcementId: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.update(announcements).set({ isActive: input.isActive }).where(eq(announcements.id, input.announcementId));
+        return { success: true };
+      }),
+
+    deleteAnnouncement: protectedProcedure
+      .input(z.object({ announcementId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.delete(announcements).where(eq(announcements.id, input.announcementId));
+        return { success: true };
+      }),
+
     listTutorials: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
@@ -1324,6 +1367,9 @@ export const appRouter = router({
 
       const allDownloads = await db.select().from(downloads).orderBy(desc(downloads.id));
       const allTutorials = await db.select().from(tutorials).orderBy(desc(tutorials.id));
+      const activeAnnouncements = await db.select().from(announcements)
+        .where(eq(announcements.isActive, true))
+        .orderBy(desc(announcements.id));
 
       const filteredDownloads = allDownloads.filter(d => targetTypes.includes(d.type || "advanced"));
       const filteredTutorials = allTutorials.filter(t => targetTypes.includes(t.type || "advanced"));
@@ -1340,6 +1386,7 @@ export const appRouter = router({
         expiresAt: client.expiresAt || null,
         downloads: filteredDownloads,
         tutorials: resolvedTutorials,
+        announcements: activeAnnouncements.filter(a => a.productType === "all" || a.productType === keyType),
       };
     }),
   }),

@@ -65,6 +65,16 @@ export const tutorials = mysqlTable("tutorials", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  productType: varchar("productType", { length: 50 }).default("all").notNull(),
+  durationSeconds: int("durationSeconds").default(5).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
 
 
 export const sessions = mysqlTable("sessions", {
@@ -91,6 +101,7 @@ export type InsertUser = typeof users.$inferInsert;
 export type Key = typeof keys.$inferSelect;
 export type Download = typeof downloads.$inferSelect;
 export type Tutorial = typeof tutorials.$inferSelect;
+export type Announcement = typeof announcements.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Log = typeof logs.$inferSelect;
 

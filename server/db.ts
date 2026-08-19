@@ -68,6 +68,9 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE \`keys\` ADD COLUMN isBanned BOOLEAN DEFAULT FALSE",
       "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
       "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
+      "ALTER TABLE announcements ADD COLUMN productType VARCHAR(50) DEFAULT 'all'",
+      "ALTER TABLE announcements ADD COLUMN durationSeconds INT DEFAULT 5",
+      "ALTER TABLE announcements ADD COLUMN isActive BOOLEAN DEFAULT TRUE",
       "ALTER TABLE products ADD COLUMN link TEXT",
       "ALTER TABLE products ADD COLUMN tutorialUrl TEXT",
       "ALTER TABLE products ADD COLUMN type VARCHAR(50) DEFAULT 'advanced'"
@@ -112,6 +115,18 @@ async function ensureTables(dbUrl: string) {
         videoUrl TEXT NOT NULL,
         type VARCHAR(32) DEFAULT 'basic' NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        productType VARCHAR(50) DEFAULT 'all' NOT NULL,
+        durationSeconds INT DEFAULT 5 NOT NULL,
+        isActive BOOLEAN DEFAULT TRUE NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
       )
     `);
     await connection.query(`

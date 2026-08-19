@@ -180,6 +180,7 @@ function ModeratorDashboard() {
   const { data: keysList, refetch: refetchKeys } = trpc.moderator.listKeys.useQuery();
   const { data: downloadsList, refetch: refetchDownloads } = trpc.moderator.listDownloads.useQuery();
   const { data: tutorialsList, refetch: refetchTutorials } = trpc.moderator.listTutorials.useQuery();
+  const { data: announcementsList, refetch: refetchAnnouncements } = trpc.moderator.listAnnouncements.useQuery();
   const { data: logsList } = trpc.moderator.listLogs.useQuery();
   const { data: resellerLogsList } = trpc.moderator.listResellerLogs.useQuery();
   const { data: resellerKeyAudit } = trpc.moderator.keyAuditByReseller.useQuery();
@@ -211,6 +212,12 @@ function ModeratorDashboard() {
   const [tutDesc, setTutDesc] = useState("");
   const [tutUrl, setTutUrl] = useState("");
   const [tutType, setTutType] = useState<"basic" | "advanced">("basic");
+
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementMessage, setAnnouncementMessage] = useState("");
+  const [announcementProductType, setAnnouncementProductType] = useState("all");
+  const [announcementDuration, setAnnouncementDuration] = useState(5);
+  const [announcementIsActive, setAnnouncementIsActive] = useState(true);
 
   const [modClientUser, setModClientUser] = useState("");
   const [modClientPass, setModClientPass] = useState("");
@@ -426,6 +433,28 @@ function ModeratorDashboard() {
     },
   });
 
+  const addAnnouncementMutation = trpc.moderator.addAnnouncement.useMutation({
+    onSuccess: () => {
+      toast.success("Aviso cadastrado!");
+      setAnnouncementTitle("");
+      setAnnouncementMessage("");
+      setAnnouncementDuration(5);
+      setAnnouncementIsActive(true);
+      refetchAnnouncements();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const toggleAnnouncementMutation = trpc.moderator.toggleAnnouncement.useMutation({
+    onSuccess: () => { toast.success("Status do aviso atualizado!"); refetchAnnouncements(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteAnnouncementMutation = trpc.moderator.deleteAnnouncement.useMutation({
+    onSuccess: () => { toast.success("Aviso removido!"); refetchAnnouncements(); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const exportKeys = () => {
     if (!keysList) return;
     const text = keysList.map((k) => k.keyValue).join("\n");
@@ -462,6 +491,46 @@ function ModeratorDashboard() {
           <CardContent><div className="text-3xl font-black text-red-500">{stats?.activeSessions || 0}</div></CardContent>
         </Card>
       </div>
+
+      <Card className="bg-[#141414] border-neutral-800 text-white">
+        <CardHeader><CardTitle className="text-white">Avisos pós-login por produto</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-neutral-400">O aviso aparece ao cliente após entrar no painel e desaparece ao fim da contagem configurada.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} placeholder="Título do aviso" className="bg-[#1f1f1f] border-neutral-700 text-white" />
+            <select value={announcementProductType} onChange={(e) => setAnnouncementProductType(e.target.value)} className="h-10 rounded-md border border-neutral-700 bg-[#1f1f1f] px-3 text-sm text-white">
+              <option value="all">Todos os produtos</option>
+              <option value="basic">Proxy Basic</option>
+              <option value="advanced">Proxy Advanced</option>
+              <option value="ios">Proxy iOS</option>
+              <option value="panel_ios">Painel iOS</option>
+              <option value="panel_legitimo">Painel Legítimo</option>
+              <option value="panel_android">Painel Android</option>
+              <option value="ios_ipa">Proxy iOS IPA</option>
+            </select>
+          </div>
+          <textarea value={announcementMessage} onChange={(e) => setAnnouncementMessage(e.target.value)} placeholder="Mensagem exibida ao cliente" rows={3} className="w-full rounded-md border border-neutral-700 bg-[#1f1f1f] p-3 text-sm text-white placeholder:text-neutral-500" />
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm text-neutral-300">Duração (segundos)</label>
+            <Input type="number" min={1} max={300} value={announcementDuration} onChange={(e) => setAnnouncementDuration(Math.max(1, Math.min(300, Number(e.target.value) || 1)))} className="w-28 bg-[#1f1f1f] border-neutral-700 text-white" />
+            <label className="flex items-center gap-2 text-sm text-neutral-300"><input type="checkbox" checked={announcementIsActive} onChange={(e) => setAnnouncementIsActive(e.target.checked)} /> Ativo imediatamente</label>
+            <Button onClick={() => addAnnouncementMutation.mutate({ title: announcementTitle, message: announcementMessage, productType: announcementProductType as any, durationSeconds: announcementDuration, isActive: announcementIsActive })} disabled={addAnnouncementMutation.isPending || !announcementTitle.trim() || !announcementMessage.trim()} className="bg-red-600 hover:bg-red-700">Adicionar aviso</Button>
+          </div>
+          <div className="space-y-2">
+            {(announcementsList || []).map((announcement: any) => (
+              <div key={announcement.id} className="rounded-md border border-neutral-800 bg-[#1b1b1b] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div><span className="font-semibold">{announcement.title}</span><span className="ml-2 text-xs text-neutral-400">{announcement.productType === "all" ? "Todos" : announcement.productType} · {announcement.durationSeconds}s</span></div>
+                  <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => toggleAnnouncementMutation.mutate({ announcementId: announcement.id, isActive: !announcement.isActive })}>{announcement.isActive ? "Desativar" : "Ativar"}</Button><Button size="sm" variant="destructive" onClick={() => deleteAnnouncementMutation.mutate({ announcementId: announcement.id })}><Trash2 className="w-3 h-3" /></Button></div>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-300">{announcement.message}</p>
+                <Badge className={announcement.isActive ? "mt-2 bg-emerald-700" : "mt-2 bg-neutral-700"}>{announcement.isActive ? "Ativo" : "Inativo"}</Badge>
+              </div>
+            ))}
+            {announcementsList?.length === 0 && <p className="text-sm text-neutral-500">Nenhum aviso cadastrado.</p>}
+          </div>
+        </CardContent>
+      </Card>
 
       {(() => {
         if (!stats) return null;
@@ -1884,18 +1953,32 @@ function ResellerDashboard() {
 function ClientDashboard() {
   const { data, isLoading } = trpc.clientPanel.dashboard.useQuery();
   const [copied, setCopied] = useState(false);
-  const [countdown, setCountdown] = useState(5);
-  const [showAlert, setShowAlert] = useState(true);
+  const [countdown, setCountdown] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
+  const announcement = data?.announcements?.[0];
 
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
+    if (!announcement) {
+      setCountdown(0);
       setShowAlert(false);
+      return;
     }
-  }, [countdown]);
+    const duration = Math.max(1, Number(announcement.durationSeconds || 5));
+    setCountdown(duration);
+    setShowAlert(true);
+    const timer = window.setInterval(() => {
+      setCountdown((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          setShowAlert(false);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [announcement?.id, announcement?.durationSeconds]);
 
   useEffect(() => {
     const calc = () => {
@@ -1947,23 +2030,13 @@ function ClientDashboard() {
       <div className="absolute inset-0 pointer-events-none z-50 flex items-start justify-end p-2 opacity-10 font-mono text-[10px] text-white overflow-hidden">
         SHELBY SECURE SESSION - NO SCREENSHARE
       </div>
-      {showAlert && (
+      {showAlert && announcement && (
         <Card className="bg-[#141414] border-red-600/50 text-white p-4 animate-fade-in shadow-xl">
           <div className="flex items-center gap-3 text-red-500 font-bold mb-2">
             <AlertTriangle className="w-6 h-6" />
-            <span>Aviso Importante ({countdown}s)</span>
+            <span>{announcement.title} ({countdown}s)</span>
           </div>
-          <p className="text-xs text-white mb-3">
-            Aguarde... Se você comprou com revendedores não autorizados da Shelby, denuncie aqui:
-          </p>
-          <a
-            href="https://discord.gg/YYBZxhhm"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
-          >
-            Entre Aqui
-          </a>
+          <p className="whitespace-pre-wrap text-xs text-white">{announcement.message}</p>
         </Card>
       )}
 

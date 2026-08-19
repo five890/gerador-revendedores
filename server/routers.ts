@@ -926,6 +926,16 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    updateTutorialType: protectedProcedure
+      .input(z.object({ tutorialId: z.number(), type: productTypeSchema }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.update(tutorials).set({ type: input.type }).where(eq(tutorials.id, input.tutorialId));
+        return { success: true };
+      }),
+
     deleteTutorial: protectedProcedure
       .input(z.object({ tutorialId: z.number() }))
       .mutation(async ({ input, ctx }) => {

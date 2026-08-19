@@ -211,7 +211,7 @@ function ModeratorDashboard() {
   const [tutTitle, setTutTitle] = useState("");
   const [tutDesc, setTutDesc] = useState("");
   const [tutUrl, setTutUrl] = useState("");
-  const [tutType, setTutType] = useState<"basic" | "advanced">("basic");
+  const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo" | "panel_android" | "ios_ipa">("basic");
 
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -423,6 +423,11 @@ function ModeratorDashboard() {
       setTutUrl("");
       refetchTutorials();
     },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateTutorialTypeMutation = trpc.moderator.updateTutorialType.useMutation({
+    onSuccess: () => { toast.success("Tipo do tutorial atualizado!"); refetchTutorials(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -1423,9 +1428,13 @@ function ModeratorDashboard() {
               <div>
                 <label className="text-xs text-white font-semibold block mb-1">Tipo de Tutorial</label>
                 <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={tutType} onChange={(e: any) => setTutType(e.target.value)}>
-                  <option value="basic">Android Basic</option>
-                  <option value="advanced">Android Advanced</option>
+                  <option value="basic">Proxy Basic</option>
+                  <option value="advanced">Proxy Advanced</option>
                   <option value="ios">Proxy iOS</option>
+                  <option value="panel_ios">Painel iOS</option>
+                  <option value="panel_legitimo">Painel Legítimo</option>
+                  <option value="panel_android">Painel Android</option>
+                  <option value="ios_ipa">Proxy iOS IPA</option>
                 </select>
               </div>
               <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título do Tutorial (ex: Como configurar o painel)" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} />
@@ -1444,7 +1453,7 @@ function ModeratorDashboard() {
                 <TableHeader>
                   <TableRow className="border-neutral-800">
                     <TableHead className="text-white font-bold">Título</TableHead>
-                    <TableHead className="text-white font-bold">Tipo</TableHead>
+                    <TableHead className="text-white font-bold">Tipo / Produto</TableHead>
                     <TableHead className="text-white font-bold">Link</TableHead>
                     <TableHead className="text-white font-bold text-right">Ação</TableHead>
                   </TableRow>
@@ -1453,7 +1462,7 @@ function ModeratorDashboard() {
                   {tutorialsList?.map((t) => (
                     <TableRow key={t.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{t.title}</TableCell>
-                      <TableCell><Badge className={t.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : t.type === "ios" ? "bg-blue-950 text-blue-400 border-blue-800" : "bg-neutral-800 text-white"}>{t.type === "advanced" ? "Advanced" : t.type === "ios" ? "iOS" : "Basic"}</Badge></TableCell>
+                      <TableCell><select value={t.type || "advanced"} onChange={(e) => updateTutorialTypeMutation.mutate({ tutorialId: t.id, type: e.target.value as any })} className="bg-[#222] border border-neutral-700 rounded px-2 py-1 text-xs text-white"><option value="basic">Proxy Basic</option><option value="advanced">Proxy Advanced</option><option value="ios">Proxy iOS</option><option value="panel_ios">Painel iOS</option><option value="panel_legitimo">Painel Legítimo</option><option value="panel_android">Painel Android</option><option value="ios_ipa">Proxy iOS IPA</option></select></TableCell>
                       <TableCell><a href={t.videoUrl} target="_blank" rel="noreferrer" className="text-blue-400 underline truncate max-w-xs block">{t.videoUrl}</a></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}>

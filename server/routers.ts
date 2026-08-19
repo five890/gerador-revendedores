@@ -1203,27 +1203,39 @@ export const appRouter = router({
         } else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") {
           const panelType = input.type;
           const unusedPanelKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, panelType), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
-          if (unusedPanelKey.length === 0) {
-            if (ctx.user.role !== "moderator" || panelType !== "panel_legitimo") throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key exclusiva disponível para ${panelType === "panel_ios" ? "o Painel iOS" : panelType === "panel_android" ? "o Painel Android" : "o Painel Legítimo"}. Cadastre uma Key ${panelType} nova.` });
-            newKeyValue = `KEY-PANEL-LEGITIMO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-            await db.insert(keys).values({ keyValue: newKeyValue, type: panelType, isActive: true, isUsed: true, usedAt: renewalNow });
-            const inserted = await db.select().from(keys).where(eq(keys.keyValue, newKeyValue)).limit(1);
-            if (inserted.length > 0) newKeyId = inserted[0].id;
-          } else {
+          if (unusedPanelKey.length > 0) {
             newKeyId = unusedPanelKey[0].id;
-          newKeyValue = unusedPanelKey[0].keyValue;
+            newKeyValue = unusedPanelKey[0].keyValue;
             await db.update(keys).set({ isUsed: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+          } else if (client.keyId) {
+            const currentClientKey = await db.select().from(keys).where(and(eq(keys.id, client.keyId), eq(keys.type, panelType))).limit(1);
+            if (currentClientKey.length > 0) {
+              newKeyId = currentClientKey[0].id;
+              newKeyValue = currentClientKey[0].keyValue;
+            } else {
+              throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key disponível para ${panelType}. Cadastre uma Key nova no painel do Moderador.` });
+            }
+          } else {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key disponível para ${panelType}. Cadastre uma Key nova no painel do Moderador.` });
           }
         } else {
-          // Basic e Advanced puxam obrigatoriamente uma chave NOVA (isUsed = false)
-          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false))).orderBy(keys.id).limit(1);
+          // Basic e Advanced usam uma Key nova quando existe; se o estoque acabar,
+          // a renovação mantém a Key atual do próprio cliente.
+          const unusedKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, input.type), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
           if (unusedKey.length > 0) {
             newKeyId = unusedKey[0].id;
             newKeyValue = unusedKey[0].keyValue;
-            // Marca como usada e banida do estoque ativo
             await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: renewalNow }).where(eq(keys.id, newKeyId));
+          } else if (client.keyId) {
+            const currentClientKey = await db.select().from(keys).where(and(eq(keys.id, client.keyId), eq(keys.type, input.type))).limit(1);
+            if (currentClientKey.length > 0) {
+              newKeyId = currentClientKey[0].id;
+              newKeyValue = currentClientKey[0].keyValue;
+            } else {
+              throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key ${input.type.toUpperCase()} disponível. Cadastre uma Key nova no painel do Moderador.` });
+            }
           } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key ${input.type.toUpperCase()} disponível. Cadastre uma Key nova e não usada no painel do Moderador.` });
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Não há Key ${input.type.toUpperCase()} disponível. Cadastre uma Key nova no painel do Moderador.` });
           }
         }
 

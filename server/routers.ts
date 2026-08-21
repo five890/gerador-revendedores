@@ -10,15 +10,23 @@ import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 
 const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"] as const;
+const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo", "panel_android"]);
+const ACTIVE_PRODUCT_TYPES = ALL_PRODUCT_TYPES.filter((type) => !REMOVED_PRODUCT_TYPES.has(type));
 const productTypeSchema = z.enum(ALL_PRODUCT_TYPES);
 
+function assertProductAvailable(type: string) {
+  if (REMOVED_PRODUCT_TYPES.has(type)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: `O produto ${type} foi removido do sistema e não está mais disponível.` });
+  }
+}
+
 function getEnabledProducts(value: unknown): string[] {
-  if (!value) return [...ALL_PRODUCT_TYPES];
+  if (!value) return [...ACTIVE_PRODUCT_TYPES];
   try {
     const parsed = JSON.parse(String(value));
-    return Array.isArray(parsed) ? parsed.filter((p): p is string => ALL_PRODUCT_TYPES.includes(p as any)) : [...ALL_PRODUCT_TYPES];
+    return Array.isArray(parsed) ? parsed.filter((p): p is string => ACTIVE_PRODUCT_TYPES.includes(p as any)) : [...ACTIVE_PRODUCT_TYPES];
   } catch {
-    return [...ALL_PRODUCT_TYPES];
+    return [...ACTIVE_PRODUCT_TYPES];
   }
 }
 
@@ -309,6 +317,7 @@ export const appRouter = router({
       .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Moderador pode usar esta rota." });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const cleanUsername = input.username.trim();
@@ -411,6 +420,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
+        assertProductAvailable(input.type);
         
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -666,6 +676,7 @@ export const appRouter = router({
       .input(z.object({ keyValue: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -681,6 +692,7 @@ export const appRouter = router({
       .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -791,6 +803,7 @@ export const appRouter = router({
       .input(z.object({ title: z.string(), description: z.string().nullable().optional(), version: z.string(), fileUrl: z.string(), type: z.string() }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -808,6 +821,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), title: z.string(), description: z.string().nullable().optional(), version: z.string(), fileUrl: z.string(), type: z.string() }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -890,6 +904,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        if (input.productType !== "all") assertProductAvailable(input.productType);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         await db.insert(announcements).values(input);
@@ -927,6 +942,7 @@ export const appRouter = router({
       .input(z.object({ title: z.string(), description: z.string().nullable().optional(), videoUrl: z.string(), type: z.string() }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -943,6 +959,7 @@ export const appRouter = router({
       .input(z.object({ tutorialId: z.number(), type: productTypeSchema }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         await db.update(tutorials).set({ type: input.type }).where(eq(tutorials.id, input.tutorialId));
@@ -1063,6 +1080,7 @@ export const appRouter = router({
       .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -1212,6 +1230,7 @@ export const appRouter = router({
       .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        assertProductAvailable(input.type);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 

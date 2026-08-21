@@ -10,6 +10,9 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Lock, Unlock, RefreshCcw, Trash2, Power, UserPlus, Copy, Download as DownloadIcon, Edit, LogOut, Shield, Users, KeyRound, FileDown, BookOpen, AlertTriangle, Video } from "lucide-react";
 
+const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo", "panel_android"]);
+const ACTIVE_PRODUCT_TYPES = ["advanced", "panel_ios", "ios_ipa"] as const;
+
 function getVideoEmbedUrl(rawUrl: string): { kind: "iframe" | "video"; url: string } | null {
   try {
     const parsed = new URL(rawUrl);
@@ -544,7 +547,7 @@ function ModeratorDashboard() {
 
       {(() => {
         if (!stats) return null;
-        const stockLabels: Record<string, string> = { basic: "Proxy Basic", advanced: "Proxy Advanced", ios: "Proxy iOS", panel_ios: "Painel iOS", panel_legitimo: "Painel Legítimo", panel_android: "Painel Android", ios_ipa: "Proxy iOS IPA" };
+        const stockLabels: Record<string, string> = { advanced: "Proxy Advanced", panel_ios: "Painel iOS", ios_ipa: "Proxy iOS IPA" };
         const lowStock = Object.entries(stockLabels).filter(([type]) => Number((stats?.stock as any)?.[type] || 0) <= 3);
         const lowStockTotal = lowStock.reduce((sum, [type]) => sum + Number((stats?.stock as any)?.[type] || 0), 0);
         return <Card className="bg-[#141414] border-neutral-800 text-white"><CardContent className="p-4"><div className="flex items-start gap-3"><KeyRound className="w-6 h-6 text-amber-400 mt-0.5 shrink-0" /><div className="w-full"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-black text-lg text-white">Estoque disponível de Keys</p>{lowStock.length > 0 && <Badge className="bg-red-900/70 border-red-600 text-red-100"><AlertTriangle className="w-3 h-3 mr-1" /> {lowStock.length} tipo(s) em estoque baixo</Badge>}</div><p className="text-xs text-neutral-400 mt-1">Quantidade atual de Keys ativas, não usadas e não banidas.</p><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 mt-3">{Object.entries(stockLabels).map(([type, label]) => { const count = Number((stats?.stock as any)?.[type] || 0); const isLow = count <= 3; return <div key={type} className={`rounded-md border px-3 py-2 ${isLow ? "border-red-600 bg-red-950/60" : "border-neutral-700 bg-[#202020]"}`}><p className={`text-xs font-bold ${isLow ? "text-red-200" : "text-neutral-300"}`}>{label}</p><p className={`text-lg font-black ${isLow ? "text-red-400" : "text-emerald-400"}`}>{count} Keys disponíveis</p></div>; })}</div>{lowStock.length > 0 && <p className="text-xs font-bold text-red-300 mt-3"><AlertTriangle className="w-3 h-3 inline mr-1" /> Atenção: {lowStockTotal} Keys somadas estão em tipos com estoque de 3 ou menos. Reponha o estoque.</p>}</div></div></CardContent></Card>;
@@ -560,14 +563,10 @@ function ModeratorDashboard() {
             <span className="mx-1 h-5 w-px bg-neutral-700" />
             <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Painéis</span>
             <TabsTrigger value="iosPanel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
-            <TabsTrigger value="legitPanel" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Painel Legítimo</TabsTrigger>
-            <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>
             <TabsTrigger value="iosIpaPanel" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Proxy iOS IPA</TabsTrigger>
             <span className="mx-1 h-5 w-px bg-neutral-700" />
             <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Keys</span>
-            <TabsTrigger value="androidKeys" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Keys Android</TabsTrigger>
             <TabsTrigger value="iosIpaKeys" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Keys iOS IPA</TabsTrigger>
-            <TabsTrigger value="legitKeys" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Keys Legítimo</TabsTrigger>
             <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Keys</TabsTrigger>
             <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Banidas / Usadas</TabsTrigger>
             <span className="mx-1 h-5 w-px bg-neutral-700" />
@@ -1607,7 +1606,7 @@ function ResellerDashboard() {
   const [renewType, setRenewType] = useState<any>("advanced");
   const [iosClientSearch, setIosClientSearch] = useState("");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
-  const allResellerProducts = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"];
+  const allResellerProducts = [...ACTIVE_PRODUCT_TYPES];
   const enabledResellerProducts = data?.enabledProducts || allResellerProducts;
   const canUseProduct = (type: string) => enabledResellerProducts.includes(type);
   const resellerProductOptions = [

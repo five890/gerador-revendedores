@@ -10,7 +10,7 @@ import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 
 const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"] as const;
-const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo", "panel_android"]);
+const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo"]);
 const ACTIVE_PRODUCT_TYPES = ALL_PRODUCT_TYPES.filter((type) => !REMOVED_PRODUCT_TYPES.has(type));
 const productTypeSchema = z.enum(ALL_PRODUCT_TYPES);
 

@@ -37,8 +37,9 @@ async function resolveMediaFireUrl(videoUrl: string): Promise<string> {
     const response = await fetch(videoUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!response.ok) return videoUrl;
     const html = await response.text();
-    const match = html.match(/href="(https:\/\/download[^" ]+)"/i);
-    return match?.[1]?.replace(/&amp;/g, "&") || videoUrl;
+    const match = html.match(/href\s*=\s*["'](https:\/\/download[^"']+)["']/i);
+    const fallback = html.match(/(?:href|data-href|data-download-url)\s*=\s*["'](https:\/\/[^"']*mediafire[^"']*\.(?:mp4|mov|webm|m4v)(?:\?[^"']*)?)["']/i);
+    return (match?.[1] || fallback?.[1] || videoUrl).replace(/&amp;/g, "&");
   } catch {
     return videoUrl;
   }

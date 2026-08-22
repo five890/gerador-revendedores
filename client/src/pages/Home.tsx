@@ -2180,7 +2180,7 @@ function ClientDashboard() {
                     {t.description && <p className="text-xs text-white">{t.description}</p>}
                   </div>
                   {video?.kind === "iframe" && <div className="relative w-full overflow-hidden rounded-lg border border-neutral-700 bg-black aspect-video"><iframe src={video.url} title={t.title} className="absolute inset-0 h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div>}
-                  {video?.kind === "video" && <video src={video.url} controls preload="metadata" className="w-full max-h-[520px] rounded-lg border border-neutral-700 bg-black" />}
+                  {video?.kind === "video" && <video src={video.url} controls playsInline preload="none" className="w-full max-h-[520px] rounded-lg border border-neutral-700 bg-black" onError={() => toast.error("Este formato ou servidor não permite reprodução incorporada neste celular. Use o botão Abrir vídeo em nova aba.")} />}
                   {!video && <p className="text-xs text-amber-300">Este link não pode ser incorporado automaticamente.</p>}
                   <a href={t.videoUrl} target="_blank" rel="noopener noreferrer"><Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"><Video className="w-4 h-4 mr-2" /> Abrir vídeo em nova aba</Button></a>
                 </div>;

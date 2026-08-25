@@ -93,6 +93,8 @@ async function ensureTables(dbUrl: string) {
         type VARCHAR(32) DEFAULT 'advanced' NOT NULL,
         isActive BOOLEAN DEFAULT TRUE NOT NULL,
         isUsed BOOLEAN DEFAULT FALSE NOT NULL,
+        isBanned BOOLEAN DEFAULT FALSE NOT NULL,
+        usedAt TIMESTAMP NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);

@@ -208,13 +208,13 @@ function ModeratorDashboard() {
   const [dlDesc, setDlDesc] = useState("");
   const [dlVersion, setDlVersion] = useState("1.0");
   const [dlUrl, setDlUrl] = useState("");
-  const [dlType, setDlType] = useState<"basic" | "advanced">("basic");
+const [dlType, setDlType] = useState<"basic" | "advanced">("advanced");
   const [editingDownload, setEditingDownload] = useState<any | null>(null);
 
   const [tutTitle, setTutTitle] = useState("");
   const [tutDesc, setTutDesc] = useState("");
   const [tutUrl, setTutUrl] = useState("");
-  const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo" | "panel_android" | "ios_ipa">("basic");
+const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo" | "panel_android" | "ios_ipa">("advanced");
 
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -755,10 +755,10 @@ function ModeratorDashboard() {
                 <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
                   <div>Usuário: <strong className="text-white">{modCreatedCredentials.username}</strong></div>
                   <div>Senha: <strong className="text-white">{modCreatedCredentials.password}</strong></div>
-                  <div>Link de ativação: <strong className="text-blue-400">https://shelbypainel-production.up.railway.app</strong></div>
+                  <div>Link de ativação: <strong className="text-blue-400">https://shelbys-production.up.railway.app</strong></div>
                 </div>
                 <Button className="bg-red-600 hover:bg-red-700 text-white mt-2" onClick={() => {
-                  navigator.clipboard.writeText(`Usuário: ${modCreatedCredentials.username}\nSenha: ${modCreatedCredentials.password}\nLink de ativação: https://shelbypainel-production.up.railway.app`);
+                  navigator.clipboard.writeText(`Usuário: ${modCreatedCredentials.username}\nSenha: ${modCreatedCredentials.password}\nLink de ativação: https://shelbys-production.up.railway.app`);
                   toast.success("Credenciais copiadas!");
                 }}>
                   <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais Completas

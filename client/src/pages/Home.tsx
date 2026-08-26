@@ -149,7 +149,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#0b0b0b] text-white font-sans flex flex-col">
       <header className="border-b border-neutral-800 bg-[#111] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <span className="text-xl font-black text-red-600 tracking-wider">{user.brandName || "SHELBY PANEL"}</span>
+          <span className="text-xl font-black tracking-wider" style={{ color: user.brandColor || "#dc2626" }}>{user.brandName || "SHELBY PANEL"}</span>
           <Badge className="bg-neutral-800 text-white border-neutral-700 uppercase text-[10px]">
             {user.role}
           </Badge>
@@ -199,6 +199,7 @@ function ModeratorDashboard() {
   const [newResellerCreditsPanelLegitimo, setNewResellerCreditsPanelLegitimo] = useState(0);
   const [newResellerBrandName, setNewResellerBrandName] = useState("");
   const [newResellerDiscordUrl, setNewResellerDiscordUrl] = useState("");
+  const [newResellerColor, setNewResellerColor] = useState("#dc2626");
   const [newResellerIsPremium, setNewResellerIsPremium] = useState(false);
 
   const [newKeyVal, setNewKeyVal] = useState("");
@@ -210,13 +211,13 @@ function ModeratorDashboard() {
   const [dlDesc, setDlDesc] = useState("");
   const [dlVersion, setDlVersion] = useState("1.0");
   const [dlUrl, setDlUrl] = useState("");
-const [dlType, setDlType] = useState<"basic" | "advanced">("advanced");
+  const [dlType, setDlType] = useState<"basic" | "advanced">("advanced");
   const [editingDownload, setEditingDownload] = useState<any | null>(null);
 
   const [tutTitle, setTutTitle] = useState("");
   const [tutDesc, setTutDesc] = useState("");
   const [tutUrl, setTutUrl] = useState("");
-const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo" | "panel_android" | "ios_ipa">("advanced");
+  const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo" | "panel_android" | "ios_ipa">("advanced");
 
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -290,6 +291,7 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
       setNewResellerPass("");
       setNewResellerBrandName("");
       setNewResellerDiscordUrl("");
+      setNewResellerColor("#dc2626");
       setNewResellerIsPremium(false);
       refetchResellers();
     },
@@ -638,6 +640,13 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
                   <Input className="bg-[#222] border-neutral-700 text-white" value={newResellerDiscordUrl} onChange={(e) => setNewResellerDiscordUrl(e.target.value)} placeholder="https://discord.gg/exemplo" />
                 </div>
                 <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Cor da marca</label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={newResellerColor} onChange={(e) => setNewResellerColor(e.target.value)} className="h-10 w-14 cursor-pointer rounded border border-neutral-700 bg-[#222] p-1" aria-label="Escolher cor da marca" />
+                    <span className="text-xs font-mono text-neutral-300">{newResellerColor}</span>
+                  </div>
+                </div>
+                <div>
                   <label className="text-xs text-white font-semibold block mb-1">Créditos Basic</label>
                   <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsBasic} onChange={(e) => setNewResellerCreditsBasic(Number(e.target.value))} />
                 </div>
@@ -661,7 +670,7 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
                   <input type="checkbox" id="isPremiumCheck" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newResellerIsPremium} onChange={(e) => setNewResellerIsPremium(e.target.checked)} />
                   <label htmlFor="isPremiumCheck" className="text-xs font-bold text-amber-400 cursor-pointer">Revendedor Premium (★)</label>
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, resellerDisplayName: newResellerBrandName, resellerDiscordUrl: newResellerDiscordUrl, creditsPanelLegitimo: newResellerCreditsPanelLegitimo, isPremium: newResellerIsPremium })}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, resellerDisplayName: newResellerBrandName, resellerDiscordUrl: newResellerDiscordUrl, resellerColor: newResellerColor, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, creditsPanelLegitimo: newResellerCreditsPanelLegitimo, isPremium: newResellerIsPremium })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>
@@ -727,11 +736,13 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button size="sm" variant="outline" className="border-cyan-700 text-cyan-300 bg-cyan-950/30" title="Personalizar nome e Discord dos clientes deste revendedor" onClick={() => {
-                          const displayName = prompt("Nome exibido para clientes criados por " + r.username + ". Deixe vazio para usar o padrão:", r.resellerDisplayName || "");
+                          const displayName = prompt(`Nome exibido para clientes criados por ${r.username}. Deixe vazio para usar o padrão:`, r.resellerDisplayName || "");
                           if (displayName === null) return;
-                          const discordUrl = prompt("Link do Discord para clientes criados por " + r.username + ". Deixe vazio para usar o padrão:", r.resellerDiscordUrl || "");
+                          const discordUrl = prompt(`Link do Discord para clientes criados por ${r.username}. Deixe vazio para usar o padrão:`, r.resellerDiscordUrl || "");
                           if (discordUrl === null) return;
-                          updateResellerBrandingMutation.mutate({ resellerId: r.id, displayName, discordUrl });
+                          const color = prompt(`Cor da marca em hexadecimal para ${r.username} (ex.: #22c55e):`, r.resellerColor || "#dc2626");
+                          if (color === null) return;
+                          updateResellerBrandingMutation.mutate({ resellerId: r.id, displayName, discordUrl, color });
                         }}>Marca</Button>
                         <Button size="sm" variant="outline" className="border-violet-700 text-violet-300 bg-violet-950/30" title="Produtos habilitados" onClick={() => {
                           const current = (r.enabledProducts || ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]).join(", ");
@@ -1087,6 +1098,15 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
                   </select>
                 </div>
                 <textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Cole uma key por linha..." value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} />
+                <label className="block rounded-md border border-dashed border-neutral-700 bg-[#1b1b1b] p-3 text-xs text-neutral-300 cursor-pointer hover:border-red-500 transition-colors">
+                  <span className="font-semibold text-white">Ou escolha um arquivo .txt</span>
+                  <input type="file" accept=".txt,text/plain" className="mt-2 block w-full text-xs text-neutral-400 file:mr-3 file:rounded file:border-0 file:bg-neutral-700 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white hover:file:bg-neutral-600" onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (!file) return;
+                    file.text().then(setBatchKeysText).catch(() => toast.error("Não foi possível ler o arquivo .txt."));
+                    e.currentTarget.value = "";
+                  }} />
+                </label>
                 <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => {
                   if (!batchKeysText.trim()) { toast.error("Cole pelo menos uma Key antes de importar."); return; }
                   batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: batchKeyType });
@@ -2024,6 +2044,7 @@ function ClientDashboard() {
   const [showAlert, setShowAlert] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
   const announcement = data?.announcements?.[0];
+  const brandColor = data?.brandColor || "#dc2626";
 
   useEffect(() => {
     if (!announcement) {
@@ -2071,9 +2092,9 @@ function ClientDashboard() {
 
   if (isExpired) {
     return (
-      <div className="max-w-xl mx-auto mt-20 p-6 bg-[#141414] border border-red-600 rounded-xl text-white text-center space-y-4 shadow-2xl select-none" style={{ WebkitUserSelect: 'none' }}>
-        <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-bounce" />
-        <h2 className="text-2xl font-bold text-red-500">Acesso Expirado</h2>
+      <div className="max-w-xl mx-auto mt-20 p-6 bg-[#141414] border rounded-xl text-white text-center space-y-4 shadow-2xl select-none" style={{ borderColor: brandColor, WebkitUserSelect: 'none' }}>
+        <AlertTriangle className="w-16 h-16 mx-auto animate-bounce" style={{ color: brandColor }} />
+        <h2 className="text-2xl font-bold" style={{ color: brandColor }}>Acesso Expirado</h2>
         <p className="text-sm text-neutral-300 font-medium">
           Seu login expirou, contate o suporte de {data?.brandName || "SHELBY PANEL"} para renovar.
         </p>
@@ -2083,6 +2104,7 @@ function ClientDashboard() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition"
+            style={{ backgroundColor: brandColor }}
           >
             Contatar Suporte / Discord
           </a>
@@ -2099,7 +2121,7 @@ function ClientDashboard() {
       </div>
       {showAlert && announcement && (
         <Card className="bg-[#141414] border-red-600/50 text-white p-4 animate-fade-in shadow-xl">
-          <div className="flex items-center gap-3 text-red-500 font-bold mb-2">
+          <div className="flex items-center gap-3 font-bold mb-2" style={{ color: brandColor }}>
             <AlertTriangle className="w-6 h-6" />
             <span>{announcement.title} ({countdown}s)</span>
           </div>
@@ -2108,7 +2130,7 @@ function ClientDashboard() {
       )}
 
       <Card className="bg-[#141414] border-neutral-800 text-white">
-        <CardHeader><CardTitle className="text-white">Suas Informações de Acesso</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-white" style={{ color: brandColor }}>Suas Informações de Acesso</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800">
@@ -2149,6 +2171,7 @@ function ClientDashboard() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-1 inline-flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-bold px-4 py-2 rounded-lg transition"
+                style={{ backgroundColor: brandColor }}
               >
                 Entrar no Discord
               </a>

@@ -149,7 +149,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#0b0b0b] text-white font-sans flex flex-col">
       <header className="border-b border-neutral-800 bg-[#111] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <span className="text-xl font-black text-red-600 tracking-wider">SHELBY PANEL</span>
+          <span className="text-xl font-black text-red-600 tracking-wider">{user.brandName || "SHELBY PANEL"}</span>
           <Badge className="bg-neutral-800 text-white border-neutral-700 uppercase text-[10px]">
             {user.role}
           </Badge>
@@ -197,6 +197,8 @@ function ModeratorDashboard() {
   const [newResellerCreditsIos, setNewResellerCreditsIos] = useState(10);
   const [newResellerCreditsPanelIos, setNewResellerCreditsPanelIos] = useState(0);
   const [newResellerCreditsPanelLegitimo, setNewResellerCreditsPanelLegitimo] = useState(0);
+  const [newResellerBrandName, setNewResellerBrandName] = useState("");
+  const [newResellerDiscordUrl, setNewResellerDiscordUrl] = useState("");
   const [newResellerIsPremium, setNewResellerIsPremium] = useState(false);
 
   const [newKeyVal, setNewKeyVal] = useState("");
@@ -286,6 +288,8 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
       toast.success("Revendedor criado com sucesso!");
       setNewResellerUser("");
       setNewResellerPass("");
+      setNewResellerBrandName("");
+      setNewResellerDiscordUrl("");
       setNewResellerIsPremium(false);
       refetchResellers();
     },
@@ -302,6 +306,11 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
 
   const updateResellerProductsMutation = trpc.moderator.updateResellerProducts.useMutation({
     onSuccess: () => { toast.success("Produtos do revendedor atualizados!"); refetchResellers(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateResellerBrandingMutation = trpc.moderator.updateResellerBranding.useMutation({
+    onSuccess: () => { toast.success("Personalização do revendedor atualizada!"); refetchResellers(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -621,6 +630,14 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
                   <Input type="password" className="bg-[#222] border-neutral-700 text-white" value={newResellerPass} onChange={(e) => setNewResellerPass(e.target.value)} placeholder="senha" />
                 </div>
                 <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Nome exibido para os clientes (opcional)</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={newResellerBrandName} onChange={(e) => setNewResellerBrandName(e.target.value)} placeholder="Ex.: Painel do João" />
+                </div>
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Discord dos clientes (opcional)</label>
+                  <Input className="bg-[#222] border-neutral-700 text-white" value={newResellerDiscordUrl} onChange={(e) => setNewResellerDiscordUrl(e.target.value)} placeholder="https://discord.gg/exemplo" />
+                </div>
+                <div>
                   <label className="text-xs text-white font-semibold block mb-1">Créditos Basic</label>
                   <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsBasic} onChange={(e) => setNewResellerCreditsBasic(Number(e.target.value))} />
                 </div>
@@ -644,7 +661,7 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
                   <input type="checkbox" id="isPremiumCheck" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newResellerIsPremium} onChange={(e) => setNewResellerIsPremium(e.target.checked)} />
                   <label htmlFor="isPremiumCheck" className="text-xs font-bold text-amber-400 cursor-pointer">Revendedor Premium (★)</label>
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, creditsPanelLegitimo: newResellerCreditsPanelLegitimo, isPremium: newResellerIsPremium })}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, resellerDisplayName: newResellerBrandName, resellerDiscordUrl: newResellerDiscordUrl, creditsPanelLegitimo: newResellerCreditsPanelLegitimo, isPremium: newResellerIsPremium })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>
@@ -709,6 +726,13 @@ const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="outline" className="border-cyan-700 text-cyan-300 bg-cyan-950/30" title="Personalizar nome e Discord dos clientes deste revendedor" onClick={() => {
+                          const displayName = prompt("Nome exibido para clientes criados por " + r.username + ". Deixe vazio para usar o padrão:", r.resellerDisplayName || "");
+                          if (displayName === null) return;
+                          const discordUrl = prompt("Link do Discord para clientes criados por " + r.username + ". Deixe vazio para usar o padrão:", r.resellerDiscordUrl || "");
+                          if (discordUrl === null) return;
+                          updateResellerBrandingMutation.mutate({ resellerId: r.id, displayName, discordUrl });
+                        }}>Marca</Button>
                         <Button size="sm" variant="outline" className="border-violet-700 text-violet-300 bg-violet-950/30" title="Produtos habilitados" onClick={() => {
                           const current = (r.enabledProducts || ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]).join(", ");
                           const value = prompt(`Produtos liberados para ${r.username}. Use: basic, advanced, ios, panel_ios, panel_legitimo, panel_android, ios_ipa`, current);
@@ -2051,11 +2075,11 @@ function ClientDashboard() {
         <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-bounce" />
         <h2 className="text-2xl font-bold text-red-500">Acesso Expirado</h2>
         <p className="text-sm text-neutral-300 font-medium">
-          Seu login expirou, contate o suporte da Shelby para renovar.
+          Seu login expirou, contate o suporte de {data?.brandName || "SHELBY PANEL"} para renovar.
         </p>
         <div className="pt-2">
           <a
-            href="https://discord.gg/YYBZxhhm"
+            href={data?.discordUrl || "https://discord.gg/YYBZxhhm"}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition"
@@ -2121,7 +2145,7 @@ function ClientDashboard() {
             <div className="bg-[#1f1f1f] p-4 rounded-lg border border-neutral-800 flex flex-col justify-between">
               <span className="text-xs text-white font-bold block mb-1">SUPORTE E COMUNIDADE</span>
               <a
-                href="https://discord.gg/YYBZxhhm"
+                href={data?.discordUrl || "https://discord.gg/YYBZxhhm"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-1 inline-flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-bold px-4 py-2 rounded-lg transition"

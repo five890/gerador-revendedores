@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN resellerColor VARCHAR(7) NULL;
+

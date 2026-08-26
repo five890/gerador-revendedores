@@ -24,8 +24,11 @@ export const users = mysqlTable("users", {
   creditsIosIpa: int("creditsIosIpa").default(0).notNull(),
   // JSON com os tipos de produto liberados para este revendedor; nulo = todos os produtos legados
   enabledProducts: text("enabledProducts"),
+  // Marca opcional exibida apenas aos clientes criados por este revendedor
   resellerDisplayName: varchar("resellerDisplayName", { length: 120 }),
   resellerDiscordUrl: varchar("resellerDiscordUrl", { length: 512 }),
+  // Cor principal opcional exibida apenas aos clientes criados por este revendedor
+  resellerColor: varchar("resellerColor", { length: 7 }),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),

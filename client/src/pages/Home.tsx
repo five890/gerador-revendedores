@@ -2178,7 +2178,7 @@ function ClientDashboard() {
             <div className="flex flex-col gap-2 sm:flex-row">
               {renewalNoticeSeconds === 0 && (
                 <a
-                  href={data?.discordUrl || "https://discord.gg/YYBZxhhm"}
+                  href="https://discord.gg/Yu3KHxc4vw"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex flex-1 items-center justify-center rounded-md border border-indigo-400/30 bg-indigo-950/50 px-4 py-2.5 text-xs font-bold text-indigo-200 transition-colors hover:bg-indigo-900/70 hover:text-white"

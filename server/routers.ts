@@ -1486,7 +1486,7 @@ export const appRouter = router({
     dashboard: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "client") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
-      if (!db) return { username: ctx.user.username, keyValue: "N/A", downloads: [], brandName: "SHELBY PANEL", discordUrl: "https://discord.gg/YYBZxhhm", brandColor: "#dc2626" };
+      if (!db) return { username: ctx.user.username, keyValue: "N/A", downloads: [], brandName: "SHELBY PANEL", discordUrl: "https://discord.gg/YYBZxhhm", brandColor: "#dc2626", renewalCount: 0 };
 
       const clientRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const client = clientRes[0];
@@ -1527,6 +1527,10 @@ export const appRouter = router({
       const activeAnnouncements = await db.select().from(announcements)
         .where(eq(announcements.isActive, true))
         .orderBy(desc(announcements.id));
+      const renewalLogs = await db.select({ details: logs.details })
+        .from(logs)
+        .where(eq(logs.action, "RESELLER_RENEW_CLIENT"));
+      const renewalCount = renewalLogs.filter((log) => log.details?.includes(`cliente ${client.openId} (`)).length;
 
       const filteredDownloads = allDownloads.filter(d => targetTypes.includes(d.type || "advanced"));
       const filteredTutorials = allTutorials.filter(t => targetTypes.includes(t.type || "advanced"));
@@ -1540,6 +1544,7 @@ export const appRouter = router({
         brandName,
         discordUrl,
         brandColor,
+        renewalCount,
         keyValue,
         keyType,
         keyUsedAt,

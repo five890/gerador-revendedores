@@ -88,6 +88,27 @@
   }
 }
 
+@keyframes shelby-login-bg {
+  0% {
+    transform: scale(1.04) translate3d(-1%, -1%, 0);
+  }
+  100% {
+    transform: scale(1.13) translate3d(1%, 1%, 0);
+  }
+}
+
+.animate-shelby-login-bg {
+  animation: shelby-login-bg 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shelby-login-bg {
+    animation: none;
+    transform: scale(1.06);
+  }
+}
+
 @layer components {
   .container {
     width: 100%;

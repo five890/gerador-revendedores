@@ -1,0 +1,4 @@
+ALTER TABLE users ADD COLUMN resellerDisplayName VARCHAR(120) NULL;
+
+ALTER TABLE users ADD COLUMN resellerDiscordUrl VARCHAR(512) NULL;
+

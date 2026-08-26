@@ -2069,9 +2069,28 @@ function ClientDashboard() {
   const [countdown, setCountdown] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
-  const announcement = data?.announcements?.[0];
+    const announcement = data?.announcements?.[0];
   const brandColor = data?.brandColor || "#dc2626";
-
+  const [renewalNoticeOpen, setRenewalNoticeOpen] = useState(false);
+  const [renewalNoticeSeconds, setRenewalNoticeSeconds] = useState(4);
+  useEffect(() => {
+    if (!data || Number(data.renewalCount || 0) <= 2) {
+      setRenewalNoticeOpen(false);
+      return;
+    }
+    setRenewalNoticeOpen(true);
+    setRenewalNoticeSeconds(4);
+    const timer = window.setInterval(() => {
+      setRenewalNoticeSeconds((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [data?.username, data?.renewalCount]);
   useEffect(() => {
     if (!announcement) {
       setCountdown(0);
@@ -2112,13 +2131,82 @@ function ClientDashboard() {
     return () => clearInterval(interval);
   }, [data?.expiresAt]);
 
-  const isExpired = data?.expiresAt ? new Date().getTime() > new Date(data.expiresAt).getTime() : false;
-
+    const isExpired = data?.expiresAt ? new Date().getTime() > new Date(data.expiresAt).getTime() : false;
+  const renewalNotice = (
+    <Dialog
+      open={renewalNoticeOpen}
+      onOpenChange={(open) => {
+        if (!open && renewalNoticeSeconds === 0) setRenewalNoticeOpen(false);
+      }}
+    >
+      <DialogContent
+        showCloseButton={false}
+        className="z-[110] max-w-md border-red-600/60 bg-[#111111]/[0.98] p-0 text-white shadow-2xl shadow-red-950/40"
+        onEscapeKeyDown={(event) => {
+          if (renewalNoticeSeconds > 0) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (renewalNoticeSeconds > 0) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (renewalNoticeSeconds > 0) event.preventDefault();
+        }}
+      >
+        <div className="relative overflow-hidden rounded-lg">
+          <div className="absolute inset-x-0 top-0 h-1 bg-red-600" style={{ backgroundColor: brandColor }} />
+          <DialogHeader className="space-y-3 p-6 pb-4 text-center sm:text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-red-500/30 bg-red-950/50" style={{ borderColor: `${brandColor}66`, backgroundColor: `${brandColor}22` }}>
+              <Lock className="h-7 w-7" style={{ color: brandColor }} />
+            </div>
+            <DialogTitle className="text-center text-2xl font-black uppercase tracking-[0.12em]" style={{ color: brandColor }}>
+              AGUARDE XITADINHO
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 px-6 pb-6 text-center">
+            <p className="text-sm font-semibold leading-6 text-neutral-200">
+              OBRIGADO POR COMPRAR NOSSO XIT MAIS UMA VEZ. AGRADECEMOS!<br />
+              DEIXE SEU FEEDBACK PRA MOTIVAR A CONTINUARMOS NESSA, TRAZENDO XITS BARATOS.
+            </p>
+            <div className="space-y-2">
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-red-600 transition-[width] duration-1000" style={{ width: `${((4 - renewalNoticeSeconds) / 4) * 100}%`, backgroundColor: brandColor }} />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400">
+                {renewalNoticeSeconds > 0 ? `Aguarde ${renewalNoticeSeconds} segundo${renewalNoticeSeconds === 1 ? "" : "s"}` : "Agora você pode continuar"}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {renewalNoticeSeconds === 0 && (
+                <a
+                  href={data?.discordUrl || "https://discord.gg/YYBZxhhm"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex flex-1 items-center justify-center rounded-md border border-indigo-400/30 bg-indigo-950/50 px-4 py-2.5 text-xs font-bold text-indigo-200 transition-colors hover:bg-indigo-900/70 hover:text-white"
+                >
+                  Deixar feedback no Discord
+                </a>
+              )}
+              <Button
+                type="button"
+                disabled={renewalNoticeSeconds > 0}
+                onClick={() => setRenewalNoticeOpen(false)}
+                className="flex-1 bg-red-600 font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ backgroundColor: renewalNoticeSeconds === 0 ? brandColor : undefined }}
+              >
+                {renewalNoticeSeconds > 0 ? `Fechar (${renewalNoticeSeconds})` : "Fechar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
   if (isLoading) return <div className="p-8 text-center text-white">Carregando painel...</div>;
 
   if (isExpired) {
     return (
-      <div className="max-w-xl mx-auto mt-20 p-6 bg-[#141414] border rounded-xl text-white text-center space-y-4 shadow-2xl select-none" style={{ borderColor: brandColor, WebkitUserSelect: 'none' }}>
+      <>
+        <div className="max-w-xl mx-auto mt-20 p-6 bg-[#141414] border rounded-xl text-white text-center space-y-4 shadow-2xl select-none" style={{ borderColor: brandColor, WebkitUserSelect: 'none' }}>
         <AlertTriangle className="w-16 h-16 mx-auto animate-bounce" style={{ color: brandColor }} />
         <h2 className="text-2xl font-bold" style={{ color: brandColor }}>Acesso Expirado</h2>
         <p className="text-sm text-neutral-300 font-medium">
@@ -2135,12 +2223,15 @@ function ClientDashboard() {
             Contatar Suporte / Discord
           </a>
         </div>
-      </div>
+        </div>
+        {renewalNotice}
+      </>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto text-white select-none relative" style={{ WebkitUserSelect: 'none' }}>
+    <>
+      <div className="space-y-6 max-w-4xl mx-auto text-white select-none relative" style={{ WebkitUserSelect: 'none' }}>
       {/* Overlay anti-screen sharing / screenshot protection */}
       <div className="absolute inset-0 pointer-events-none z-50 flex items-start justify-end p-2 opacity-10 font-mono text-[10px] text-white overflow-hidden">
         SHELBY SECURE SESSION - NO SCREENSHARE
@@ -2262,6 +2353,8 @@ function ClientDashboard() {
           </div>
         </CardContent>
       </Card>
+      {renewalNotice}
     </div>
+  </>
   );
 }

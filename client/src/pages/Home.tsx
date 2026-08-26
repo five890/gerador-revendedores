@@ -102,43 +102,69 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0b0b0b] text-white flex flex-col items-center justify-center px-4 font-sans">
-        <div className="w-full max-w-md bg-[#141414] border border-neutral-800 rounded-xl p-8 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-black text-red-600 tracking-wider">SHELBY PANEL</h1>
-            <p className="text-xs text-neutral-400">Painel de Acesso & Distribuição</p>
+      <div className="relative min-h-screen overflow-hidden bg-[#070707] text-white flex items-center justify-center px-4 py-8 font-sans">
+        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className="absolute inset-[-6%] bg-[url('/assets/shelby-login-bg.png')] bg-cover bg-center lg:bg-[position:center_18%] blur-[2px] animate-shelby-login-bg" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/35" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_40%,rgba(127,29,29,0.3),transparent_42%)]" />
+          <div className="absolute inset-0 bg-black/25" />
+        </div>
+
+        <div className="relative z-10 grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[1fr_420px]">
+          <div className="hidden lg:block max-w-xl space-y-5 px-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-black/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.28em] text-red-300 backdrop-blur-md">
+              Acesso seguro
+            </div>
+            <h1 className="text-5xl font-black leading-none tracking-[0.16em] text-white drop-shadow-2xl xl:text-6xl">SHELBY<br /><span className="text-red-600">PANEL</span></h1>
+            <p className="max-w-md text-sm leading-6 text-neutral-300">Gerencie seus acessos, produtos e clientes em um só lugar.</p>
+            <div className="h-px w-24 bg-red-600/80" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-400">Painel de acesso & distribuição</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs text-white font-semibold">Usuário</label>
-              <Input
-                className="bg-[#222] border-neutral-700 text-white placeholder:text-neutral-500"
-                placeholder="Ex: seu login"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
+          <div className="w-full rounded-2xl border border-white/15 bg-black/65 p-6 shadow-2xl shadow-black/60 backdrop-blur-xl sm:p-8">
+            <div className="mb-6 text-center space-y-2 lg:hidden">
+              <h1 className="text-3xl font-black tracking-[0.14em] text-red-600 drop-shadow-lg">SHELBY PANEL</h1>
+              <p className="text-xs text-neutral-300">Painel de Acesso & Distribuição</p>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-white font-semibold">Senha</label>
-              <Input
-                type="password"
-                className="bg-[#222] border-neutral-700 text-white placeholder:text-neutral-500"
-                placeholder="••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+            <div className="mb-6 hidden items-center justify-between lg:flex">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-red-400">Bem-vindo</p>
+                <h2 className="mt-1 text-xl font-black tracking-wide text-white">Entrar no painel</h2>
+              </div>
+              <Lock className="h-5 w-5 text-red-500" />
             </div>
-            <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2">
-              Entrar na Plataforma
-            </Button>
-          </form>
-          <div className="border-t border-neutral-800 pt-4 text-center space-y-2">
-            <p className="text-xs text-neutral-400">Entre no nosso Discord oficial</p>
-            <a href="https://discord.gg/shelbys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-full rounded-md border border-indigo-700 bg-indigo-950/40 px-4 py-2 text-sm font-bold text-indigo-300 hover:bg-indigo-900/60 hover:text-white transition-colors">
-              Entrar no Discord Oficial
-            </a>
-            <p className="text-[11px] font-semibold text-amber-400">Atenção: abra este link em um navegador como Chrome ou Safari.</p>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-neutral-200">Usuário</label>
+                <Input
+                  className="h-11 border-white/15 bg-white/10 text-white placeholder:text-neutral-500 focus-visible:ring-red-500"
+                  placeholder="Ex: seu login"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-neutral-200">Senha</label>
+                <Input
+                  type="password"
+                  className="h-11 border-white/15 bg-white/10 text-white placeholder:text-neutral-500 focus-visible:ring-red-500"
+                  placeholder="••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              <Button type="submit" className="h-11 w-full bg-red-600 font-bold text-white shadow-lg shadow-red-950/40 transition-all hover:bg-red-700 hover:shadow-red-900/50" disabled={loginMutation.isPending}>
+                {loginMutation.isPending ? "Entrando..." : "Entrar na Plataforma"}
+              </Button>
+            </form>
+            <div className="mt-6 space-y-2 border-t border-white/10 pt-5 text-center">
+              <p className="text-xs text-neutral-400">Entre no nosso Discord oficial</p>
+              <a href="https://discord.gg/shelbys" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center rounded-md border border-indigo-400/30 bg-indigo-950/50 px-4 py-2.5 text-sm font-bold text-indigo-200 transition-colors hover:bg-indigo-900/70 hover:text-white">
+                Entrar no Discord Oficial
+              </a>
+              <p className="text-[11px] font-semibold text-amber-300/90">Abra este link em um navegador como Chrome ou Safari.</p>
+            </div>
           </div>
         </div>
       </div>

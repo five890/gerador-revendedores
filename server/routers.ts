@@ -30,6 +30,19 @@ function getEnabledProducts(value: unknown): string[] {
   }
 }
 
+function validateDiscordUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    const allowedHosts = new Set(["discord.gg", "discord.com", "www.discord.com"]);
+    if (parsed.protocol !== "https:" || !allowedHosts.has(parsed.hostname.toLowerCase())) throw new Error("invalid");
+    return trimmed;
+  } catch {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Use um link HTTPS válido do Discord, por exemplo https://discord.gg/exemplo." });
+  }
+}
+
 async function resolveMediaFireUrl(videoUrl: string): Promise<string> {
   try {
     const parsed = new URL(videoUrl);
@@ -51,17 +64,46 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user) return null;
+      const defaultBrandName = "SHELBY PANEL";
+      const defaultDiscordUrl = "https://discord.gg/YYBZxhhm";
       const db = await getDb();
-      if (!db) return ctx.user;
+      if (!db) {
+        return {
+          id: ctx.user.id,
+          username: ctx.user.username,
+          name: ctx.user.name || null,
+          email: ctx.user.email || null,
+          role: ctx.user.role,
+          credits: ctx.user.credits,
+          isPremium: ctx.user.isPremium || false,
+          brandName: defaultBrandName,
+          discordUrl: defaultDiscordUrl,
+        };
+      }
       const res = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       if (res.length === 0) return null;
       const u = res[0];
+      let brandName = defaultBrandName;
+      let discordUrl = defaultDiscordUrl;
+      if (u.role === "client" && u.resellerId) {
+        const resellerRes = await db.select({ resellerDisplayName: users.resellerDisplayName, resellerDiscordUrl: users.resellerDiscordUrl })
+          .from(users)
+          .where(and(eq(users.id, u.resellerId), eq(users.role, "reseller")))
+          .limit(1);
+        const reseller = resellerRes[0];
+        if (reseller?.resellerDisplayName?.trim()) brandName = reseller.resellerDisplayName.trim();
+        if (reseller?.resellerDiscordUrl?.trim()) discordUrl = reseller.resellerDiscordUrl.trim();
+      }
       return {
         id: u.id,
         username: u.openId,
+        name: u.name || null,
+        email: u.email || null,
         role: u.role,
         credits: u.credits,
         isPremium: u.isPremium || false,
+        brandName,
+        discordUrl,
       };
     }),
 
@@ -306,6 +348,8 @@ export const appRouter = router({
             ios_ipa: r.creditsIosIpa || 0,
           },
           enabledProducts: getEnabledProducts(r.enabledProducts),
+          resellerDisplayName: r.resellerDisplayName || null,
+          resellerDiscordUrl: r.resellerDiscordUrl || null,
           isActive: r.isActive,
           isPremium: r.isPremium || false,
           clientCount: Number(clientCountRes[0]?.count || 0),
@@ -371,6 +415,8 @@ export const appRouter = router({
         creditsPanelIos: z.number().default(0),
         creditsPanelLegitimo: z.number().default(0),
         creditsIosIpa: z.number().default(0),
+        resellerDisplayName: z.string().trim().max(120).default(""),
+        resellerDiscordUrl: z.string().trim().max(512).default(""),
         isPremium: z.boolean().default(false) 
       }))
       .mutation(async ({ input, ctx }) => {
@@ -392,6 +438,8 @@ export const appRouter = router({
         }
 
         const passHash = hashPassword(input.password);
+        const resellerDisplayName = input.resellerDisplayName.trim() || null;
+        const resellerDiscordUrl = validateDiscordUrl(input.resellerDiscordUrl);
         await db.insert(users).values({
           openId: input.username,
           role: "reseller",
@@ -399,6 +447,8 @@ export const appRouter = router({
           resellerId: null,
           isActive: true,
           isPremium: input.isPremium,
+          resellerDisplayName,
+          resellerDiscordUrl,
           creditsBasic: input.creditsBasic,
           creditsAdvanced: input.creditsAdvanced,
           creditsIos: input.creditsIos,
@@ -478,6 +528,30 @@ export const appRouter = router({
         await db.update(users).set({ enabledProducts: JSON.stringify(products) }).where(eq(users.id, input.resellerId));
         await db.insert(logs).values({ userId: ctx.user.id, action: "UPDATE_RESELLER_PRODUCTS", details: `Moderador configurou os produtos do revendedor ${resellerRes[0].openId}: ${products.join(", ") || "nenhum"}.` });
         return { success: true, products };
+      }),
+    updateResellerBranding: protectedProcedure
+      .input(z.object({
+        resellerId: z.number(),
+        displayName: z.string().trim().max(120),
+        discordUrl: z.string().trim().max(512),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const resellerRes = await db.select().from(users).where(and(eq(users.id, input.resellerId), eq(users.role, "reseller"))).limit(1);
+        if (!resellerRes.length) throw new TRPCError({ code: "NOT_FOUND", message: "Revendedor não encontrado." });
+
+        const displayName = input.displayName.trim() || null;
+        const discordUrl = validateDiscordUrl(input.discordUrl);
+
+        await db.update(users).set({ resellerDisplayName: displayName, resellerDiscordUrl: discordUrl }).where(eq(users.id, input.resellerId));
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "UPDATE_RESELLER_BRANDING",
+          details: "Moderador atualizou a marca do revendedor " + resellerRes[0].openId + ". Nome: " + (displayName || "padrão") + "; Discord: " + (discordUrl || "padrão") + ".",
+        });
+        return { success: true, displayName, discordUrl };
       }),
     toggleResellerPremium: protectedProcedure
       .input(z.object({ resellerId: z.number() }))
@@ -1387,10 +1461,21 @@ export const appRouter = router({
     dashboard: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "client") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
-      if (!db) return { username: ctx.user.username, keyValue: "N/A", downloads: [] };
+      if (!db) return { username: ctx.user.username, keyValue: "N/A", downloads: [], brandName: "SHELBY PANEL", discordUrl: "https://discord.gg/YYBZxhhm" };
 
       const clientRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const client = clientRes[0];
+      let brandName = "SHELBY PANEL";
+      let discordUrl = "https://discord.gg/YYBZxhhm";
+      if (client?.resellerId) {
+        const resellerRes = await db.select({ resellerDisplayName: users.resellerDisplayName, resellerDiscordUrl: users.resellerDiscordUrl })
+          .from(users)
+          .where(and(eq(users.id, client.resellerId), eq(users.role, "reseller")))
+          .limit(1);
+        const reseller = resellerRes[0];
+        if (reseller?.resellerDisplayName?.trim()) brandName = reseller.resellerDisplayName.trim();
+        if (reseller?.resellerDiscordUrl?.trim()) discordUrl = reseller.resellerDiscordUrl.trim();
+      }
 
       let keyValue: string | null = null;
       let keyType = "advanced";
@@ -1425,6 +1510,8 @@ export const appRouter = router({
 
       return {
         username: client.openId,
+        brandName,
+        discordUrl,
         keyValue,
         keyType,
         keyUsedAt,

@@ -54,6 +54,22 @@ function validateBrandColor(value: string): string | null {
   return trimmed;
 }
 
+function validatePublicBannerUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Cole um link público válido para a imagem do banner." });
+  }
+  const hostname = parsed.hostname.toLowerCase();
+  if (parsed.protocol !== "https:" || hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname.endsWith(".local")) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "O banner precisa usar um link HTTPS público." });
+  }
+  return parsed.toString();
+}
+
 function decodeBannerData(data: string, contentType: string): { buffer: Buffer; mimeType: string } {
   const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
   if (!allowedTypes.has(contentType)) {
@@ -616,6 +632,23 @@ export const appRouter = router({
           details: `Moderador atualizou o banner do revendedor ${resellerRes[0].openId}.`,
         });
         return { success: true, bannerUrl: stored.url };
+      }),
+    setResellerBannerUrl: protectedProcedure
+      .input(z.object({ resellerId: z.number(), bannerUrl: z.string().trim().max(1024) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const resellerRes = await db.select({ openId: users.openId }).from(users).where(and(eq(users.id, input.resellerId), eq(users.role, "reseller"))).limit(1);
+        if (!resellerRes.length) throw new TRPCError({ code: "NOT_FOUND", message: "Revendedor não encontrado." });
+        const bannerUrl = validatePublicBannerUrl(input.bannerUrl);
+        await db.update(users).set({ resellerBannerUrl: bannerUrl }).where(eq(users.id, input.resellerId));
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "UPDATE_RESELLER_BANNER",
+          details: `Moderador atualizou o link do banner do revendedor ${resellerRes[0].openId}.`,
+        });
+        return { success: true, bannerUrl };
       }),
     toggleResellerPremium: protectedProcedure
       .input(z.object({ resellerId: z.number() }))

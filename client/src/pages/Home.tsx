@@ -342,8 +342,8 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
-  const uploadResellerBannerMutation = trpc.moderator.uploadResellerBanner.useMutation({
-    onSuccess: () => { toast.success("Banner do revendedor atualizado!"); refetchResellers(); },
+  const setResellerBannerUrlMutation = trpc.moderator.setResellerBannerUrl.useMutation({
+    onSuccess: () => { toast.success("Link do banner atualizado!"); refetchResellers(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -509,36 +509,6 @@ function ModeratorDashboard() {
     onSuccess: () => { toast.success("Aviso removido!"); refetchAnnouncements(); },
     onError: (e) => toast.error(e.message),
   });
-
-  const handleResellerBannerUpload = (resellerId: number, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
-    if (!allowedTypes.has(file.type)) {
-      toast.error("Escolha uma imagem PNG, JPG, WEBP ou GIF.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("O banner deve ter no máximo 5 MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        toast.error("Não foi possível ler o banner.");
-        return;
-      }
-      uploadResellerBannerMutation.mutate({
-        resellerId,
-        fileName: file.name,
-        contentType: file.type as "image/png" | "image/jpeg" | "image/webp" | "image/gif",
-        data: reader.result,
-      });
-    };
-    reader.onerror = () => toast.error("Não foi possível ler o banner.");
-    reader.readAsDataURL(file);
-  };
 
   const exportKeys = () => {
     if (!keysList) return;
@@ -796,10 +766,13 @@ function ModeratorDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <label className="inline-flex cursor-pointer items-center rounded-md border border-emerald-700 bg-emerald-950/30 px-2 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900/50">
-                          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" disabled={uploadResellerBannerMutation.isPending} onChange={(event) => handleResellerBannerUpload(r.id, event)} />
-                          {uploadResellerBannerMutation.isPending ? "Enviando..." : r.resellerBannerUrl ? "Banner ✓" : "Banner"}
-                        </label>
+                        <Button size="sm" variant="outline" className="border-emerald-700 text-emerald-300 bg-emerald-950/30" title="Colar o link público do banner para clientes deste revendedor" disabled={setResellerBannerUrlMutation.isPending} onClick={() => {
+                          const bannerUrl = prompt(`Link público HTTPS do banner para clientes criados por ${r.username}. Deixe vazio para remover:`, r.resellerBannerUrl || "");
+                          if (bannerUrl === null) return;
+                          setResellerBannerUrlMutation.mutate({ resellerId: r.id, bannerUrl });
+                        }}>
+                          {setResellerBannerUrlMutation.isPending ? "Salvando..." : r.resellerBannerUrl ? "Banner ✓" : "Banner"}
+                        </Button>
                         <Button size="sm" variant="outline" className="border-cyan-700 text-cyan-300 bg-cyan-950/30" title="Personalizar nome e Discord dos clientes deste revendedor" onClick={() => {
                           const displayName = prompt(`Nome exibido para clientes criados por ${r.username}. Deixe vazio para usar o padrão:`, r.resellerDisplayName || "");
                           if (displayName === null) return;

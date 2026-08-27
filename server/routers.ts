@@ -8,6 +8,7 @@ import { users, keys, downloads, tutorials, sessions, logs, announcements } from
 import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
+import { storagePut } from "./storage";
 
 const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"] as const;
 // Os formulários do painel continuam oferecendo estes produtos; o backend deve aceitar os mesmos tipos.
@@ -51,6 +52,23 @@ function validateBrandColor(value: string): string | null {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Escolha uma cor hexadecimal válida, por exemplo #dc2626." });
   }
   return trimmed;
+}
+
+function decodeBannerData(data: string, contentType: string): { buffer: Buffer; mimeType: string } {
+  const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+  if (!allowedTypes.has(contentType)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "O banner precisa ser PNG, JPG, WEBP ou GIF." });
+  }
+  const match = data.trim().match(/^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/i);
+  const base64 = match?.[2] || data.trim();
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64) || base64.length % 4 === 1) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Arquivo de banner inválido." });
+  }
+  const buffer = Buffer.from(base64, "base64");
+  if (!buffer.length || buffer.length > 5 * 1024 * 1024) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "O banner deve ter entre 1 byte e 5 MB." });
+  }
+  return { buffer, mimeType: match?.[1]?.toLowerCase() || contentType };
 }
 
 async function resolveMediaFireUrl(videoUrl: string): Promise<string> {
@@ -366,6 +384,7 @@ export const appRouter = router({
           resellerDisplayName: r.resellerDisplayName || null,
           resellerDiscordUrl: r.resellerDiscordUrl || null,
           resellerColor: r.resellerColor || null,
+          resellerBannerUrl: r.resellerBannerUrl || null,
           isActive: r.isActive,
           isPremium: r.isPremium || false,
           clientCount: Number(clientCountRes[0]?.count || 0),
@@ -565,7 +584,6 @@ export const appRouter = router({
         const displayName = input.displayName.trim() || null;
         const discordUrl = validateDiscordUrl(input.discordUrl);
         const color = validateBrandColor(input.color);
-
         await db.update(users).set({ resellerDisplayName: displayName, resellerDiscordUrl: discordUrl, resellerColor: color }).where(eq(users.id, input.resellerId));
         await db.insert(logs).values({
           userId: ctx.user.id,
@@ -573,6 +591,31 @@ export const appRouter = router({
           details: `Moderador atualizou a marca do revendedor ${resellerRes[0].openId}. Nome: ${displayName || "padrão"}; Discord: ${discordUrl || "padrão"}; Cor: ${color || "padrão"}.`,
         });
         return { success: true, displayName, discordUrl, color };
+      }),
+    uploadResellerBanner: protectedProcedure
+      .input(z.object({
+        resellerId: z.number(),
+        fileName: z.string().trim().min(1).max(120),
+        contentType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif"]),
+        data: z.string().min(1).max(7_000_000),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const resellerRes = await db.select().from(users).where(and(eq(users.id, input.resellerId), eq(users.role, "reseller"))).limit(1);
+        if (!resellerRes.length) throw new TRPCError({ code: "NOT_FOUND", message: "Revendedor não encontrado." });
+
+        const { buffer, mimeType } = decodeBannerData(input.data, input.contentType);
+        const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "") || "banner";
+        const stored = await storagePut(`reseller-banners/${input.resellerId}/${safeName}`, buffer, mimeType);
+        await db.update(users).set({ resellerBannerUrl: stored.url }).where(eq(users.id, input.resellerId));
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "UPDATE_RESELLER_BANNER",
+          details: `Moderador atualizou o banner do revendedor ${resellerRes[0].openId}.`,
+        });
+        return { success: true, bannerUrl: stored.url };
       }),
     toggleResellerPremium: protectedProcedure
       .input(z.object({ resellerId: z.number() }))
@@ -1486,15 +1529,16 @@ export const appRouter = router({
     dashboard: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "client") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
-      if (!db) return { username: ctx.user.username, keyValue: "N/A", downloads: [], brandName: "SHELBY PANEL", discordUrl: "https://discord.gg/YYBZxhhm", brandColor: "#dc2626", renewalCount: 0 };
+      if (!db) return { username: ctx.user.username, keyValue: "N/A", downloads: [], brandName: "SHELBY PANEL", discordUrl: "https://discord.gg/YYBZxhhm", brandColor: "#dc2626", bannerUrl: null, renewalCount: 0 };
 
       const clientRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const client = clientRes[0];
       let brandName = "SHELBY PANEL";
       let discordUrl = "https://discord.gg/YYBZxhhm";
       let brandColor = "#dc2626";
+      let bannerUrl: string | null = null;
       if (client?.resellerId) {
-        const resellerRes = await db.select({ resellerDisplayName: users.resellerDisplayName, resellerDiscordUrl: users.resellerDiscordUrl, resellerColor: users.resellerColor })
+        const resellerRes = await db.select({ resellerDisplayName: users.resellerDisplayName, resellerDiscordUrl: users.resellerDiscordUrl, resellerColor: users.resellerColor, resellerBannerUrl: users.resellerBannerUrl })
           .from(users)
           .where(and(eq(users.id, client.resellerId), eq(users.role, "reseller")))
           .limit(1);
@@ -1502,6 +1546,7 @@ export const appRouter = router({
         if (reseller?.resellerDisplayName?.trim()) brandName = reseller.resellerDisplayName.trim();
         if (reseller?.resellerDiscordUrl?.trim()) discordUrl = reseller.resellerDiscordUrl.trim();
         if (reseller?.resellerColor && /^#[0-9a-f]{6}$/i.test(reseller.resellerColor)) brandColor = reseller.resellerColor.toLowerCase();
+        if (reseller?.resellerBannerUrl?.trim()) bannerUrl = reseller.resellerBannerUrl.trim();
       }
 
       let keyValue: string | null = null;
@@ -1544,6 +1589,7 @@ export const appRouter = router({
         brandName,
         discordUrl,
         brandColor,
+        bannerUrl,
         renewalCount,
         keyValue,
         keyType,

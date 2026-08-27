@@ -31,6 +31,8 @@ export const users = mysqlTable("users", {
   resellerColor: varchar("resellerColor", { length: 7 }),
   // Banner opcional exibido somente aos clientes criados por este revendedor
   resellerBannerUrl: varchar("resellerBannerUrl", { length: 1024 }),
+  // Vídeo opcional do banner; o cliente usa a imagem como fallback
+  resellerBannerVideoUrl: varchar("resellerBannerVideoUrl", { length: 1024 }),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),

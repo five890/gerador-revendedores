@@ -33,6 +33,9 @@ export const users = mysqlTable("users", {
   resellerBannerUrl: varchar("resellerBannerUrl", { length: 1024 }),
   // Vídeo opcional do banner; o cliente usa a imagem como fallback
   resellerBannerVideoUrl: varchar("resellerBannerVideoUrl", { length: 1024 }),
+  // Banners globais exibidos somente para clientes criados diretamente pelo moderador
+  moderatorBannerUrl: varchar("moderatorBannerUrl", { length: 1024 }),
+  moderatorBannerVideoUrl: varchar("moderatorBannerVideoUrl", { length: 1024 }),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),

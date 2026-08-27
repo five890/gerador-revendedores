@@ -29,6 +29,8 @@ export const users = mysqlTable("users", {
   resellerDiscordUrl: varchar("resellerDiscordUrl", { length: 512 }),
   // Cor principal opcional exibida apenas aos clientes criados por este revendedor
   resellerColor: varchar("resellerColor", { length: 7 }),
+  // Banner opcional exibido somente aos clientes criados por este revendedor
+  resellerBannerUrl: varchar("resellerBannerUrl", { length: 1024 }),
   resellerId: int("resellerId"),
   keyId: int("keyId"),
   maxDevices: int("maxDevices").default(1).notNull(),

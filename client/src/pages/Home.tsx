@@ -44,6 +44,8 @@ export default function Home() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [deviceLimitError, setDeviceLimitError] = useState(false);
+  const [resetCode, setResetCode] = useState("");
   const [securityHidden, setSecurityHidden] = useState(false);
 
   useEffect(() => {
@@ -65,12 +67,28 @@ export default function Home() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
+      setDeviceLimitError(false);
+      setResetCode("");
       toast.success("Login realizado com sucesso!");
       utils.auth.me.invalidate();
     },
     onError: (err) => {
+      const isDeviceLimit = err.message.toLowerCase().includes("limite excedido");
+      setDeviceLimitError(isDeviceLimit);
       toast.error(err.message);
     },
+  });
+
+  const resetSessionWithCodeMutation = trpc.auth.resetSessionWithCode.useMutation({
+    onSuccess: () => {
+      toast.success("Sessão resetada. Entrando novamente...");
+      setDeviceLimitError(false);
+      setResetCode("");
+      const deviceIdentifier = localStorage.getItem("device_id") || Math.random().toString(36).substring(2);
+      localStorage.setItem("device_id", deviceIdentifier);
+      loginMutation.mutate({ username: username.trim(), password, deviceIdentifier });
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -89,7 +107,8 @@ export default function Home() {
     const deviceIdentifier = localStorage.getItem("device_id") || Math.random().toString(36).substring(2);
     localStorage.setItem("device_id", deviceIdentifier);
 
-    loginMutation.mutate({ username, password, deviceIdentifier });
+    setDeviceLimitError(false);
+    loginMutation.mutate({ username: username.trim(), password, deviceIdentifier });
   };
 
   if (authLoading) {
@@ -154,9 +173,33 @@ export default function Home() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="h-11 w-full bg-red-600 font-bold text-white shadow-lg shadow-red-950/40 transition-all hover:bg-red-700 hover:shadow-red-900/50" disabled={loginMutation.isPending}>
+              <Button type="submit" className="h-11 w-full bg-red-600 font-bold text-white shadow-lg shadow-red-950/40 transition-all hover:bg-red-700 hover:shadow-red-900/50" disabled={loginMutation.isPending || resetSessionWithCodeMutation.isPending}>
                 {loginMutation.isPending ? "Entrando..." : "Entrar na Plataforma"}
               </Button>
+              {deviceLimitError && (
+                <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-950/30 p-4 text-left">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-wide text-amber-300">Limite de dispositivos</p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-100/80">Digite o código abaixo <strong className="text-amber-200">shelbys</strong> para resetar a sessão e acessar novamente.</p>
+                  </div>
+                  <Input
+                    type="text"
+                    autoComplete="off"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value)}
+                    placeholder="Digite o código"
+                    className="h-10 border-amber-500/40 bg-black/30 text-white placeholder:text-neutral-500 focus-visible:ring-amber-500"
+                  />
+                  <Button
+                    type="button"
+                    className="h-10 w-full bg-amber-600 font-bold text-black hover:bg-amber-500"
+                    disabled={resetSessionWithCodeMutation.isPending || !resetCode.trim() || loginMutation.isPending}
+                    onClick={() => resetSessionWithCodeMutation.mutate({ username: username.trim(), password, resetCode })}
+                  >
+                    {resetSessionWithCodeMutation.isPending ? "Resetando sessão..." : "Resetar sessão e acessar"}
+                  </Button>
+                </div>
+              )}
             </form>
             <div className="mt-6 space-y-2 border-t border-white/10 pt-5 text-center">
               <p className="text-xs text-neutral-400">Entre no nosso Discord oficial</p>

@@ -342,6 +342,11 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
+  const uploadResellerBannerMutation = trpc.moderator.uploadResellerBanner.useMutation({
+    onSuccess: () => { toast.success("Banner do revendedor atualizado!"); refetchResellers(); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const toggleStatusMutation = trpc.moderator.toggleUserStatus.useMutation({
     onSuccess: () => {
       toast.success("Status alterado!");
@@ -505,9 +510,39 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
+  const handleResellerBannerUpload = (resellerId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+    if (!allowedTypes.has(file.type)) {
+      toast.error("Escolha uma imagem PNG, JPG, WEBP ou GIF.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("O banner deve ter no máximo 5 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        toast.error("Não foi possível ler o banner.");
+        return;
+      }
+      uploadResellerBannerMutation.mutate({
+        resellerId,
+        fileName: file.name,
+        contentType: file.type as "image/png" | "image/jpeg" | "image/webp" | "image/gif",
+        data: reader.result,
+      });
+    };
+    reader.onerror = () => toast.error("Não foi possível ler o banner.");
+    reader.readAsDataURL(file);
+  };
+
   const exportKeys = () => {
     if (!keysList) return;
-    const text = keysList.map((k) => k.keyValue).join("\n");
+    const text = keysList.map((k) => k.keyValue).join("\\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -761,6 +796,10 @@ function ModeratorDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
+                        <label className="inline-flex cursor-pointer items-center rounded-md border border-emerald-700 bg-emerald-950/30 px-2 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900/50">
+                          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" disabled={uploadResellerBannerMutation.isPending} onChange={(event) => handleResellerBannerUpload(r.id, event)} />
+                          {uploadResellerBannerMutation.isPending ? "Enviando..." : r.resellerBannerUrl ? "Banner ✓" : "Banner"}
+                        </label>
                         <Button size="sm" variant="outline" className="border-cyan-700 text-cyan-300 bg-cyan-950/30" title="Personalizar nome e Discord dos clientes deste revendedor" onClick={() => {
                           const displayName = prompt(`Nome exibido para clientes criados por ${r.username}. Deixe vazio para usar o padrão:`, r.resellerDisplayName || "");
                           if (displayName === null) return;
@@ -2236,6 +2275,11 @@ function ClientDashboard() {
       <div className="absolute inset-0 pointer-events-none z-50 flex items-start justify-end p-2 opacity-10 font-mono text-[10px] text-white overflow-hidden">
         SHELBY SECURE SESSION - NO SCREENSHARE
       </div>
+      {data?.bannerUrl && (
+        <Card className="overflow-hidden border-neutral-800 bg-[#141414] p-0 text-white shadow-xl">
+          <img src={data.bannerUrl} alt={`Banner de ${data.brandName || "SHELBY PANEL"}`} className="max-h-72 w-full object-cover" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+        </Card>
+      )}
       {showAlert && announcement && (
         <Card className="bg-[#141414] border-red-600/50 text-white p-4 animate-fade-in shadow-xl">
           <div className="flex items-center gap-3 font-bold mb-2" style={{ color: brandColor }}>

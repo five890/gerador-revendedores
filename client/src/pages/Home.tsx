@@ -347,6 +347,11 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
+  const setResellerBannerVideoUrlMutation = trpc.moderator.setResellerBannerVideoUrl.useMutation({
+    onSuccess: () => { toast.success("Vídeo do banner atualizado!"); refetchResellers(); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const toggleStatusMutation = trpc.moderator.toggleUserStatus.useMutation({
     onSuccess: () => {
       toast.success("Status alterado!");
@@ -772,6 +777,13 @@ function ModeratorDashboard() {
                           setResellerBannerUrlMutation.mutate({ resellerId: r.id, bannerUrl });
                         }}>
                           {setResellerBannerUrlMutation.isPending ? "Salvando..." : r.resellerBannerUrl ? "Banner ✓" : "Banner"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-fuchsia-700 text-fuchsia-300 bg-fuchsia-950/30" title="Colar link HTTPS do vídeo do banner para clientes deste revendedor" disabled={setResellerBannerVideoUrlMutation.isPending} onClick={() => {
+                          const videoUrl = prompt(`Link HTTPS do vídeo do banner para clientes criados por ${r.username}. Aceita link direto .mp4/.webm ou página pública do MediaFire. Deixe vazio para remover:`, r.resellerBannerVideoUrl || "");
+                          if (videoUrl === null) return;
+                          setResellerBannerVideoUrlMutation.mutate({ resellerId: r.id, videoUrl });
+                        }}>
+                          {setResellerBannerVideoUrlMutation.isPending ? "Salvando..." : r.resellerBannerVideoUrl ? "Vídeo ✓" : "Vídeo"}
                         </Button>
                         <Button size="sm" variant="outline" className="border-cyan-700 text-cyan-300 bg-cyan-950/30" title="Personalizar nome e Discord dos clientes deste revendedor" onClick={() => {
                           const displayName = prompt(`Nome exibido para clientes criados por ${r.username}. Deixe vazio para usar o padrão:`, r.resellerDisplayName || "");
@@ -2085,6 +2097,10 @@ function ClientDashboard() {
   const brandColor = data?.brandColor || "#dc2626";
   const [renewalNoticeOpen, setRenewalNoticeOpen] = useState(false);
   const [renewalNoticeSeconds, setRenewalNoticeSeconds] = useState(4);
+  const [bannerVideoFailed, setBannerVideoFailed] = useState(false);
+  useEffect(() => {
+    setBannerVideoFailed(false);
+  }, [data?.bannerVideoUrl]);
   useEffect(() => {
     if (!data || Number(data.renewalCount || 0) <= 2) {
       setRenewalNoticeOpen(false);
@@ -2248,9 +2264,29 @@ function ClientDashboard() {
       <div className="absolute inset-0 pointer-events-none z-50 flex items-start justify-end p-2 opacity-10 font-mono text-[10px] text-white overflow-hidden">
         SHELBY SECURE SESSION - NO SCREENSHARE
       </div>
-      {data?.bannerUrl && (
+      {(data?.bannerVideoUrl && !bannerVideoFailed || data?.bannerUrl) && (
         <Card className="overflow-hidden border-neutral-800 bg-[#141414] p-0 text-white shadow-xl">
-          <img src={data.bannerUrl} alt={`Banner de ${data.brandName || "SHELBY PANEL"}`} className="max-h-72 w-full object-cover" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+          {data?.bannerVideoUrl && !bannerVideoFailed ? (
+            <video
+              src={data.bannerVideoUrl}
+              className="max-h-72 w-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label={`Vídeo do banner de ${data.brandName || "SHELBY PANEL"}`}
+              onError={() => setBannerVideoFailed(true)}
+            />
+          ) : data?.bannerUrl ? (
+            <img
+              src={data.bannerUrl}
+              alt={`Banner de ${data.brandName || "SHELBY PANEL"}`}
+              className="max-h-72 w-full object-cover"
+              loading="lazy"
+              onError={(event) => { event.currentTarget.style.display = "none"; }}
+            />
+          ) : null}
         </Card>
       )}
       {showAlert && announcement && (

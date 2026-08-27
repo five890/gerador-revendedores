@@ -684,6 +684,41 @@ export const appRouter = router({
         });
         return { success: true, videoUrl };
       }),
+    getDirectClientBanner: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) return { bannerUrl: null, bannerVideoUrl: null };
+      const moderator = await db.select({ bannerUrl: users.moderatorBannerUrl, bannerVideoUrl: users.moderatorBannerVideoUrl })
+        .from(users)
+        .where(and(eq(users.id, ctx.user.id), eq(users.role, "moderator")))
+        .limit(1);
+      return {
+        bannerUrl: moderator[0]?.bannerUrl?.trim() || null,
+        bannerVideoUrl: moderator[0]?.bannerVideoUrl?.trim() || null,
+      };
+    }),
+    setDirectClientBannerUrl: protectedProcedure
+      .input(z.object({ bannerUrl: z.string().trim().max(1024) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const bannerUrl = validatePublicBannerUrl(input.bannerUrl);
+        await db.update(users).set({ moderatorBannerUrl: bannerUrl }).where(and(eq(users.id, ctx.user.id), eq(users.role, "moderator")));
+        await db.insert(logs).values({ userId: ctx.user.id, action: "UPDATE_DIRECT_CLIENT_BANNER", details: "Moderador atualizou o banner dos clientes diretos." });
+        return { success: true, bannerUrl };
+      }),
+    setDirectClientBannerVideoUrl: protectedProcedure
+      .input(z.object({ videoUrl: z.string().trim().max(1024) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const videoUrl = validatePublicBannerVideoUrl(input.videoUrl);
+        await db.update(users).set({ moderatorBannerVideoUrl: videoUrl }).where(and(eq(users.id, ctx.user.id), eq(users.role, "moderator")));
+        await db.insert(logs).values({ userId: ctx.user.id, action: "UPDATE_DIRECT_CLIENT_BANNER_VIDEO", details: "Moderador atualizou o vídeo do banner dos clientes diretos." });
+        return { success: true, videoUrl };
+      }),
     toggleResellerPremium: protectedProcedure
       .input(z.object({ resellerId: z.number() }))
       .mutation(async ({ input, ctx }) => {
@@ -1616,6 +1651,14 @@ export const appRouter = router({
         if (reseller?.resellerColor && /^#[0-9a-f]{6}$/i.test(reseller.resellerColor)) brandColor = reseller.resellerColor.toLowerCase();
         if (reseller?.resellerBannerUrl?.trim()) bannerUrl = reseller.resellerBannerUrl.trim();
         if (reseller?.resellerBannerVideoUrl?.trim()) bannerVideoUrl = await resolveMediaFireUrl(reseller.resellerBannerVideoUrl.trim());
+      } else {
+        const moderatorRes = await db.select({ moderatorBannerUrl: users.moderatorBannerUrl, moderatorBannerVideoUrl: users.moderatorBannerVideoUrl })
+          .from(users)
+          .where(eq(users.role, "moderator"))
+          .limit(1);
+        const moderator = moderatorRes[0];
+        if (moderator?.moderatorBannerUrl?.trim()) bannerUrl = moderator.moderatorBannerUrl.trim();
+        if (moderator?.moderatorBannerVideoUrl?.trim()) bannerVideoUrl = await resolveMediaFireUrl(moderator.moderatorBannerVideoUrl.trim());
       }
 
       let keyValue: string | null = null;

@@ -251,6 +251,35 @@ export const appRouter = router({
         return { success: true, role: user.role };
       }),
 
+    resetSessionWithCode: publicProcedure
+      .input(z.object({ username: z.string(), password: z.string(), resetCode: z.string() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not connected" });
+
+        const cleanUsername = input.username.trim();
+        const userRes = await db.select().from(users).where(eq(users.openId, cleanUsername)).limit(1);
+        if (userRes.length === 0 || userRes[0].role !== "client") {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha inválidos." });
+        }
+
+        const user = userRes[0];
+        if (!verifyPassword(input.password, user.passwordHash || "")) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha inválidos." });
+        }
+        if (input.resetCode.trim().toLowerCase() !== "shelbys") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Código de reset incorreto." });
+        }
+
+        await db.delete(sessions).where(eq(sessions.userId, user.id));
+        await db.insert(logs).values({
+          userId: user.id,
+          action: "CLIENT_RESET_SESSION_WITH_CODE",
+          details: `Cliente ${user.openId} resetou somente as próprias sessões pelo código de recuperação.`,
+        });
+        return { success: true };
+      }),
+
     logout: publicProcedure.mutation(async ({ ctx }) => {
       if (ctx.user) {
         const db = await getDb();

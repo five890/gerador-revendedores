@@ -205,6 +205,7 @@ export default function Home() {
 function ModeratorDashboard() {
   const { data: stats } = trpc.moderator.dashboardStats.useQuery();
   const { data: resellers, refetch: refetchResellers } = trpc.moderator.listResellers.useQuery();
+  const { data: directClientBanner, refetch: refetchDirectClientBanner } = trpc.moderator.getDirectClientBanner.useQuery();
   const { data: clients, refetch: refetchClients } = trpc.moderator.listClients.useQuery();
   const { data: keysList, refetch: refetchKeys } = trpc.moderator.listKeys.useQuery();
   const { data: downloadsList, refetch: refetchDownloads } = trpc.moderator.listDownloads.useQuery();
@@ -349,6 +350,16 @@ function ModeratorDashboard() {
 
   const setResellerBannerVideoUrlMutation = trpc.moderator.setResellerBannerVideoUrl.useMutation({
     onSuccess: () => { toast.success("Vídeo do banner atualizado!"); refetchResellers(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const setDirectClientBannerUrlMutation = trpc.moderator.setDirectClientBannerUrl.useMutation({
+    onSuccess: () => { toast.success("Banner dos clientes diretos atualizado!"); refetchDirectClientBanner(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const setDirectClientBannerVideoUrlMutation = trpc.moderator.setDirectClientBannerVideoUrl.useMutation({
+    onSuccess: () => { toast.success("Vídeo dos clientes diretos atualizado!"); refetchDirectClientBanner(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -551,6 +562,32 @@ function ModeratorDashboard() {
           <CardContent><div className="text-3xl font-black text-red-500">{stats?.activeSessions || 0}</div></CardContent>
         </Card>
       </div>
+
+      <Card className="bg-[#141414] border-neutral-800 text-white">
+        <CardHeader>
+          <CardTitle className="text-white">Banner dos clientes diretos</CardTitle>
+          <p className="text-xs text-neutral-400">Este banner aparece somente nos clientes criados pelo Moderador. Clientes de revendedores continuam usando o banner configurado em cada revendedor.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" className="border-emerald-700 text-emerald-300 bg-emerald-950/30" disabled={setDirectClientBannerUrlMutation.isPending} onClick={() => {
+              const bannerUrl = prompt("Link público HTTPS da foto para os clientes diretos. Deixe vazio para remover:", directClientBanner?.bannerUrl || "");
+              if (bannerUrl === null) return;
+              setDirectClientBannerUrlMutation.mutate({ bannerUrl });
+            }}>
+              {setDirectClientBannerUrlMutation.isPending ? "Salvando..." : directClientBanner?.bannerUrl ? "Foto ✓" : "Foto"}
+            </Button>
+            <Button size="sm" variant="outline" className="border-fuchsia-700 text-fuchsia-300 bg-fuchsia-950/30" disabled={setDirectClientBannerVideoUrlMutation.isPending} onClick={() => {
+              const videoUrl = prompt("Link HTTPS do vídeo para os clientes diretos. Aceita link direto .mp4/.webm ou página pública do MediaFire. Deixe vazio para remover:", directClientBanner?.bannerVideoUrl || "");
+              if (videoUrl === null) return;
+              setDirectClientBannerVideoUrlMutation.mutate({ videoUrl });
+            }}>
+              {setDirectClientBannerVideoUrlMutation.isPending ? "Salvando..." : directClientBanner?.bannerVideoUrl ? "Vídeo ✓" : "Vídeo"}
+            </Button>
+          </div>
+          <p className="text-xs text-neutral-500">Se os dois forem definidos, o vídeo aparece primeiro e a foto funciona como fallback. O login do Moderador não exibe este banner.</p>
+        </CardContent>
+      </Card>
 
       <Card className="bg-[#141414] border-neutral-800 text-white">
         <CardHeader><CardTitle className="text-white">Avisos pós-login por produto</CardTitle></CardHeader>

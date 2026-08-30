@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
 import { users, keys, downloads, tutorials, sessions, logs, announcements } from "../drizzle/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, isNull } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
@@ -228,6 +228,16 @@ export const appRouter = router({
         }
 
         const token = signJwt({ userId: user.id, username: user.openId, role: user.role });
+
+        // O prazo do cliente começa somente no primeiro login válido, não na criação da conta.
+        if (user.role === "client" && !user.expiresAt) {
+          const firstLoginAt = new Date();
+          await db.update(users)
+            .set({ expiresAt: new Date(firstLoginAt.getTime() + 24 * 60 * 60 * 1000), lastSignedIn: firstLoginAt })
+            .where(and(eq(users.id, user.id), isNull(users.expiresAt)));
+        } else {
+          await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
+        }
 
         // Registrar sessão se não existir para este device
         const existingForDevice = await db.select().from(sessions).where(and(eq(sessions.userId, user.id), eq(sessions.deviceIdentifier, input.deviceIdentifier)));
@@ -466,7 +476,6 @@ export const appRouter = router({
         const existing = await db.select().from(users).where(eq(users.openId, cleanUsername)).limit(1);
         if (existing.length > 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Este nome de usuário já está em uso." });
         const now = new Date();
-        const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         let keyId: number | null = null;
         let keyValue = "";
         if (input.type === "ios") {
@@ -497,7 +506,7 @@ export const appRouter = router({
           keyId = found[0].id; keyValue = found[0].keyValue;
           await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: now }).where(eq(keys.id, keyId));
         }
-        await db.insert(users).values({ openId: cleanUsername, role: "client", passwordHash: hashPassword(input.password) as any, resellerId: null, keyId, maxDevices: input.maxDevices || 1, credits: 0, isActive: true, expiresAt });
+        await db.insert(users).values({ openId: cleanUsername, role: "client", passwordHash: hashPassword(input.password) as any, resellerId: null, keyId, maxDevices: input.maxDevices || 1, credits: 0, isActive: true, expiresAt: null });
         await db.insert(logs).values({ userId: ctx.user.id, action: "MODERATOR_CREATE_CLIENT", details: `Moderador ${ctx.user.username} criou ${cleanUsername} (${input.type}) com a Key ${keyValue}.` });
         return { success: true, createdUsername: cleanUsername, createdPassword: input.password };
       }),
@@ -1385,7 +1394,6 @@ export const appRouter = router({
         let keyValueUsed = "DEFAULT-KEY-" + input.type.toUpperCase();
 
         const now = new Date();
-        const expiresAtDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 horas
 
         if (input.type === "ios") {
           // Proxy iOS comum usa a última Key ativa cadastrada.
@@ -1438,7 +1446,7 @@ export const appRouter = router({
           maxDevices: input.maxDevices || 1,
           credits: 0,
           isActive: true,
-          expiresAt: expiresAtDate,
+          expiresAt: null,
         });
 
         // already handled above

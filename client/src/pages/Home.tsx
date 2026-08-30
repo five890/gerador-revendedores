@@ -47,6 +47,15 @@ export default function Home() {
   const [deviceLimitError, setDeviceLimitError] = useState(false);
   const [resetCode, setResetCode] = useState("");
   const [securityHidden, setSecurityHidden] = useState(false);
+  const [activeClients, setActiveClients] = useState(2490);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const variation = Math.floor(Math.random() * 17) - 8;
+      setActiveClients((current) => Math.max(2480, Math.min(2505, current + variation)));
+    }, 3500);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -140,17 +149,27 @@ export default function Home() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-400">Painel de acesso & distribuição</p>
           </div>
 
-          <div className="w-full rounded-2xl border border-white/15 bg-black/65 p-6 shadow-2xl shadow-black/60 backdrop-blur-xl sm:p-8">
-            <div className="mb-6 text-center space-y-2 lg:hidden">
+          <div className="w-full max-w-[360px] justify-self-center rounded-2xl border border-white/15 bg-black/65 p-5 shadow-2xl shadow-black/60 backdrop-blur-xl sm:p-6 lg:justify-self-end">
+            <div className="mb-5 text-center space-y-2 lg:hidden">
               <h1 className="text-3xl font-black tracking-[0.14em] text-red-600 drop-shadow-lg">SHELBY PANEL</h1>
               <p className="text-xs text-neutral-300">Painel de Acesso & Distribuição</p>
             </div>
-            <div className="mb-6 hidden items-center justify-between lg:flex">
+            <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-red-400">Bem-vindo</p>
-                <h2 className="mt-1 text-xl font-black tracking-wide text-white">Entrar no painel</h2>
+                <h2 className="mt-1 text-lg font-black tracking-wide text-white">Entrar no painel</h2>
               </div>
               <Lock className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="mb-5 grid grid-cols-2 gap-2" aria-label="Estatísticas de acesso">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Clientes</p>
+                <p className="mt-1 text-xl font-black text-amber-300">3.789</p>
+              </div>
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-3">
+                <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Clientes ativos</p>
+                <p className="mt-1 text-xl font-black text-emerald-300" aria-live="polite">{activeClients.toLocaleString("pt-BR")}</p>
+              </div>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">

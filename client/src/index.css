@@ -89,12 +89,8 @@
 }
 
 @keyframes shelby-login-bg {
-  0% {
-    transform: scale(1.04) translate3d(-1%, -1%, 0);
-  }
-  100% {
-    transform: scale(1.13) translate3d(1%, 1%, 0);
-  }
+  0% { transform: scale(1.04) translate3d(-1%, -1%, 0); }
+  100% { transform: scale(1.13) translate3d(1%, 1%, 0); }
 }
 
 .animate-shelby-login-bg {
@@ -124,17 +120,10 @@
   }
 
   @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
+    .container { padding-left: 1.5rem; padding-right: 1.5rem; }
   }
 
   @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-      max-width: 1280px;
-    }
+    .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; }
   }
 }

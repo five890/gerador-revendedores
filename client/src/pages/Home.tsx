@@ -379,7 +379,7 @@ function ModeratorDashboard() {
           username = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join("");
         } while (generatedUsernames.has(username));
         generatedUsernames.add(username);
-        const password = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+        const password = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join("");
         const result = await modCreateClientMutation.mutateAsync({ username, password, type: modClientType as any, maxDevices: modClientMaxDevices });
         results.push({ username: result.createdUsername, password: result.createdPassword });
       }
@@ -1044,7 +1044,7 @@ function ModeratorDashboard() {
           <Card className="bg-[#141414] border-lime-800 text-white">
             <CardHeader><CardTitle className="text-white">Gerar vários logins — Moderador</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-xs text-neutral-400">Informe a quantidade desejada. Cada login terá usuário com 4 letras, senha com 8 números e o link do site.</p>
+              <p className="text-xs text-neutral-400">Informe a quantidade desejada. Cada login terá usuário com 4 letras, senha com 4 números e o link do site.</p>
               <div className="flex flex-wrap items-end gap-3">
                 <div>
                   <label className="text-xs text-white font-semibold block mb-1">Produto</label>

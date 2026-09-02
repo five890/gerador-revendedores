@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Lock, Unlock, RefreshCcw, Trash2, Power, UserPlus, Copy, Download as DownloadIcon, Edit, LogOut, Shield, Users, KeyRound, FileDown, BookOpen, AlertTriangle, Video } from "lucide-react";
 
 const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo"]);
-const ACTIVE_PRODUCT_TYPES = ["advanced", "panel_ios", "panel_android", "ios_ipa"] as const;
+const ACTIVE_PRODUCT_TYPES = ["advanced", "panel_ios", "panel_android", "proxy_android_clientes", "ios_ipa"] as const;
 type ActiveProductType = typeof ACTIVE_PRODUCT_TYPES[number];
 
 function getVideoEmbedUrl(rawUrl: string): { kind: "iframe" | "video"; url: string } | null {
@@ -287,6 +287,7 @@ function ModeratorDashboard() {
   const [newResellerCreditsIos, setNewResellerCreditsIos] = useState(10);
   const [newResellerCreditsPanelIos, setNewResellerCreditsPanelIos] = useState(0);
   const [newResellerCreditsPanelLegitimo, setNewResellerCreditsPanelLegitimo] = useState(0);
+  const [newResellerCreditsProxyAndroidClientes, setNewResellerCreditsProxyAndroidClientes] = useState(0);
   const [newResellerBrandName, setNewResellerBrandName] = useState("");
   const [newResellerDiscordUrl, setNewResellerDiscordUrl] = useState("");
   const [newResellerColor, setNewResellerColor] = useState("#dc2626");
@@ -700,6 +701,7 @@ function ModeratorDashboard() {
             <span className="mx-1 h-5 w-px bg-neutral-700" />
             <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Keys</span>
             <TabsTrigger value="androidKeys" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Keys Android</TabsTrigger>
+            <TabsTrigger value="proxyAndroidClientesKeys" className="data-[state=active]:bg-lime-600 data-[state=active]:text-white text-white">Keys Proxy Android Clientes</TabsTrigger>
             <TabsTrigger value="iosIpaKeys" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Keys iOS IPA</TabsTrigger>
             <TabsTrigger value="keys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Gerenciar Keys</TabsTrigger>
             <TabsTrigger value="bannedKeys" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Banidas / Usadas</TabsTrigger>
@@ -774,11 +776,16 @@ function ModeratorDashboard() {
                     <label className="text-xs text-white font-semibold block mb-1">Créditos Painel iOS</label>
                     <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsPanelIos} onChange={(e) => setNewResellerCreditsPanelIos(Number(e.target.value))} />
                   </div>
-                <div className="flex items-center space-x-2 pt-2">
+                                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Créditos Proxy Android Clientes</label>
+                  <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsProxyAndroidClientes} onChange={(e) => setNewResellerCreditsProxyAndroidClientes(Number(e.target.value))} />
+                </div>
+                  <div className="flex items-center space-x-2 pt-2">
+
                   <input type="checkbox" id="isPremiumCheck" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newResellerIsPremium} onChange={(e) => setNewResellerIsPremium(e.target.checked)} />
                   <label htmlFor="isPremiumCheck" className="text-xs font-bold text-amber-400 cursor-pointer">Revendedor Premium (★)</label>
                 </div>
-                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, resellerDisplayName: newResellerBrandName, resellerDiscordUrl: newResellerDiscordUrl, resellerColor: newResellerColor, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, creditsPanelLegitimo: newResellerCreditsPanelLegitimo, isPremium: newResellerIsPremium })}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto" onClick={() => createResellerMutation.mutate({ username: newResellerUser, password: newResellerPass, resellerDisplayName: newResellerBrandName, resellerDiscordUrl: newResellerDiscordUrl, resellerColor: newResellerColor, creditsBasic: newResellerCreditsBasic, creditsAdvanced: newResellerCreditsAdvanced, creditsIos: newResellerCreditsIos, creditsPanelIos: newResellerCreditsPanelIos, creditsPanelLegitimo: newResellerCreditsPanelLegitimo, creditsProxyAndroidClientes: newResellerCreditsProxyAndroidClientes, isPremium: newResellerIsPremium })}>
                   <UserPlus className="w-4 h-4 mr-1" /> Criar Revendedor
                 </Button>
               </div>
@@ -810,6 +817,7 @@ function ModeratorDashboard() {
                           { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
                                           { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
                           { name: 'panel_android', label: 'Painel Android', color: 'text-orange-400' },
+          { name: 'proxy_android_clientes', label: 'Proxy Android Clientes', color: 'text-lime-400' },
                           { name: 'ios_ipa', label: 'Proxy iOS IPA', color: 'text-violet-400' }
                         ].map((cat) => (
                           <div key={cat.name} className="text-[10px] font-mono text-white flex items-center gap-1">
@@ -933,6 +941,7 @@ function ModeratorDashboard() {
                         <option value="advanced">Android Advanced</option>
                         <option value="panel_ios">Painel iOS</option>
                         <option value="panel_android">Painel Android</option>
+                    <option value="proxy_android_clientes">Proxy Android Clientes</option>
                     <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -959,6 +968,7 @@ function ModeratorDashboard() {
                         <option value="advanced">Android Advanced</option>
                         <option value="panel_ios">Painel iOS</option>
                     <option value="panel_android">Painel Android</option>
+                    <option value="proxy_android_clientes">Proxy Android Clientes</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1127,9 +1137,24 @@ function ModeratorDashboard() {
           <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Conteúdo Painel Android cadastrado</CardTitle></CardHeader><CardContent><p className="text-sm text-neutral-300">Downloads: {downloadsList?.filter((d: any) => d.type === "panel_android").length || 0} · Tutoriais: {tutorialsList?.filter((t: any) => t.type === "panel_android").length || 0}</p></CardContent></Card>
         </TabsContent>
 
+
+        {/* PROXY ANDROID CLIENTES */}
+        <TabsContent value="proxyAndroidClientesPanel" className="space-y-4">
+          <Card className="bg-lime-950/30 border-lime-800 text-white"><CardHeader><CardTitle className="text-white">Administração completa do Proxy Android Clientes</CardTitle></CardHeader><CardContent><p className="text-sm text-lime-100">Este painel usa o tipo <strong>proxy_android_clientes</strong>, com créditos, Keys e conteúdos separados.</p></CardContent></Card>
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Créditos do Proxy Android Clientes por revendedor</CardTitle></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Revendedor</TableHead><TableHead className="text-white font-bold">Créditos Proxy Android Clientes</TableHead><TableHead className="text-white font-bold text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{resellers?.map((r: any) => <TableRow key={r.id} className="border-neutral-800"><TableCell className="font-bold text-white">{r.username}</TableCell><TableCell className="text-lime-400 font-black">{r.credits?.proxy_android_clientes || 0}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" className="border-lime-700 bg-lime-950/40 text-lime-300" onClick={() => { const action = prompt(`Para ${r.username}, digite add ou remove:`); if (action === "add" || action === "remove") { const amount = Number(prompt("Quantidade de créditos Proxy Android Clientes:")); if (Number.isInteger(amount) && amount > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "proxy_android_clientes", action, amount }); } }}>Adicionar/Remover créditos</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Keys do Proxy Android Clientes</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Cole a Key do Proxy Android Clientes" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} /><Button className="w-full bg-lime-600 hover:bg-lime-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal, type: "proxy_android_clientes" })}>Adicionar Key Proxy Android Clientes</Button><textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Uma Key por linha" value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} /><Button className="w-full bg-lime-800 hover:bg-lime-900 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: "proxy_android_clientes" })}>Importar Keys Proxy Android Clientes</Button></CardContent></Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Download Proxy Android Clientes</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={dlTitle} onChange={(e) => setDlTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Versão" value={dlVersion} onChange={(e) => setDlVersion(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="URL do download" value={dlUrl} onChange={(e) => setDlUrl(e.target.value)} /><Button className="w-full bg-lime-600 hover:bg-lime-700 text-white" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl, type: "proxy_android_clientes" })}>Cadastrar Download</Button></CardContent></Card><Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Tutorial Proxy Android Clientes</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Link do tutorial" value={tutUrl} onChange={(e) => setTutUrl(e.target.value)} /><Button className="w-full bg-lime-600 hover:bg-lime-700 text-white" onClick={() => addTutorialMutation.mutate({ title: tutTitle, description: tutDesc, videoUrl: tutUrl, type: "proxy_android_clientes" })}>Cadastrar Tutorial</Button></CardContent></Card></div>
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Conteúdo Proxy Android Clientes cadastrado</CardTitle></CardHeader><CardContent><p className="text-sm text-neutral-300">Downloads: {downloadsList?.filter((d: any) => d.type === "proxy_android_clientes").length || 0} · Tutoriais: {tutorialsList?.filter((t: any) => t.type === "proxy_android_clientes").length || 0}</p></CardContent></Card>
+        </TabsContent>
+
         {/* KEYS PAINEL ANDROID */}
         <TabsContent value="androidKeys" className="space-y-4">
           <Card className="bg-orange-950/30 border-orange-800 text-white"><CardHeader><CardTitle className="text-white">Keys do Painel Android</CardTitle></CardHeader><CardContent><p className="text-sm text-orange-100">Disponíveis: <strong>{keysList?.filter(k => k.type === "panel_android" && !k.isUsed && !k.isBanned).length || 0}</strong> · Usadas: <strong>{keysList?.filter(k => k.type === "panel_android" && (k.isUsed || k.isBanned)).length || 0}</strong></p><div className="mt-3 max-h-80 overflow-y-auto space-y-1">{keysList?.filter(k => k.type === "panel_android").map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-xs"><span className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><div className="flex items-center gap-2"><Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{k.isUsed ? "Usada" : "Disponível"}</Badge><Button size="sm" variant="destructive" title="Excluir Key do Painel Android" onClick={() => { if (confirm(`Excluir a Key ${k.keyValue}? O login existente continuará salvo, mas esta Key será removida da lista.`)) deleteAndroidKeyMutation.mutate({ keyId: k.id }); }}><Trash2 className="w-3 h-3" /></Button></div></div>)}</div></CardContent></Card>
+        </TabsContent>
+        {/* PAINEL LEGÍTIMO */}
+
+        <TabsContent value="proxyAndroidClientesKeys" className="space-y-4">
+          <Card className="bg-lime-950/30 border-lime-800 text-white"><CardHeader><CardTitle className="text-white">Keys do Proxy Android Clientes</CardTitle></CardHeader><CardContent><p className="text-sm text-lime-100">Disponíveis: <strong>{keysList?.filter(k => k.type === "proxy_android_clientes" && !k.isUsed && !k.isBanned).length || 0}</strong> · Usadas: <strong>{keysList?.filter(k => k.type === "proxy_android_clientes" && (k.isUsed || k.isBanned)).length || 0}</strong></p><div className="mt-3 max-h-80 overflow-y-auto space-y-1">{keysList?.filter(k => k.type === "proxy_android_clientes").map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-xs"><span className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><div className="flex items-center gap-2"><Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{k.isUsed ? "Usada" : "Disponível"}</Badge><Button size="sm" variant="destructive" title="Excluir Key do Proxy Android Clientes" onClick={() => { if (confirm(`Excluir a Key ${k.keyValue}? O login existente continuará salvo, mas esta Key será removida da lista.`)) deleteAndroidKeyMutation.mutate({ keyId: k.id }); }}><Trash2 className="w-3 h-3" /></Button></div></div>)}</div></CardContent></Card>
         </TabsContent>
         {/* PAINEL LEGÍTIMO */}
         <TabsContent value="keys" className="space-y-4">
@@ -1161,6 +1186,7 @@ function ModeratorDashboard() {
                         <option value="advanced">Android Advanced</option>
                         <option value="panel_ios">Painel iOS</option>
                     <option value="panel_android">Painel Android</option>
+                    <option value="proxy_android_clientes">Proxy Android Clientes</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1183,6 +1209,7 @@ function ModeratorDashboard() {
                         <option value="advanced">Android Advanced</option>
                         <option value="panel_ios">Painel iOS</option>
                     <option value="panel_android">Painel Android</option>
+                    <option value="proxy_android_clientes">Proxy Android Clientes</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1427,6 +1454,7 @@ function ModeratorDashboard() {
                   <option value="advanced">Proxy Advanced</option>
                     <option value="panel_ios">Painel iOS</option>
                     <option value="panel_android">Painel Android</option>
+                    <option value="proxy_android_clientes">Proxy Android Clientes</option>
                   <option value="ios_ipa">Proxy iOS IPA</option>
                 </select>
               </div>
@@ -1488,6 +1516,7 @@ function ModeratorDashboard() {
                         <option value="advanced">Proxy Advanced</option>
                     <option value="panel_ios">Painel iOS</option>
                     <option value="panel_android">Painel Android</option>
+                    <option value="proxy_android_clientes">Proxy Android Clientes</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1691,6 +1720,7 @@ function ResellerDashboard() {
           { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
           { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
           { name: 'panel_android', label: 'Painel Android', color: 'text-orange-400' },
+          { name: 'proxy_android_clientes', label: 'Proxy Android Clientes', color: 'text-lime-400' },
           { name: 'ios_ipa', label: 'Proxy iOS IPA', color: 'text-violet-400' }
         ].filter((cat) => canUseProduct(cat.name)).map((cat) => (
           <Card key={cat.name} className="bg-[#141414] border-neutral-800 text-white">
@@ -1714,6 +1744,7 @@ function ResellerDashboard() {
                   <TabsList className="bg-[#141414] border border-neutral-800 p-1">
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Clientes</TabsTrigger>
           {canUseProduct("panel_android") && <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>}
+          {canUseProduct("proxy_android_clientes") && <TabsTrigger value="proxyAndroidClientesPanel" className="data-[state=active]:bg-lime-600 data-[state=active]:text-white text-white">Proxy Android Clientes</TabsTrigger>}
           {canUseProduct("ios_ipa") && <TabsTrigger value="iosIpaPanel" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Proxy iOS IPA</TabsTrigger>}
           {data?.isPremium && (
             <TabsTrigger value="subresellers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Revendedores</TabsTrigger>
@@ -1752,6 +1783,7 @@ function ResellerDashboard() {
                 <option value="advanced">Android Advanced</option>
                 <option value="panel_ios">Painel iOS</option>
                 <option value="panel_android">Painel Android</option>
+                <option value="proxy_android_clientes">Proxy Android Clientes</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
               </select>
             </div>
@@ -1872,6 +1904,11 @@ function ResellerDashboard() {
         <TabsContent value="androidPanel" className="space-y-4">
           <Card className="bg-orange-950/30 border-orange-800 text-white"><CardHeader><CardTitle className="text-white">Painel Android</CardTitle></CardHeader><CardContent><p className="text-sm text-orange-100">Clientes deste painel usam Keys, créditos e conteúdos exclusivos do tipo <strong>panel_android</strong>. A renovação troca a Key e consome crédito Painel Android; + Horas apenas estende a validade.</p></CardContent></Card>
           <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Painel Android</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente Android..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{data?.clients?.filter((c: any) => c.keyType === "panel_android")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("panel_android"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="proxyAndroidClientesPanel" className="space-y-4">
+          <Card className="bg-orange-950/30 border-orange-800 text-white"><CardHeader><CardTitle className="text-white">Proxy Android Clientes</CardTitle></CardHeader><CardContent><p className="text-sm text-orange-100">Clientes deste painel usam Keys, créditos e conteúdos exclusivos do tipo <strong>proxy_android_clientes</strong>. A renovação troca a Key e consome crédito Proxy Android Clientes; + Horas apenas estende a validade.</p></CardContent></Card>
+          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Proxy Android Clientes</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente Proxy Android Clientes..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{data?.clients?.filter((c: any) => c.keyType === "proxy_android_clientes")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("proxy_android_clientes"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
         </TabsContent>
 
         <TabsContent value="iosIpaPanel" className="space-y-4"><Card className="bg-violet-950/30 border-violet-800 text-white"><CardHeader><CardTitle className="text-white">Proxy iOS IPA</CardTitle></CardHeader><CardContent><p className="text-sm text-violet-100">Este painel usa Keys e crédito IPA independentes. Novos clientes recebem a última Key IPA ativa; renovar troca para a Key IPA atual.</p></CardContent></Card><Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Proxy iOS IPA</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente IPA..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{data?.clients?.filter((c: any) => c.keyType === "ios_ipa")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("ios_ipa"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>

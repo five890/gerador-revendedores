@@ -10,7 +10,7 @@ import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
 
-const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"] as const;
+const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"] as const;
 // Os formulários do painel continuam oferecendo estes produtos; o backend deve aceitar os mesmos tipos.
 const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo"]);
 const ACTIVE_PRODUCT_TYPES = ALL_PRODUCT_TYPES.filter((type) => !REMOVED_PRODUCT_TYPES.has(type));
@@ -449,6 +449,7 @@ export const appRouter = router({
             panel_ios: r.creditsPanelIos || 0,
             panel_legitimo: r.creditsPanelLegitimo || 0,
             panel_android: r.creditsPanelAndroid || 0,
+            proxy_android_clientes: r.creditsProxyAndroidClientes || 0,
             ios_ipa: r.creditsIosIpa || 0,
           },
           enabledProducts: getEnabledProducts(r.enabledProducts),
@@ -466,7 +467,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Moderador pode usar esta rota." });
         assertProductAvailable(input.type);
@@ -521,6 +522,7 @@ export const appRouter = router({
         creditsPanelIos: z.number().default(0),
         creditsPanelLegitimo: z.number().default(0),
         creditsIosIpa: z.number().default(0),
+        creditsProxyAndroidClientes: z.number().default(0),
         resellerDisplayName: z.string().trim().max(120).default(""),
         resellerDiscordUrl: z.string().trim().max(512).default(""),
         resellerColor: z.string().trim().default("#dc2626"),
@@ -564,6 +566,7 @@ export const appRouter = router({
           creditsPanelIos: input.creditsPanelIos,
           creditsPanelLegitimo: input.creditsPanelLegitimo,
           creditsIosIpa: input.creditsIosIpa,
+          creditsProxyAndroidClientes: input.creditsProxyAndroidClientes,
         });
 
         await db.insert(logs).values({
@@ -576,7 +579,7 @@ export const appRouter = router({
       }),
 
     updateResellerCredits: protectedProcedure
-      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]), action: z.enum(["add", "remove"]) }))
+      .input(z.object({ resellerId: z.number(), amount: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]), action: z.enum(["add", "remove"]) }))
       .mutation(async ({ input, ctx }) => {
         const isMod = ctx.user.role === "moderator";
         const isReseller = ctx.user.role === "reseller";
@@ -592,7 +595,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", ios_ipa: "creditsIosIpa" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", proxy_android_clientes: "creditsProxyAndroidClientes", ios_ipa: "creditsIosIpa" };
         const col = colMap[input.type];
 
         if (isReseller) {
@@ -952,7 +955,7 @@ export const appRouter = router({
     }),
 
     addKey: protectedProcedure
-      .input(z.object({ keyValue: z.string().trim().min(1, "Informe uma Key válida.").max(255, "A Key pode ter no máximo 255 caracteres."), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]) }))
+      .input(z.object({ keyValue: z.string().trim().min(1, "Informe uma Key válida.").max(255, "A Key pode ter no máximo 255 caracteres."), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         assertProductAvailable(input.type);
@@ -969,7 +972,7 @@ export const appRouter = router({
       }),
 
     importKeysBatch: protectedProcedure
-      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]) }))
+      .input(z.object({ keysList: z.array(z.string()), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         assertProductAvailable(input.type);
@@ -1342,7 +1345,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]), maxDevices: z.number().default(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         assertProductAvailable(input.type);
@@ -1358,7 +1361,7 @@ export const appRouter = router({
         const actorRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
         const actor = actorRes[0];
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", ios_ipa: "creditsIosIpa" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", proxy_android_clientes: "creditsProxyAndroidClientes", ios_ipa: "creditsIosIpa" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller" && !getEnabledProducts(actor.enabledProducts).includes(input.type)) {
@@ -1491,7 +1494,7 @@ export const appRouter = router({
       }),
 
     renewClient: protectedProcedure
-      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"]) }))
+      .input(z.object({ clientId: z.number(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         assertProductAvailable(input.type);
@@ -1518,7 +1521,7 @@ export const appRouter = router({
         // O Premium pode renovar qualquer cliente listado, inclusive expirado.
         // O Basic continua restrito aos próprios clientes pela consulta acima.
 
-        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", ios_ipa: "creditsIosIpa" };
+        const colMap: any = { basic: "creditsBasic", advanced: "creditsAdvanced", ios: "creditsIos", panel_ios: "creditsPanelIos", panel_legitimo: "creditsPanelLegitimo", panel_android: "creditsPanelAndroid", proxy_android_clientes: "creditsProxyAndroidClientes", ios_ipa: "creditsIosIpa" };
         const col = colMap[input.type];
 
         if (ctx.user.role === "reseller" && !getEnabledProducts(actor.enabledProducts).includes(input.type)) {

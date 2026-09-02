@@ -20,6 +20,8 @@ export const users = mysqlTable("users", {
   creditsAndroid: int("creditsAndroid").default(0).notNull(),
   // Saldo independente do Painel Android (tipo panel_android)
   creditsPanelAndroid: int("creditsPanelAndroid").default(0).notNull(),
+  // Saldo independente do Proxy Android Clientes (tipo proxy_android_clientes)
+  creditsProxyAndroidClientes: int("creditsProxyAndroidClientes").default(0).notNull(),
   // Saldo independente do Proxy iOS IPA (tipo ios_ipa)
   creditsIosIpa: int("creditsIosIpa").default(0).notNull(),
   // JSON com os tipos de produto liberados para este revendedor; nulo = todos os produtos legados

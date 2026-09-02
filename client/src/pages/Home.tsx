@@ -1047,6 +1047,16 @@ function ModeratorDashboard() {
               <p className="text-xs text-neutral-400">Informe a quantidade desejada. Cada login terá usuário com 4 letras, senha com 8 números e o link do site.</p>
               <div className="flex flex-wrap items-end gap-3">
                 <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Produto</label>
+                  <select className="w-48 bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modClientType} onChange={(e: any) => setModClientType(e.target.value)}>
+                    <option value="advanced">Android Advanced</option>
+                    <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_android">Painel Android</option>
+                    <option value="proxy_android_clientes">Proxy Android Clientes</option>
+                    <option value="ios_ipa">Proxy iOS IPA</option>
+                  </select>
+                </div>
+                <div>
                   <label className="text-xs text-white font-semibold block mb-1">Quantidade</label>
                   <Input type="number" min={1} step={1} className="w-32 bg-[#222] border-neutral-700 text-white" value={modBulkQuantity} onChange={(e) => setModBulkQuantity(Number(e.target.value))} placeholder="Quantidade" />
                 </div>

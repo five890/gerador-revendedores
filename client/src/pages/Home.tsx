@@ -12,6 +12,7 @@ import { Lock, Unlock, RefreshCcw, Trash2, Power, UserPlus, Copy, Download as Do
 
 const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo"]);
 const ACTIVE_PRODUCT_TYPES = ["advanced", "panel_ios", "panel_android", "ios_ipa"] as const;
+type ActiveProductType = typeof ACTIVE_PRODUCT_TYPES[number];
 
 function getVideoEmbedUrl(rawUrl: string): { kind: "iframe" | "video"; url: string } | null {
   try {
@@ -222,7 +223,7 @@ export default function Home() {
             </form>
             <div className="mt-6 space-y-2 border-t border-white/10 pt-5 text-center">
               <p className="text-xs text-neutral-400">Entre no nosso Discord oficial</p>
-              <a href="https://discord.gg/shelbys" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center rounded-md border border-indigo-400/30 bg-indigo-950/50 px-4 py-2.5 text-sm font-bold text-indigo-200 transition-colors hover:bg-indigo-900/70 hover:text-white">
+              <a href="https://discord.gg/Nge3JfEZfb" target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center rounded-md border border-indigo-400/30 bg-indigo-950/50 px-4 py-2.5 text-sm font-bold text-indigo-200 transition-colors hover:bg-indigo-900/70 hover:text-white">
                 Entrar no Discord Oficial
               </a>
               <p className="text-[11px] font-semibold text-amber-300/90">Abra este link em um navegador como Chrome ou Safari.</p>
@@ -292,9 +293,9 @@ function ModeratorDashboard() {
   const [newResellerIsPremium, setNewResellerIsPremium] = useState(false);
 
   const [newKeyVal, setNewKeyVal] = useState("");
-  const [newKeyType, setNewKeyType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
+  const [newKeyType, setNewKeyType] = useState<ActiveProductType>("advanced");
   const [batchKeysText, setBatchKeysText] = useState("");
-  const [batchKeyType, setBatchKeyType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
+  const [batchKeyType, setBatchKeyType] = useState<ActiveProductType>("advanced");
 
   const [dlTitle, setDlTitle] = useState("");
   const [dlDesc, setDlDesc] = useState("");
@@ -306,7 +307,7 @@ function ModeratorDashboard() {
   const [tutTitle, setTutTitle] = useState("");
   const [tutDesc, setTutDesc] = useState("");
   const [tutUrl, setTutUrl] = useState("");
-  const [tutType, setTutType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo" | "panel_android" | "ios_ipa">("advanced");
+  const [tutType, setTutType] = useState<ActiveProductType>("advanced");
 
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -316,7 +317,7 @@ function ModeratorDashboard() {
 
   const [modClientUser, setModClientUser] = useState("");
   const [modClientPass, setModClientPass] = useState("");
-  const [modClientType, setModClientType] = useState<"basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("advanced");
+  const [modClientType, setModClientType] = useState<ActiveProductType>("advanced");
   const [modClientMaxDevices, setModClientMaxDevices] = useState(1);
   const [keysRevealed, setKeysRevealed] = useState(false);
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
@@ -504,18 +505,6 @@ function ModeratorDashboard() {
     onError: (e) => toast.error(e.message),
   });
 
-  const forceRotateIosMutation = trpc.moderator.forceRotateIos.useMutation({
-    onSuccess: (res) => {
-      if (res.lowStock) {
-        toast.warning(`Rotação iOS forçada. ALERTA: Estoque baixo (${res.availableCount} keys disponíveis)!`);
-      } else {
-        toast.success(`Rotação iOS forçada com sucesso! Keys livres disponíveis: ${res.availableCount}.`);
-      }
-      refetchKeys();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
   const addDownloadMutation = trpc.moderator.addDownload.useMutation({
     onSuccess: () => {
       toast.success("Download cadastrado!");
@@ -659,11 +648,8 @@ function ModeratorDashboard() {
             <Input value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} placeholder="Título do aviso" className="bg-[#1f1f1f] border-neutral-700 text-white" />
             <select value={announcementProductType} onChange={(e) => setAnnouncementProductType(e.target.value)} className="h-10 rounded-md border border-neutral-700 bg-[#1f1f1f] px-3 text-sm text-white">
               <option value="all">Todos os produtos</option>
-              <option value="basic">Proxy Basic</option>
               <option value="advanced">Proxy Advanced</option>
-              <option value="ios">Proxy iOS</option>
               <option value="panel_ios">Painel iOS</option>
-              <option value="panel_legitimo">Painel Legítimo</option>
               <option value="panel_android">Painel Android</option>
               <option value="ios_ipa">Proxy iOS IPA</option>
             </select>
@@ -735,7 +721,6 @@ function ModeratorDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Input value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} placeholder="Título do aviso" className="bg-[#222] border-neutral-700 text-white" />
                 <select value={announcementProductType} onChange={(e) => setAnnouncementProductType(e.target.value)} className="h-10 rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white">
-                  <option value="all">Todos os produtos</option><option value="basic">Proxy Basic</option><option value="advanced">Proxy Advanced</option><option value="ios">Proxy iOS</option><option value="panel_ios">Painel iOS</option><option value="panel_legitimo">Painel Legítimo</option><option value="panel_android">Painel Android</option><option value="ios_ipa">Proxy iOS IPA</option>
                 </select>
               </div>
               <textarea value={announcementMessage} onChange={(e) => setAnnouncementMessage(e.target.value)} placeholder="Mensagem do aviso" rows={4} className="w-full rounded-md border border-neutral-700 bg-[#222] p-3 text-sm text-white" />
@@ -782,24 +767,12 @@ function ModeratorDashboard() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-white font-semibold block mb-1">Créditos Basic</label>
-                  <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsBasic} onChange={(e) => setNewResellerCreditsBasic(Number(e.target.value))} />
-                </div>
-                <div>
                   <label className="text-xs text-white font-semibold block mb-1">Créditos Advanced</label>
                   <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsAdvanced} onChange={(e) => setNewResellerCreditsAdvanced(Number(e.target.value))} />
                 </div>
                   <div>
-                    <label className="text-xs text-white font-semibold block mb-1">Créditos Proxy iOS</label>
-                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsIos} onChange={(e) => setNewResellerCreditsIos(Number(e.target.value))} />
-                  </div>
-                  <div>
                     <label className="text-xs text-white font-semibold block mb-1">Créditos Painel iOS</label>
                     <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsPanelIos} onChange={(e) => setNewResellerCreditsPanelIos(Number(e.target.value))} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-white font-semibold block mb-1">Créditos Painel Legítimo</label>
-                    <Input type="number" className="bg-[#222] border-neutral-700 text-white" value={newResellerCreditsPanelLegitimo} onChange={(e) => setNewResellerCreditsPanelLegitimo(Number(e.target.value))} />
                   </div>
                 <div className="flex items-center space-x-2 pt-2">
                   <input type="checkbox" id="isPremiumCheck" className="w-4 h-4 rounded border-neutral-700 bg-[#222] text-red-600 focus:ring-red-500" checked={newResellerIsPremium} onChange={(e) => setNewResellerIsPremium(e.target.checked)} />
@@ -834,11 +807,8 @@ function ModeratorDashboard() {
                       <TableCell className="font-bold text-white">{r.username}</TableCell>
                       <TableCell className="space-y-1">
                         {[
-                          { name: 'basic', label: 'Android Basic', color: 'text-red-500' },
                           { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
-                          { name: 'ios', label: 'Proxy iOS', color: 'text-blue-400' },
-                          { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
-                          { name: 'panel_legitimo', label: 'Painel Legítimo', color: 'text-teal-400' },
+                                          { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
                           { name: 'panel_android', label: 'Painel Android', color: 'text-orange-400' },
                           { name: 'ios_ipa', label: 'Proxy iOS IPA', color: 'text-violet-400' }
                         ].map((cat) => (
@@ -960,12 +930,9 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-2">Selecione o tipo de proxy para renovação:</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modRenewType} onChange={(e: any) => setModRenewType(e.target.value)}>
-                    <option value="basic">Android Basic</option>
-                    <option value="advanced">Android Advanced</option>
-                    <option value="ios">Proxy iOS</option>
-                    <option value="panel_ios">Painel iOS</option>
-                    <option value="panel_legitimo">Painel Legítimo</option>
-                    <option value="panel_android">Painel Android</option>
+                        <option value="advanced">Android Advanced</option>
+                        <option value="panel_ios">Painel iOS</option>
+                        <option value="panel_android">Painel Android</option>
                     <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -989,12 +956,9 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modClientType} onChange={(e: any) => setModClientType(e.target.value)}>
-                    <option value="basic">Android Basic</option>
-                    <option value="advanced">Android Advanced</option>
-                    <option value="ios">Proxy iOS</option>
-                    <option value="panel_ios">Painel iOS</option>
-                    <option value="panel_legitimo">Painel Legítimo</option>
-                <option value="panel_android">Painel Android</option>
+                        <option value="advanced">Android Advanced</option>
+                        <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_android">Painel Android</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1132,7 +1096,7 @@ function ModeratorDashboard() {
 
         {/* PROXY IOS IPA */}
         <TabsContent value="iosIpaPanel" className="space-y-4">
-          <Card className="bg-violet-950/30 border-violet-800 text-white"><CardHeader><CardTitle className="text-white">Administração do Proxy iOS IPA</CardTitle></CardHeader><CardContent><p className="text-sm text-violet-100">Créditos e Keys independentes do Proxy iOS comum. Novos clientes recebem a última Key IPA ativa.</p></CardContent></Card>
+          <Card className="bg-violet-950/30 border-violet-800 text-white"><CardHeader><CardTitle className="text-white">Administração do Proxy iOS IPA</CardTitle></CardHeader><CardContent><p className="text-sm text-violet-100">Créditos e Keys independentes para o Proxy iOS IPA. Novos clientes recebem a última Key IPA ativa.</p></CardContent></Card>
           <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Créditos Proxy iOS IPA por revendedor</CardTitle></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Revendedor</TableHead><TableHead className="text-white font-bold">Créditos IPA</TableHead><TableHead className="text-white font-bold text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{resellers?.map((r: any) => <TableRow key={r.id} className="border-neutral-800"><TableCell className="font-bold text-white">{r.username}</TableCell><TableCell className="text-violet-400 font-black">{r.credits?.ios_ipa || 0}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" className="border-violet-700 bg-violet-950/40 text-violet-300" onClick={() => { const action = prompt(`Para ${r.username}, digite add ou remove:`); if (action === "add" || action === "remove") { const amount = Number(prompt("Quantidade de créditos IPA:")); if (Number.isInteger(amount) && amount > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "ios_ipa", action, amount }); } }}>Adicionar/Remover</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
           <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Keys Proxy iOS IPA</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Cole a Key IPA" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} /><Button className="w-full bg-violet-600 hover:bg-violet-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal, type: "ios_ipa" })}>Adicionar Key IPA</Button><textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Uma Key IPA por linha" value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} /><Button className="w-full bg-violet-800 hover:bg-violet-900 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\n"), type: "ios_ipa" })}>Importar Keys IPA</Button></CardContent></Card>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1168,24 +1132,6 @@ function ModeratorDashboard() {
           <Card className="bg-orange-950/30 border-orange-800 text-white"><CardHeader><CardTitle className="text-white">Keys do Painel Android</CardTitle></CardHeader><CardContent><p className="text-sm text-orange-100">Disponíveis: <strong>{keysList?.filter(k => k.type === "panel_android" && !k.isUsed && !k.isBanned).length || 0}</strong> · Usadas: <strong>{keysList?.filter(k => k.type === "panel_android" && (k.isUsed || k.isBanned)).length || 0}</strong></p><div className="mt-3 max-h-80 overflow-y-auto space-y-1">{keysList?.filter(k => k.type === "panel_android").map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-xs"><span className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><div className="flex items-center gap-2"><Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{k.isUsed ? "Usada" : "Disponível"}</Badge><Button size="sm" variant="destructive" title="Excluir Key do Painel Android" onClick={() => { if (confirm(`Excluir a Key ${k.keyValue}? O login existente continuará salvo, mas esta Key será removida da lista.`)) deleteAndroidKeyMutation.mutate({ keyId: k.id }); }}><Trash2 className="w-3 h-3" /></Button></div></div>)}</div></CardContent></Card>
         </TabsContent>
         {/* PAINEL LEGÍTIMO */}
-        <TabsContent value="legitPanel" className="space-y-4">
-          <Card className="bg-cyan-950/30 border-cyan-800 text-white"><CardHeader><CardTitle className="text-white">Administração completa do Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-sm text-cyan-100">Este painel usa o tipo <strong>panel_legitimo</strong>, com créditos, Keys e conteúdos totalmente separados.</p></CardContent></Card>
-          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Créditos do Painel Legítimo por revendedor</CardTitle></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Revendedor</TableHead><TableHead className="text-white font-bold">Créditos</TableHead><TableHead className="text-white font-bold text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{resellers?.map((r: any) => <TableRow key={r.id} className="border-neutral-800"><TableCell className="font-bold text-white">{r.username}</TableCell><TableCell className="text-cyan-400 font-black">{r.credits?.panel_legitimo || 0}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" className="border-cyan-700 bg-cyan-950/40 text-cyan-300" onClick={() => { const action = prompt(`Para ${r.username}, digite add ou remove:`); if (action === "add" || action === "remove") { const amount = Number(prompt("Quantidade de créditos Painel Legítimo:")); if (Number.isInteger(amount) && amount > 0) updateCreditsMutation.mutate({ resellerId: r.id, type: "panel_legitimo", action, amount }); } }}>Adicionar/Remover créditos</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Key Painel Legítimo</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white font-mono" placeholder="Cole a Key do Painel Legítimo" value={newKeyVal} onChange={(e) => setNewKeyVal(e.target.value)} /><Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" onClick={() => addKeyMutation.mutate({ keyValue: newKeyVal, type: "panel_legitimo" })}>Adicionar Key</Button><textarea className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-xs font-mono h-24" placeholder="Uma Key por linha" value={batchKeysText} onChange={(e) => setBatchKeysText(e.target.value)} /><Button className="w-full bg-cyan-800 hover:bg-cyan-900 text-white" onClick={() => batchAddKeysMutation.mutate({ keysList: batchKeysText.split("\\n"), type: "panel_legitimo" })}>Importar Keys</Button></CardContent></Card>
-            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Keys Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-emerald-400 font-bold">Disponíveis: {keysList?.filter(k => k.type === "panel_legitimo" && !k.isUsed && !k.isBanned).length || 0}</p><p className="text-amber-400 font-bold">Já usadas: {keysList?.filter(k => k.type === "panel_legitimo" && (k.isUsed || k.isBanned)).length || 0}</p><div className="mt-3 max-h-64 overflow-y-auto space-y-1">{keysList?.filter(k => k.type === "panel_legitimo").map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2 text-xs"><span className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{k.isUsed ? "Usada" : "Disponível"}</Badge></div>)}</div></CardContent></Card>
-            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Download Painel Legítimo</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={dlTitle} onChange={(e) => setDlTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Versão" value={dlVersion} onChange={(e) => setDlVersion(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="URL" value={dlUrl} onChange={(e) => setDlUrl(e.target.value)} /><Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" onClick={() => addDownloadMutation.mutate({ title: dlTitle, description: dlDesc, version: dlVersion, fileUrl: dlUrl, type: "panel_legitimo" })}>Cadastrar Download</Button></CardContent></Card>
-            <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Cadastrar Tutorial Painel Legítimo</CardTitle></CardHeader><CardContent className="space-y-3"><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={tutTitle} onChange={(e) => setTutTitle(e.target.value)} /><Input className="bg-[#222] border-neutral-700 text-white" placeholder="Link do tutorial" value={tutUrl} onChange={(e) => setTutUrl(e.target.value)} /><Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" onClick={() => addTutorialMutation.mutate({ title: tutTitle, description: tutDesc, videoUrl: tutUrl, type: "panel_legitimo" })}>Cadastrar Tutorial</Button></CardContent></Card>
-          </div>
-          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-white">Conteúdo Painel Legítimo cadastrado</CardTitle></CardHeader><CardContent className="space-y-3"><div><h4 className="text-sm font-bold text-cyan-400">Downloads</h4>{downloadsList?.filter((d: any) => d.type === "panel_legitimo").map((d: any) => <div key={d.id} className="flex justify-between border-b border-neutral-800 py-2 text-sm"><span>{d.title} — v{d.version}</span><Button size="sm" variant="destructive" onClick={() => deleteDownloadMutation.mutate({ downloadId: d.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div><div><h4 className="text-sm font-bold text-cyan-400">Tutoriais</h4>{tutorialsList?.filter((t: any) => t.type === "panel_legitimo").map((t: any) => <div key={t.id} className="flex justify-between border-b border-neutral-800 py-2 text-sm"><span>{t.title}</span><Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div></CardContent></Card>
-        </TabsContent>
-
-        <TabsContent value="legitKeys" className="space-y-4">
-          <Card className="bg-cyan-950/30 border-cyan-800 text-white"><CardHeader><CardTitle className="text-white">Keys do Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-sm text-cyan-100">As Keys abaixo pertencem somente ao tipo <strong>panel_legitimo</strong>.</p><div className="grid grid-cols-2 gap-3 mt-3"><div className="rounded border border-emerald-800 bg-emerald-950/30 p-3"><p className="text-xs text-emerald-300">Disponíveis</p><p className="text-2xl font-black text-emerald-400">{keysList?.filter(k => k.type === "panel_legitimo" && !k.isUsed && !k.isBanned).length || 0}</p></div><div className="rounded border border-amber-800 bg-amber-950/30 p-3"><p className="text-xs text-amber-300">Já usadas</p><p className="text-2xl font-black text-amber-400">{keysList?.filter(k => k.type === "panel_legitimo" && (k.isUsed || k.isBanned)).length || 0}</p></div></div></CardContent></Card>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-emerald-400">Keys disponíveis</CardTitle></CardHeader><CardContent><div className="max-h-80 overflow-y-auto space-y-2">{keysList?.filter(k => k.type === "panel_legitimo" && !k.isUsed && !k.isBanned).map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2"><span className="font-mono text-xs text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}><Trash2 className="w-3 h-3" /></Button></div>)}</div></CardContent></Card><Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader><CardTitle className="text-amber-400">Keys já usadas</CardTitle></CardHeader><CardContent><div className="max-h-80 overflow-y-auto space-y-2">{keysList?.filter(k => k.type === "panel_legitimo" && (k.isUsed || k.isBanned)).map(k => <div key={k.id} className="flex items-center justify-between border-b border-neutral-800 py-2"><span className="font-mono text-xs text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</span><span className="text-[10px] text-neutral-500">{k.usedAt ? new Date(k.usedAt).toLocaleString() : "Usada"}</span></div>)}</div></CardContent></Card></div>
-        </TabsContent>
-
-        {/* GERENCIAR KEYS */}
         <TabsContent value="keys" className="space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-2 bg-[#141414] border border-neutral-800 p-4 rounded-lg">
             <div>
@@ -1212,12 +1158,9 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-1">Tipo de Proxy</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newKeyType} onChange={(e: any) => setNewKeyType(e.target.value)}>
-                    <option value="basic">Android Basic</option>
-                    <option value="advanced">Android Advanced</option>
-                    <option value="ios">Proxy iOS</option>
-                    <option value="panel_ios">Painel iOS</option>
-                    <option value="panel_legitimo">Painel Legítimo</option>
-                <option value="panel_android">Painel Android</option>
+                        <option value="advanced">Android Advanced</option>
+                        <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_android">Painel Android</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1237,12 +1180,9 @@ function ModeratorDashboard() {
                 <div>
                   <label className="text-xs text-white font-semibold block mb-1">Tipo de Proxy</label>
                   <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={batchKeyType} onChange={(e: any) => setBatchKeyType(e.target.value)}>
-                    <option value="basic">Android Basic</option>
-                    <option value="advanced">Android Advanced</option>
-                    <option value="ios">Proxy iOS</option>
-                    <option value="panel_ios">Painel iOS</option>
-                    <option value="panel_legitimo">Painel Legítimo</option>
-                <option value="panel_android">Painel Android</option>
+                        <option value="advanced">Android Advanced</option>
+                        <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_android">Painel Android</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1274,63 +1214,6 @@ function ModeratorDashboard() {
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-[#141414] border-neutral-800 text-white">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white">Keys - Proxy Basic</CardTitle>
-                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
-                  if (!keysList) return;
-                  const text = keysList.filter(k => k.type === "basic").map((k) => k.keyValue).join("\n");
-                  const blob = new Blob([text], { type: "text/plain" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "keys_basic.txt";
-                  a.click();
-                }}>
-                  Exportar Basic (.txt)
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto"><Table>
-                  <TableHeader>
-                    <TableRow className="border-neutral-800">
-                      <TableHead className="text-white font-bold">ID</TableHead>
-                      <TableHead className="text-white font-bold">Key Value</TableHead>
-                      <TableHead className="text-white font-bold">Status Uso</TableHead>
-                      <TableHead className="text-white font-bold">Estado Ativação</TableHead>
-                      <TableHead className="text-white font-bold text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {keysList?.filter(k => k.type === "basic" && !k.isBanned && !k.isUsed).map((k) => (
-                      <TableRow key={k.id} className="border-neutral-800">
-                        <TableCell className="font-mono text-white">#{k.id}</TableCell>
-                        <TableCell className="font-mono text-red-500 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
-                        <TableCell>
-                          <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
-                            {k.isUsed ? "Usada" : "Disponível"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
-                            {k.isActive ? "Ativa" : "Desativada"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-1">
-                          <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
-                            <Power className="w-3 h-3" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table></div>
-              </CardContent>
-            </Card>
-
             <Card className="bg-[#141414] border-neutral-800 text-white">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white">Keys - Proxy Advanced</CardTitle>
@@ -1388,90 +1271,6 @@ function ModeratorDashboard() {
               </CardContent>
             </Card>
 
-            {/* Controle de Rotação Automática / Manual iOS */}
-            <Card className="bg-[#141414] border-neutral-800 text-white">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white">Gerenciamento & Rotação Automática (8h) - Proxy iOS</CardTitle>
-                <div className="flex gap-2">
-                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => {
-                    const active = (window as any)._iosRotationActive !== false;
-                    (window as any)._iosRotationActive = !active;
-                    toast.success(!active ? "Rotação automática de chaves iOS (8h) ATIVADA." : "Rotação automática de chaves iOS PAUSADA.");
-                  }}>
-                    {(window as any)._iosRotationActive !== false ? "Pausar Rotação 8h" : "Retomar Rotação 8h"}
-                  </Button>
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
-                    forceRotateIosMutation.mutate();
-                  }}>
-                    Forçar Rotação Manual
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-xs text-neutral-400">
-                  <p>• Revendedores Premium possuem rotação automática a cada 8 horas e mantêm no mínimo 3 chaves ativas.</p>
-                  <p>• Quando o estoque de chaves iOS livres ficar abaixo de 3, o sistema emitirá um alerta automático nos logs.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-[#141414] border-neutral-800 text-white">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white">Keys - Proxy iOS</CardTitle>
-                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
-                  if (!keysList) return;
-                  const text = keysList.filter(k => k.type === "ios").map((k) => k.keyValue).join("\n");
-                  const blob = new Blob([text], { type: "text/plain" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "keys_ios.txt";
-                  a.click();
-                }}>
-                  Exportar iOS (.txt)
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto"><Table>
-                  <TableHeader>
-                    <TableRow className="border-neutral-800">
-                      <TableHead className="text-white font-bold">ID</TableHead>
-                      <TableHead className="text-white font-bold">Key Value</TableHead>
-                      <TableHead className="text-white font-bold">Status Uso</TableHead>
-                      <TableHead className="text-white font-bold">Estado Ativação</TableHead>
-                      <TableHead className="text-white font-bold text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {keysList?.filter(k => k.type === "ios").map((k) => (
-                      <TableRow key={k.id} className="border-neutral-800">
-                        <TableCell className="font-mono text-white">#{k.id}</TableCell>
-                        <TableCell className="font-mono text-blue-400 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
-                        <TableCell>
-                          <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
-                            {k.isUsed ? "Usada" : "Disponível"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
-                            {k.isActive ? "Ativa" : "Desativada"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-1">
-                          <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
-                            <Power className="w-3 h-3" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table></div>
-              </CardContent>
-            </Card>
-          </div>
           <Card className="bg-[#141414] border-blue-800 text-white">
             <CardHeader className="flex flex-row items-center justify-between">
               <div><CardTitle className="text-white">Keys - Painel iOS</CardTitle><p className="text-xs text-neutral-400 mt-1">Controle separado das Keys disponíveis e já usadas pelo Painel iOS.</p></div>
@@ -1487,7 +1286,8 @@ function ModeratorDashboard() {
               <div><h4 className="text-sm text-emerald-400 font-bold mb-2">Keys disponíveis</h4><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white">ID</TableHead><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Estado</TableHead><TableHead className="text-white text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{keysList?.filter(k => k.type === "panel_ios" && !k.isUsed && !k.isBanned).map(k => <TableRow key={k.id} className="border-neutral-800"><TableCell>#{k.id}</TableCell><TableCell className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className="bg-emerald-950 text-emerald-400 border-emerald-800">Disponível</Badge></TableCell><TableCell className="text-right space-x-1"><Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}><Power className="w-3 h-3" /></Button><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></div>
               <div><h4 className="text-sm text-amber-400 font-bold mb-2">Keys já usadas</h4><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white">ID</TableHead><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Estado</TableHead><TableHead className="text-white">Usada em</TableHead><TableHead className="text-white text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{keysList?.filter(k => k.type === "panel_ios" && (k.isUsed || k.isBanned)).map(k => <TableRow key={k.id} className="border-neutral-800"><TableCell>#{k.id}</TableCell><TableCell className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className="bg-amber-950 text-amber-400 border-amber-800">Usada</Badge></TableCell><TableCell className="text-xs text-neutral-400">{k.usedAt ? new Date(k.usedAt).toLocaleString() : "—"}</TableCell><TableCell className="text-right"><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></div>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* KEYS BANIDAS / USADAS */}
@@ -1551,10 +1351,8 @@ function ModeratorDashboard() {
               <div>
                 <label className="text-xs text-white font-semibold block mb-1">Tipo de Download</label>
                 <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={editingDownload ? editingDownload.type : dlType} onChange={(e: any) => editingDownload ? setEditingDownload({...editingDownload, type: e.target.value}) : setDlType(e.target.value)}>
-                  <option value="basic">Proxy Basic</option>
                   <option value="advanced">Proxy Advanced</option>
-                  <option value="ios">Proxy iOS</option>
-                </select>
+                  </select>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input className="bg-[#222] border-neutral-700 text-white" placeholder="Título" value={editingDownload ? editingDownload.title : dlTitle} onChange={(e) => editingDownload ? setEditingDownload({...editingDownload, title: e.target.value}) : setDlTitle(e.target.value)} />
@@ -1626,12 +1424,9 @@ function ModeratorDashboard() {
               <div>
                 <label className="text-xs text-white font-semibold block mb-1">Tipo de Tutorial</label>
                 <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={tutType} onChange={(e: any) => setTutType(e.target.value)}>
-                  <option value="basic">Proxy Basic</option>
                   <option value="advanced">Proxy Advanced</option>
-                  <option value="ios">Proxy iOS</option>
-                  <option value="panel_ios">Painel iOS</option>
-                  <option value="panel_legitimo">Painel Legítimo</option>
-                  <option value="panel_android">Painel Android</option>
+                    <option value="panel_ios">Painel iOS</option>
+                    <option value="panel_android">Painel Android</option>
                   <option value="ios_ipa">Proxy iOS IPA</option>
                 </select>
               </div>
@@ -1660,7 +1455,6 @@ function ModeratorDashboard() {
                   {tutorialsList?.map((t) => (
                     <TableRow key={t.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{t.title}</TableCell>
-                      <TableCell><select value={t.type || "advanced"} onChange={(e) => updateTutorialTypeMutation.mutate({ tutorialId: t.id, type: e.target.value as any })} className="bg-[#222] border border-neutral-700 rounded px-2 py-1 text-xs text-white"><option value="basic">Proxy Basic</option><option value="advanced">Proxy Advanced</option><option value="ios">Proxy iOS</option><option value="panel_ios">Painel iOS</option><option value="panel_legitimo">Painel Legítimo</option><option value="panel_android">Painel Android</option><option value="ios_ipa">Proxy iOS IPA</option></select></TableCell>
                       <TableCell><a href={t.videoUrl} target="_blank" rel="noreferrer" className="text-blue-400 underline truncate max-w-xs block">{t.videoUrl}</a></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}>
@@ -1691,12 +1485,9 @@ function ModeratorDashboard() {
                   <input type="date" value={keyAuditTo} onChange={(e) => setKeyAuditTo(e.target.value)} className="bg-[#222] border border-neutral-700 rounded px-2 py-2 text-xs text-white" title="Data final" />
                   <select value={keyAuditType} onChange={(e) => setKeyAuditType(e.target.value as any)} className="bg-[#222] border border-neutral-700 rounded px-3 py-2 text-xs text-white">
                     <option value="all">Todos os tipos</option>
-                    <option value="ios">Proxy iOS</option>
-                    <option value="advanced">Proxy Advanced</option>
-                    <option value="basic">Proxy Basic</option>
+                        <option value="advanced">Proxy Advanced</option>
                     <option value="panel_ios">Painel iOS</option>
-                    <option value="panel_legitimo">Painel Legítimo</option>
-                <option value="panel_android">Painel Android</option>
+                    <option value="panel_android">Painel Android</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
                   </select>
                 </div>
@@ -1706,11 +1497,8 @@ function ModeratorDashboard() {
               <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 {[
                   { type: "all", label: "Total" },
-                  { type: "ios", label: "Proxy iOS" },
                   { type: "advanced", label: "Proxy Advanced" },
-                  { type: "basic", label: "Proxy Basic" },
                   { type: "panel_ios", label: "Painel iOS" },
-                  { type: "panel_legitimo", label: "Legítimo" },
                   { type: "panel_android", label: "Painel Android" },
                   { type: "ios_ipa", label: "Proxy iOS IPA" },
                 ].map((item) => <div key={item.type} className="rounded border border-neutral-800 bg-[#1b1b1b] p-2"><p className="text-[10px] text-neutral-400">{item.label}</p><p className="text-xl font-black text-amber-400">{resellerKeyAudit?.reduce((sum: number, audit: any) => sum + (item.type === "all" ? audit.totalKeys : Number(audit.counts?.[item.type] || 0)), 0) || 0}</p></div>)}
@@ -1794,7 +1582,7 @@ function ResellerDashboard() {
 
   const [newClientUser, setNewClientUser] = useState("");
   const [newClientPass, setNewClientPass] = useState("");
-  const [newClientType, setNewClientType] = useState<any>("basic");
+  const [newClientType, setNewClientType] = useState<ActiveProductType>("advanced");
   const [newClientMaxDevices, setNewClientMaxDevices] = useState(1);
   const [clientSearch, setClientSearch] = useState("");
   const [renewingClient, setRenewingClient] = useState<{ id: number; username: string } | null>(null);
@@ -1805,17 +1593,14 @@ function ResellerDashboard() {
   const enabledResellerProducts = data?.enabledProducts || allResellerProducts;
   const canUseProduct = (type: string) => enabledResellerProducts.includes(type);
   const resellerProductOptions = [
-    { value: "basic", label: "Android Basic" },
     { value: "advanced", label: "Android Advanced" },
-    { value: "ios", label: "Proxy iOS" },
     { value: "panel_ios", label: "Painel iOS" },
-    { value: "panel_legitimo", label: "Painel Legítimo" },
     { value: "panel_android", label: "Painel Android" },
     { value: "ios_ipa", label: "Proxy iOS IPA" },
   ].filter((product) => canUseProduct(product.value));
   const normalizeRenewalType = (type: string | null | undefined) => {
     const normalized = type === "ios_basic" || type === "ios_advanced" ? "ios" : type;
-    return resellerProductOptions.some((product) => product.value === normalized) ? normalized : (resellerProductOptions[0]?.value || "basic");
+    return resellerProductOptions.some((product) => product.value === normalized) ? normalized : (resellerProductOptions[0]?.value || "advanced");
   };
 
   // Estados para criação de sub-revendedor (Premium Reseller)
@@ -1903,11 +1688,8 @@ function ResellerDashboard() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { name: 'basic', label: 'Android Basic', color: 'text-red-600' },
           { name: 'advanced', label: 'Android Advanced', color: 'text-amber-400' },
-          { name: 'ios', label: 'Proxy iOS', color: 'text-blue-400' },
           { name: 'panel_ios', label: 'Painel iOS', color: 'text-cyan-400' },
-          { name: 'panel_legitimo', label: 'Painel Legítimo', color: 'text-emerald-400' },
           { name: 'panel_android', label: 'Painel Android', color: 'text-orange-400' },
           { name: 'ios_ipa', label: 'Proxy iOS IPA', color: 'text-violet-400' }
         ].filter((cat) => canUseProduct(cat.name)).map((cat) => (
@@ -1931,8 +1713,6 @@ function ResellerDashboard() {
       <Tabs defaultValue="clients" className="space-y-4">
                   <TabsList className="bg-[#141414] border border-neutral-800 p-1">
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Clientes</TabsTrigger>
-          {canUseProduct("ios") && <TabsTrigger value="ios" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>}
-          {canUseProduct("panel_legitimo") && <TabsTrigger value="legitimo" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-white">Painel Legítimo</TabsTrigger>}
           {canUseProduct("panel_android") && <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>}
           {canUseProduct("ios_ipa") && <TabsTrigger value="iosIpaPanel" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Proxy iOS IPA</TabsTrigger>}
           {data?.isPremium && (
@@ -1969,11 +1749,8 @@ function ResellerDashboard() {
             <div>
               <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
-                <option value="basic">Android Basic</option>
                 <option value="advanced">Android Advanced</option>
-                <option value="ios">Proxy iOS</option>
                 <option value="panel_ios">Painel iOS</option>
-                <option value="panel_legitimo">Painel Legítimo</option>
                 <option value="panel_android">Painel Android</option>
                 <option value="ios_ipa">Proxy iOS IPA</option>
               </select>
@@ -2092,24 +1869,6 @@ function ResellerDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ios" className="space-y-4">
-          <Card className="bg-blue-950/30 border-blue-800 text-white">
-            <CardHeader><CardTitle className="text-white">Painel iOS / Proxy iOS</CardTitle></CardHeader>
-            <CardContent><p className="text-sm text-blue-100">Este painel usa o mesmo fluxo do painel principal. Renovar troca a key; <strong>+ Horas</strong> apenas estende a validade, sem trocar a key e sem consumir crédito.</p></CardContent>
-          </Card>
-          <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Painel iOS</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente iOS..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader>
-            <CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
-              {data?.clients?.filter((c: any) => c.keyType === "panel_ios")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{(data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium)) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("panel_ios"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}
-            </TableBody></Table></div></CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="legitimo" className="space-y-4">
-          <Card className="bg-cyan-950/30 border-cyan-800 text-white"><CardHeader><CardTitle className="text-white">Painel Legítimo</CardTitle></CardHeader><CardContent><p className="text-sm text-cyan-100">Clientes deste painel usam Keys, créditos e conteúdos exclusivos do tipo <strong>panel_legitimo</strong>.</p></CardContent></Card>
-          <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Painel Legítimo</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{data?.clients?.filter((c: any) => c.keyType === "panel_legitimo")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{(data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium)) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("panel_legitimo"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
-        </TabsContent>
-
         <TabsContent value="androidPanel" className="space-y-4">
           <Card className="bg-orange-950/30 border-orange-800 text-white"><CardHeader><CardTitle className="text-white">Painel Android</CardTitle></CardHeader><CardContent><p className="text-sm text-orange-100">Clientes deste painel usam Keys, créditos e conteúdos exclusivos do tipo <strong>panel_android</strong>. A renovação troca a Key e consome crédito Painel Android; + Horas apenas estende a validade.</p></CardContent></Card>
           <Card className="bg-[#141414] border-neutral-800 text-white"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-white">Clientes Painel Android</CardTitle><Input className="w-72 bg-[#222] border-neutral-700 text-white text-xs" placeholder="Pesquisar cliente Android..." value={iosClientSearch} onChange={(e) => setIosClientSearch(e.target.value)} /></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">Usuário</TableHead><TableHead className="text-white font-bold">Expiração</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{data?.clients?.filter((c: any) => c.keyType === "panel_android")?.filter((c: any) => c.username.toLowerCase().includes(iosClientSearch.toLowerCase())).map((c: any) => <TableRow key={c.id} className="border-neutral-800"><TableCell className="font-bold text-white">{c.username}</TableCell><TableCell className="text-emerald-400 text-xs">{c.expiresAt ? new Date(c.expiresAt).toLocaleString() : "Sem validade"}</TableCell><TableCell className="text-right space-x-1">{data?.isPremium || (c.ownerRole === "reseller" && !c.ownerIsPremium) ? <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewType("panel_android"); setRenewingClient({ id: c.id, username: c.username }); }}>Renovar</Button> : <span className="text-[10px] text-neutral-500">Cliente de Premium</span>}<Button size="sm" variant="outline" className="border-blue-700 bg-blue-950/40 text-blue-300" onClick={() => { const hours = Number(prompt(`Quantas horas adicionar ao cliente ${c.username}?`)); if (Number.isInteger(hours) && hours > 0) addHoursMutation.mutate({ clientId: c.id, hours }); }}>+ Horas</Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>
@@ -2142,11 +1901,8 @@ function ResellerDashboard() {
                         <TableCell className="font-bold text-white">{r.username}</TableCell>
                         <TableCell className="space-y-1">
                           {[
-                            { name: 'basic', label: 'Android Basic' },
                             { name: 'advanced', label: 'Android Advanced' },
-                            { name: 'ios', label: 'Proxy iOS' },
                             { name: 'panel_ios', label: 'Painel iOS' },
-                            { name: 'panel_legitimo', label: 'Painel Legítimo' },
                             { name: 'panel_android', label: 'Painel Android' },
                             { name: 'ios_ipa', label: 'Proxy iOS IPA' }
                           ].map((cat) => (

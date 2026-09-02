@@ -12,9 +12,9 @@ import { storagePut } from "./storage";
 
 const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "ios_ipa"] as const;
 // Os formulários do painel continuam oferecendo estes produtos; o backend deve aceitar os mesmos tipos.
-const REMOVED_PRODUCT_TYPES = new Set<string>();
+const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo"]);
 const ACTIVE_PRODUCT_TYPES = ALL_PRODUCT_TYPES.filter((type) => !REMOVED_PRODUCT_TYPES.has(type));
-const productTypeSchema = z.enum(ALL_PRODUCT_TYPES);
+const productTypeSchema = z.enum(ACTIVE_PRODUCT_TYPES);
 
 function assertProductAvailable(type: string) {
   if (REMOVED_PRODUCT_TYPES.has(type)) {
@@ -948,7 +948,7 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) return [];
       // Retorna todas para a aba de banidas/histórico, mas as tabelas ativas podem filtrar isBanned !== true
-      return await db.select().from(keys).orderBy(desc(keys.id));
+      return (await db.select().from(keys).orderBy(desc(keys.id))).filter((key) => ACTIVE_PRODUCT_TYPES.includes(key.type as any));
     }),
 
     addKey: protectedProcedure
@@ -1079,7 +1079,7 @@ export const appRouter = router({
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
       if (!db) return [];
-      return await db.select().from(downloads).orderBy(desc(downloads.id));
+      return (await db.select().from(downloads).orderBy(desc(downloads.id))).filter((download) => ACTIVE_PRODUCT_TYPES.includes(download.type as any));
     }),
 
     addDownload: protectedProcedure
@@ -1130,24 +1130,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    forceRotateIos: protectedProcedure
-      .mutation(async ({ ctx }) => {
-        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-        const availableIosKeys = await db.select().from(keys).where(and(eq(keys.type, "ios"), eq(keys.isUsed, false), eq(keys.isActive, true)));
-        const lowStock = availableIosKeys.length < 3;
-
-        await db.insert(logs).values({
-          userId: ctx.user.id,
-          action: "MANUAL_IOS_ROTATION",
-          details: `Moderador forçou rotação manual de chaves iOS. Keys livres disponíveis: ${availableIosKeys.length}. ${lowStock ? "ALERTA: Estoque abaixo de 3 keys!" : "Estoque normal."}`,
-        });
-
-        return { success: true, availableCount: availableIosKeys.length, lowStock };
-      }),
-
     listLogs: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
@@ -1174,7 +1156,7 @@ export const appRouter = router({
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
       if (!db) return [];
-      return await db.select().from(announcements).orderBy(desc(announcements.id));
+      return (await db.select().from(announcements).orderBy(desc(announcements.id))).filter((announcement) => announcement.productType === "all" || ACTIVE_PRODUCT_TYPES.includes(announcement.productType as any));
     }),
 
     addAnnouncement: protectedProcedure
@@ -1218,7 +1200,7 @@ export const appRouter = router({
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
       if (!db) return [];
-      return await db.select().from(tutorials).orderBy(desc(tutorials.id));
+      return (await db.select().from(tutorials).orderBy(desc(tutorials.id))).filter((tutorial) => ACTIVE_PRODUCT_TYPES.includes(tutorial.type as any));
     }),
 
     addTutorial: protectedProcedure

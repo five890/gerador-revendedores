@@ -697,6 +697,7 @@ function ModeratorDashboard() {
             <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Painéis</span>
             <TabsTrigger value="iosPanel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white">Painel iOS</TabsTrigger>
             <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>
+            <TabsTrigger value="proxyAndroidClientesPanel" className="data-[state=active]:bg-lime-600 data-[state=active]:text-white text-white">Proxy Android Clientes</TabsTrigger>
             <TabsTrigger value="iosIpaPanel" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white text-white">Proxy iOS IPA</TabsTrigger>
             <span className="mx-1 h-5 w-px bg-neutral-700" />
             <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Keys</span>

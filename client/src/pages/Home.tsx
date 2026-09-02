@@ -1625,6 +1625,9 @@ function ResellerDashboard() {
   const [renewType, setRenewType] = useState<any>("advanced");
   const [iosClientSearch, setIosClientSearch] = useState("");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
+  const [bulkQuantity, setBulkQuantity] = useState(1);
+  const [bulkCredentials, setBulkCredentials] = useState<Array<{ username: string; password: string }>>([]);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
   const allResellerProducts = [...ACTIVE_PRODUCT_TYPES];
   const enabledResellerProducts = data?.enabledProducts || allResellerProducts;
   const canUseProduct = (type: string) => enabledResellerProducts.includes(type);
@@ -1719,6 +1722,36 @@ function ResellerDashboard() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const handleBulkGenerate = async () => {
+    const quantity = Math.max(1, Math.min(20, Number(bulkQuantity) || 1));
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const generatedUsernames = new Set<string>();
+    const results: Array<{ username: string; password: string }> = [];
+    setBulkGenerating(true);
+    setBulkCredentials([]);
+    try {
+      for (let index = 0; index < quantity; index += 1) {
+        let username = "";
+        do {
+          username = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join("");
+        } while (generatedUsernames.has(username));
+        generatedUsernames.add(username);
+        const password = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+        const result = await createClientMutation.mutateAsync({ username, password, type: newClientType as any, maxDevices: newClientMaxDevices });
+        results.push({ username: result.createdUsername, password: result.createdPassword });
+      }
+      setBulkCredentials(results);
+      toast.success(`${results.length} login(s) gerado(s) com sucesso!`);
+      refetch();
+    } catch (error: any) {
+      toast.error(error?.message || "Não foi possível concluir a geração em lote.");
+      setBulkCredentials(results);
+      refetch();
+    } finally {
+      setBulkGenerating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -1816,6 +1849,28 @@ function ResellerDashboard() {
                 <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType})
               </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-[#141414] border-lime-800 text-white">
+        <CardHeader><CardTitle className="text-white">Gerar logins em lote</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-neutral-400">Gere de 1 a 20 clientes de uma vez. O usuário terá 4 letras aleatórias e a senha terá 8 números aleatórios.</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-xs text-white font-semibold block mb-1">Quantidade</label>
+              <select className="w-28 bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={bulkQuantity} onChange={(e) => setBulkQuantity(Number(e.target.value))}>
+                {Array.from({ length: 20 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} login{index === 0 ? "" : "s"}</option>)}
+              </select>
+            </div>
+            <Button className="bg-lime-600 hover:bg-lime-500 text-black font-bold" onClick={handleBulkGenerate} disabled={bulkGenerating || createClientMutation.isPending}>
+              {bulkGenerating ? "Gerando..." : "Gerar logins"}
+            </Button>
+          </div>
+          {bulkCredentials.length > 0 && <div className="space-y-2 rounded border border-neutral-700 bg-black/30 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-bold text-lime-300">Logins gerados</p><Button size="sm" variant="outline" className="border-lime-700 text-lime-300" onClick={() => { navigator.clipboard.writeText(bulkCredentials.map((credential) => `Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`).join("\n\n")); toast.success("Todos os logins foram copiados!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar todos</Button></div>
+            <div className="max-h-72 overflow-y-auto space-y-2">{bulkCredentials.map((credential) => <div key={`${credential.username}-${credential.password}`} className="rounded border border-neutral-800 bg-[#1b1b1b] p-2 font-mono text-xs"><div>Usuário: <strong className="text-white">{credential.username}</strong></div><div>Senha: <strong className="text-white">{credential.password}</strong></div><div>Link: <span className="text-blue-400">https://shelbys-production.up.railway.app</span></div><Button size="sm" variant="outline" className="mt-2 border-neutral-700 text-neutral-200" onClick={() => { navigator.clipboard.writeText(`Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`); toast.success("Login copiado!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar</Button></div>)}</div>
+          </div>}
         </CardContent>
       </Card>
 

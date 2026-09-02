@@ -1724,7 +1724,11 @@ function ResellerDashboard() {
   });
 
   const handleBulkGenerate = async () => {
-    const quantity = Math.max(1, Math.min(20, Number(bulkQuantity) || 1));
+    const quantity = Number(bulkQuantity);
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      toast.error("Informe uma quantidade inteira maior que zero.");
+      return;
+    }
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const generatedUsernames = new Set<string>();
     const results: Array<{ username: string; password: string }> = [];
@@ -1855,13 +1859,11 @@ function ResellerDashboard() {
       <Card className="bg-[#141414] border-lime-800 text-white">
         <CardHeader><CardTitle className="text-white">Gerar logins em lote</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-xs text-neutral-400">Gere de 1 a 20 clientes de uma vez. O usuário terá 4 letras aleatórias e a senha terá 8 números aleatórios.</p>
+          <p className="text-xs text-neutral-400">Informe quantos clientes deseja gerar. O sistema cria todos de uma vez enquanto houver créditos e Keys disponíveis, com usuário de 4 letras e senha de 8 números aleatórios.</p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="text-xs text-white font-semibold block mb-1">Quantidade</label>
-              <select className="w-28 bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={bulkQuantity} onChange={(e) => setBulkQuantity(Number(e.target.value))}>
-                {Array.from({ length: 20 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} login{index === 0 ? "" : "s"}</option>)}
-              </select>
+              <Input type="number" min={1} step={1} className="w-32 bg-[#222] border-neutral-700 text-white" value={bulkQuantity} onChange={(e) => setBulkQuantity(Number(e.target.value))} placeholder="Quantidade" />
             </div>
             <Button className="bg-lime-600 hover:bg-lime-500 text-black font-bold" onClick={handleBulkGenerate} disabled={bulkGenerating || createClientMutation.isPending}>
               {bulkGenerating ? "Gerando..." : "Gerar logins"}

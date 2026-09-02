@@ -45,7 +45,8 @@ async function ensureTables(dbUrl: string) {
         expiresAt TIMESTAMP NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
-        lastSignedIn TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        lastSignedIn TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        resetCode VARCHAR(32) NULL
       )
     `);
 
@@ -79,6 +80,7 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE users ADD COLUMN isPremium BOOLEAN DEFAULT FALSE",
       "ALTER TABLE users ADD COLUMN maxDevices INT DEFAULT 1",
       "ALTER TABLE users ADD COLUMN expiresAt TIMESTAMP NULL",
+      "ALTER TABLE users ADD COLUMN resetCode VARCHAR(32) NULL",
       "ALTER TABLE \`keys\` ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
       "ALTER TABLE \`keys\` ADD COLUMN isActive BOOLEAN DEFAULT TRUE",
       "ALTER TABLE \`keys\` ADD COLUMN isUsed BOOLEAN DEFAULT FALSE",

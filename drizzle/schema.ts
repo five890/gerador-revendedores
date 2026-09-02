@@ -47,6 +47,7 @@ export const users = mysqlTable("users", {
   expiresAt: timestamp("expiresAt"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  resetCode: varchar("resetCode", { length: 32 }),
 });
 
 export const keys = mysqlTable("keys", {

@@ -9,6 +9,7 @@ import { eq, and, desc, sql, isNull } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
+import { randomBytes } from "node:crypto";
 
 const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"] as const;
 // Os formulários do painel continuam oferecendo estes produtos; o backend deve aceitar os mesmos tipos.
@@ -218,10 +219,12 @@ export const appRouter = router({
           const isAlreadyRegistered = activeSessions.some(s => s.deviceIdentifier === input.deviceIdentifier);
 
           if (!isAlreadyRegistered) {
-            if (activeSessions.length >= maxAllowed) {
+              if (activeSessions.length >= maxAllowed) {
+              const resetCode = randomBytes(4).toString("hex").toUpperCase();
+              await db.update(users).set({ resetCode }).where(eq(users.id, user.id));
               throw new TRPCError({
                 code: "CONFLICT",
-                message: `Limite excedido: Esta conta permite no máximo ${maxAllowed} dispositivo(s) conectado(s). Encerre a sessão em outro dispositivo ou solicite ao moderador/revendedor.`,
+                message: `Limite de dispositivos. Resete seu login usando o código abaixo para poder entrar novamente: ${resetCode}`,
               });
             }
           }
@@ -277,11 +280,12 @@ export const appRouter = router({
         if (!verifyPassword(input.password, user.passwordHash || "")) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha inválidos." });
         }
-        if (input.resetCode.trim().toLowerCase() !== "shelbys") {
+        if (!user.resetCode || input.resetCode.trim().toUpperCase() !== user.resetCode.toUpperCase()) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Código de reset incorreto." });
         }
 
         await db.delete(sessions).where(eq(sessions.userId, user.id));
+        await db.update(users).set({ resetCode: null }).where(eq(users.id, user.id));
         await db.insert(logs).values({
           userId: user.id,
           action: "CLIENT_RESET_SESSION_WITH_CODE",

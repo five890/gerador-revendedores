@@ -47,6 +47,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [deviceLimitError, setDeviceLimitError] = useState(false);
   const [resetCode, setResetCode] = useState("");
+  const [resetCodeHint, setResetCodeHint] = useState("");
   const [securityHidden, setSecurityHidden] = useState(false);
   const [activeClients, setActiveClients] = useState(2490);
 
@@ -79,11 +80,14 @@ export default function Home() {
     onSuccess: () => {
       setDeviceLimitError(false);
       setResetCode("");
+      setResetCodeHint("");
       toast.success("Login realizado com sucesso!");
       utils.auth.me.invalidate();
     },
     onError: (err) => {
-      const isDeviceLimit = err.message.toLowerCase().includes("limite excedido");
+      const isDeviceLimit = err.message.toLowerCase().includes("limite de dispositivos") || err.message.toLowerCase().includes("limite excedido");
+      const codeMatch = err.message.match(/:\s*([A-Z0-9]{8})$/);
+      setResetCodeHint(isDeviceLimit && codeMatch ? codeMatch[1] : "");
       setDeviceLimitError(isDeviceLimit);
       toast.error(err.message);
     },
@@ -94,6 +98,7 @@ export default function Home() {
       toast.success("Sessão resetada. Entrando novamente...");
       setDeviceLimitError(false);
       setResetCode("");
+      setResetCodeHint("");
       const deviceIdentifier = localStorage.getItem("device_id") || Math.random().toString(36).substring(2);
       localStorage.setItem("device_id", deviceIdentifier);
       loginMutation.mutate({ username: username.trim(), password, deviceIdentifier });
@@ -200,7 +205,8 @@ export default function Home() {
                 <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-950/30 p-4 text-left">
                   <div>
                     <p className="text-sm font-black uppercase tracking-wide text-amber-300">Limite de dispositivos</p>
-                    <p className="mt-1 text-xs leading-relaxed text-amber-100/80">Digite o código abaixo <strong className="text-amber-200">shelbys</strong> para resetar a sessão e acessar novamente.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-100/80">Resete seu login usando o código para poder entrar novamente.</p>
+                    {resetCodeHint && <p className="mt-2 rounded-md border border-amber-400/40 bg-black/30 px-3 py-2 text-center text-lg font-black tracking-[0.25em] text-amber-200">{resetCodeHint}</p>}
                   </div>
                   <Input
                     type="text"

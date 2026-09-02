@@ -220,7 +220,7 @@ export const appRouter = router({
 
           if (!isAlreadyRegistered) {
               if (activeSessions.length >= maxAllowed) {
-              const resetCode = randomBytes(4).toString("hex").toUpperCase();
+              const resetCode = randomBytes(3).toString("hex").slice(0, 4).toUpperCase();
               await db.update(users).set({ resetCode }).where(eq(users.id, user.id));
               throw new TRPCError({
                 code: "CONFLICT",

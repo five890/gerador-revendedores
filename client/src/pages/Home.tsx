@@ -86,7 +86,7 @@ export default function Home() {
     },
     onError: (err) => {
       const isDeviceLimit = err.message.toLowerCase().includes("limite de dispositivos") || err.message.toLowerCase().includes("limite excedido");
-      const codeMatch = err.message.match(/:\s*([A-Z0-9]{8})$/);
+      const codeMatch = err.message.match(/:\s*([A-Z0-9]{4})$/);
       setResetCodeHint(isDeviceLimit && codeMatch ? codeMatch[1] : "");
       setDeviceLimitError(isDeviceLimit);
       toast.error(err.message);
@@ -206,7 +206,7 @@ export default function Home() {
                   <div>
                     <p className="text-sm font-black uppercase tracking-wide text-amber-300">Limite de dispositivos</p>
                     <p className="mt-1 text-xs leading-relaxed text-amber-100/80">Resete seu login usando o código para poder entrar novamente.</p>
-                    {resetCodeHint && <p className="mt-2 rounded-md border border-amber-400/40 bg-black/30 px-3 py-2 text-center text-lg font-black tracking-[0.25em] text-amber-200">{resetCodeHint}</p>}
+                    {resetCodeHint && <p className="mt-2 rounded-md border border-amber-400/40 bg-black/30 px-3 py-2 text-center text-lg font-black tracking-[0.15em] text-amber-200">{resetCodeHint}</p>}
                   </div>
                   <Input
                     type="text"

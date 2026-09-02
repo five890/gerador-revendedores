@@ -328,8 +328,12 @@ function ModeratorDashboard() {
   const [modClientMaxDevices, setModClientMaxDevices] = useState(1);
   const [keysRevealed, setKeysRevealed] = useState(false);
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
+  const [modBulkQuantity, setModBulkQuantity] = useState(1);
+  const [modBulkCredentials, setModBulkCredentials] = useState<Array<{ username: string; password: string }>>([]);
+  const [modBulkGenerating, setModBulkGenerating] = useState(false);
   const [modRenewingClient, setModRenewingClient] = useState<{ id: number; username: string } | null>(null);
   const [modClientSearch, setModClientSearch] = useState("");
+  const [modLoginFilter, setModLoginFilter] = useState<"all" | "logged" | "never">("all");
   const [keyAuditType, setKeyAuditType] = useState<"all" | "basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("all");
   const [keyAuditSearch, setKeyAuditSearch] = useState("");
   const [keyAuditFrom, setKeyAuditFrom] = useState("");
@@ -356,6 +360,40 @@ function ModeratorDashboard() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const handleModeratorBulkGenerate = async () => {
+    const quantity = Number(modBulkQuantity);
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      toast.error("Informe uma quantidade inteira maior que zero.");
+      return;
+    }
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const generatedUsernames = new Set<string>();
+    const results: Array<{ username: string; password: string }> = [];
+    setModBulkGenerating(true);
+    setModBulkCredentials([]);
+    try {
+      for (let index = 0; index < quantity; index += 1) {
+        let username = "";
+        do {
+          username = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join("");
+        } while (generatedUsernames.has(username));
+        generatedUsernames.add(username);
+        const password = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+        const result = await modCreateClientMutation.mutateAsync({ username, password, type: modClientType as any, maxDevices: modClientMaxDevices });
+        results.push({ username: result.createdUsername, password: result.createdPassword });
+      }
+      setModBulkCredentials(results);
+      toast.success(`${results.length} login(s) gerado(s) com sucesso!`);
+      refetchClients();
+    } catch (error: any) {
+      toast.error(error?.message || "Não foi possível concluir a geração em lote.");
+      setModBulkCredentials(results);
+      refetchClients();
+    } finally {
+      setModBulkGenerating(false);
+    }
+  };
 
   const modRenewClientMutation = trpc.reseller.renewClient.useMutation({
     onSuccess: (res) => {
@@ -1002,14 +1040,37 @@ function ModeratorDashboard() {
                 </Button>
               </div>
             </CardContent>
+                    </Card>
+          <Card className="bg-[#141414] border-lime-800 text-white">
+            <CardHeader><CardTitle className="text-white">Gerar vários logins — Moderador</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-neutral-400">Informe a quantidade desejada. Cada login terá usuário com 4 letras, senha com 8 números e o link do site.</p>
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="text-xs text-white font-semibold block mb-1">Quantidade</label>
+                  <Input type="number" min={1} step={1} className="w-32 bg-[#222] border-neutral-700 text-white" value={modBulkQuantity} onChange={(e) => setModBulkQuantity(Number(e.target.value))} placeholder="Quantidade" />
+                </div>
+                <Button className="bg-lime-600 hover:bg-lime-500 text-black font-bold" onClick={handleModeratorBulkGenerate} disabled={modBulkGenerating || modCreateClientMutation.isPending}>
+                  {modBulkGenerating ? "Gerando..." : "Gerar logins"}
+                </Button>
+              </div>
+              {modBulkCredentials.length > 0 && <div className="space-y-2 rounded border border-neutral-700 bg-black/30 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-bold text-lime-300">Logins gerados</p><Button size="sm" variant="outline" className="border-lime-700 text-lime-300" onClick={() => { navigator.clipboard.writeText(modBulkCredentials.map((credential) => `Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`).join("\n\n")); toast.success("Todos os logins foram copiados!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar todos</Button></div>
+                <div className="max-h-72 overflow-y-auto space-y-2">{modBulkCredentials.map((credential) => <div key={`${credential.username}-${credential.password}`} className="rounded border border-neutral-800 bg-[#1b1b1b] p-2 font-mono text-xs"><div>Usuário: <strong className="text-white">{credential.username}</strong></div><div>Senha: <strong className="text-white">{credential.password}</strong></div><div>Link: <span className="text-blue-400">https://shelbys-production.up.railway.app</span></div><Button size="sm" variant="outline" className="mt-2 border-neutral-700 text-neutral-200" onClick={() => { navigator.clipboard.writeText(`Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`); toast.success("Login copiado!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar</Button></div>)}</div>
+              </div>}
+            </CardContent>
           </Card>
-
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-white">Todos os Clientes do Sistema</CardTitle>
-              <div className="w-72">
+              <div className="flex flex-wrap gap-2 items-center">
+                <select className="bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modLoginFilter} onChange={(e) => setModLoginFilter(e.target.value as "all" | "logged" | "never")}>
+                  <option value="all">Todos os logins</option>
+                  <option value="logged">Já entrou</option>
+                  <option value="never">Ainda não entrou</option>
+                </select>
                 <Input
-                  className="bg-[#222] border-neutral-700 text-white text-sm"
+                  className="w-56 bg-[#222] border-neutral-700 text-white text-sm"
                   placeholder="Pesquisar login do cliente..."
                   value={modClientSearch}
                   onChange={(e) => setModClientSearch(e.target.value)}
@@ -1025,12 +1086,14 @@ function ModeratorDashboard() {
                     <TableHead className="text-white font-bold">Key Atribuída</TableHead>
                     <TableHead className="text-white font-bold">Criado por</TableHead>
                     <TableHead className="text-white font-bold">Status</TableHead>
+                    <TableHead className="text-white font-bold">Acesso</TableHead>
                     <TableHead className="text-white font-bold text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clients
                     ?.filter((c) => c.username.toLowerCase().includes(modClientSearch.toLowerCase()))
+                    ?.filter((c) => modLoginFilter === "all" || (modLoginFilter === "logged" ? c.hasLoggedIn : !c.hasLoggedIn))
                     ?.map((c) => (
                     <TableRow key={c.id} className="border-neutral-800">
                       <TableCell className="font-mono text-white">#{c.id}</TableCell>
@@ -1053,6 +1116,7 @@ function ModeratorDashboard() {
                           {c.isActive ? "Ativo" : "Bloqueado"}
                         </Badge>
                       </TableCell>
+                      <TableCell>{c.hasLoggedIn ? <Badge className="bg-emerald-950 text-emerald-400 border-emerald-800">Já entrou{c.lastLoginAt ? ` · ${new Date(c.lastLoginAt).toLocaleString()}` : ""}</Badge> : <Badge className="bg-amber-950 text-amber-300 border-amber-800">Ainda não entrou</Badge>}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => { setModRenewType((c.keyType === "ios_basic" || c.keyType === "ios_advanced" ? "ios" : c.keyType || "advanced") as any); setModRenewingClient({ id: c.id, username: c.username }); }}>
                           Renovar
@@ -1625,9 +1689,6 @@ function ResellerDashboard() {
   const [renewType, setRenewType] = useState<any>("advanced");
   const [iosClientSearch, setIosClientSearch] = useState("");
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
-  const [bulkQuantity, setBulkQuantity] = useState(1);
-  const [bulkCredentials, setBulkCredentials] = useState<Array<{ username: string; password: string }>>([]);
-  const [bulkGenerating, setBulkGenerating] = useState(false);
   const allResellerProducts = [...ACTIVE_PRODUCT_TYPES];
   const enabledResellerProducts = data?.enabledProducts || allResellerProducts;
   const canUseProduct = (type: string) => enabledResellerProducts.includes(type);
@@ -1722,40 +1783,6 @@ function ResellerDashboard() {
     },
     onError: (e: any) => toast.error(e.message),
   });
-
-  const handleBulkGenerate = async () => {
-    const quantity = Number(bulkQuantity);
-    if (!Number.isSafeInteger(quantity) || quantity < 1) {
-      toast.error("Informe uma quantidade inteira maior que zero.");
-      return;
-    }
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const generatedUsernames = new Set<string>();
-    const results: Array<{ username: string; password: string }> = [];
-    setBulkGenerating(true);
-    setBulkCredentials([]);
-    try {
-      for (let index = 0; index < quantity; index += 1) {
-        let username = "";
-        do {
-          username = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join("");
-        } while (generatedUsernames.has(username));
-        generatedUsernames.add(username);
-        const password = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
-        const result = await createClientMutation.mutateAsync({ username, password, type: newClientType as any, maxDevices: newClientMaxDevices });
-        results.push({ username: result.createdUsername, password: result.createdPassword });
-      }
-      setBulkCredentials(results);
-      toast.success(`${results.length} login(s) gerado(s) com sucesso!`);
-      refetch();
-    } catch (error: any) {
-      toast.error(error?.message || "Não foi possível concluir a geração em lote.");
-      setBulkCredentials(results);
-      refetch();
-    } finally {
-      setBulkGenerating(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -1853,26 +1880,6 @@ function ResellerDashboard() {
                 <UserPlus className="w-4 h-4 mr-1" /> Gerar Key ({newClientType})
               </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-[#141414] border-lime-800 text-white">
-        <CardHeader><CardTitle className="text-white">Gerar logins em lote</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-neutral-400">Informe quantos clientes deseja gerar. O sistema cria todos de uma vez enquanto houver créditos e Keys disponíveis, com usuário de 4 letras e senha de 8 números aleatórios.</p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label className="text-xs text-white font-semibold block mb-1">Quantidade</label>
-              <Input type="number" min={1} step={1} className="w-32 bg-[#222] border-neutral-700 text-white" value={bulkQuantity} onChange={(e) => setBulkQuantity(Number(e.target.value))} placeholder="Quantidade" />
-            </div>
-            <Button className="bg-lime-600 hover:bg-lime-500 text-black font-bold" onClick={handleBulkGenerate} disabled={bulkGenerating || createClientMutation.isPending}>
-              {bulkGenerating ? "Gerando..." : "Gerar logins"}
-            </Button>
-          </div>
-          {bulkCredentials.length > 0 && <div className="space-y-2 rounded border border-neutral-700 bg-black/30 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-bold text-lime-300">Logins gerados</p><Button size="sm" variant="outline" className="border-lime-700 text-lime-300" onClick={() => { navigator.clipboard.writeText(bulkCredentials.map((credential) => `Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`).join("\n\n")); toast.success("Todos os logins foram copiados!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar todos</Button></div>
-            <div className="max-h-72 overflow-y-auto space-y-2">{bulkCredentials.map((credential) => <div key={`${credential.username}-${credential.password}`} className="rounded border border-neutral-800 bg-[#1b1b1b] p-2 font-mono text-xs"><div>Usuário: <strong className="text-white">{credential.username}</strong></div><div>Senha: <strong className="text-white">{credential.password}</strong></div><div>Link: <span className="text-blue-400">https://shelbys-production.up.railway.app</span></div><Button size="sm" variant="outline" className="mt-2 border-neutral-700 text-neutral-200" onClick={() => { navigator.clipboard.writeText(`Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`); toast.success("Login copiado!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar</Button></div>)}</div>
-          </div>}
         </CardContent>
       </Card>
 

@@ -794,6 +794,11 @@ export const appRouter = router({
       if (!db) return [];
 
       const clients = await db.select().from(users).where(eq(users.role, "client"));
+      const loginRows = await db.select({ userId: logs.userId, createdAt: logs.createdAt }).from(logs).where(eq(logs.action, "LOGIN")).orderBy(desc(logs.createdAt));
+      const lastLoginByUser = new Map<number, Date>();
+      for (const row of loginRows) {
+        if (row.userId && !lastLoginByUser.has(row.userId)) lastLoginByUser.set(row.userId, new Date(row.createdAt));
+      }
       const result = [];
       for (const c of clients) {
         let keyValue = "Nenhuma";
@@ -823,6 +828,8 @@ export const appRouter = router({
           resellerName,
           expiresAt: c.expiresAt ? new Date(c.expiresAt).getTime() : null,
           usedAt: usedAt ? new Date(usedAt).getTime() : null,
+          hasLoggedIn: lastLoginByUser.has(c.id),
+          lastLoginAt: lastLoginByUser.get(c.id)?.getTime() || null,
         });
       }
       return result;

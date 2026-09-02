@@ -1346,6 +1346,7 @@ export const appRouter = router({
           panel_ios: reseller.creditsPanelIos || 0,
           panel_legitimo: reseller.creditsPanelLegitimo || 0,
           panel_android: reseller.creditsPanelAndroid || 0,
+          proxy_android_clientes: reseller.creditsProxyAndroidClientes || 0,
           ios_ipa: reseller.creditsIosIpa || 0,
         },
         enabledProducts: getEnabledProducts(reseller.enabledProducts),

@@ -8,7 +8,44 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Lock, Unlock, RefreshCcw, Trash2, Power, UserPlus, Copy, Download as DownloadIcon, Edit, LogOut, Shield, Users, KeyRound, FileDown, BookOpen, AlertTriangle, Video } from "lucide-react";
+import {
+  Lock,
+  Unlock,
+  RefreshCcw,
+  Trash2,
+  Power,
+  UserPlus,
+  Copy,
+  Download as DownloadIcon,
+  Edit,
+  LogOut,
+  Shield,
+  Users,
+  KeyRound,
+  FileDown,
+  BookOpen,
+  AlertTriangle,
+  Video,
+  History,
+  PanelTop,
+} from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo"]);
 const ACTIVE_PRODUCT_TYPES = ["advanced", "panel_ios", "panel_android", "proxy_android_clientes", "ios_ipa"] as const;
@@ -32,6 +69,163 @@ function getVideoEmbedUrl(rawUrl: string): { kind: "iframe" | "video"; url: stri
     return null;
   }
   return null;
+}
+
+type ManagementNavItem = {
+  value: string;
+  label: string;
+  group: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
+type ManagementUser = {
+  username: string;
+  role: string;
+  brandName?: string | null;
+  brandColor?: string | null;
+};
+
+type ManagementNavigationContextValue = {
+  activeSection: string;
+  setActiveSection: React.Dispatch<React.SetStateAction<string>>;
+  menuItems: ManagementNavItem[];
+  setMenuItems: React.Dispatch<React.SetStateAction<ManagementNavItem[]>>;
+};
+
+const ManagementNavigationContext = React.createContext<ManagementNavigationContextValue | null>(null);
+
+function useManagementNavigation() {
+  const context = React.useContext(ManagementNavigationContext);
+  if (!context) throw new Error("useManagementNavigation must be used inside ManagementShell.");
+  return context;
+}
+
+const moderatorNavigationItems: ManagementNavItem[] = [
+  { value: "resellers", label: "Revendedores", group: "Operação", icon: Users },
+  { value: "clients", label: "Clientes", group: "Operação", icon: UserPlus },
+  { value: "iosPanel", label: "Painel iOS", group: "Painéis", icon: PanelTop },
+  { value: "androidPanel", label: "Painel Android", group: "Painéis", icon: Shield },
+  { value: "proxyAndroidClientesPanel", label: "Proxy Android Clientes", group: "Painéis", icon: DownloadIcon },
+  { value: "iosIpaPanel", label: "Proxy iOS IPA", group: "Painéis", icon: Lock },
+  { value: "androidKeys", label: "Keys Android", group: "Keys", icon: KeyRound },
+  { value: "proxyAndroidClientesKeys", label: "Keys Proxy Android Clientes", group: "Keys", icon: KeyRound },
+  { value: "iosIpaKeys", label: "Keys iOS IPA", group: "Keys", icon: KeyRound },
+  { value: "keys", label: "Gerenciar Keys", group: "Keys", icon: KeyRound },
+  { value: "bannedKeys", label: "Banidas / Usadas", group: "Keys", icon: Shield },
+  { value: "downloads", label: "Downloads", group: "Conteúdo e auditoria", icon: FileDown },
+  { value: "tutorials", label: "Tutoriais", group: "Conteúdo e auditoria", icon: BookOpen },
+  { value: "logs", label: "Logs", group: "Conteúdo e auditoria", icon: History },
+  { value: "keyAudit", label: "Keys por Revendedor", group: "Conteúdo e auditoria", icon: Users },
+  { value: "announcements", label: "Avisos", group: "Conteúdo e auditoria", icon: AlertTriangle },
+];
+
+const resellerNavigationItems: ManagementNavItem[] = [
+  { value: "clients", label: "Seus Clientes", group: "Operação", icon: Users },
+  { value: "androidPanel", label: "Painel Android", group: "Painéis", icon: Shield },
+  { value: "proxyAndroidClientesPanel", label: "Proxy Android Clientes", group: "Painéis", icon: DownloadIcon },
+  { value: "iosIpaPanel", label: "Proxy iOS IPA", group: "Painéis", icon: Lock },
+  { value: "subresellers", label: "Seus Revendedores", group: "Operação Premium", icon: UserPlus },
+];
+
+function ManagementNavButton({ item }: { item: ManagementNavItem }) {
+  const { activeSection, setActiveSection } = useManagementNavigation();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const Icon = item.icon;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        type="button"
+        isActive={activeSection === item.value}
+        tooltip={item.label}
+        className="text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300"
+        onClick={() => {
+          setActiveSection(item.value);
+          if (isMobile) setOpenMobile(false);
+        }}
+      >
+        <Icon className="h-4 w-4" />
+        <span>{item.label}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+function ManagementShell({ user, securityHidden, onLogout, children }: { user: ManagementUser; securityHidden: boolean; onLogout: () => void; children: React.ReactNode }) {
+  const [activeSection, setActiveSection] = useState(user.role === "moderator" ? "resellers" : "clients");
+  const [menuItems, setMenuItems] = useState<ManagementNavItem[]>(user.role === "moderator" ? moderatorNavigationItems : resellerNavigationItems);
+  const brandColor = user.brandColor || "#dc2626";
+  const groupedItems = menuItems.reduce<Record<string, ManagementNavItem[]>>((groups, item) => {
+    (groups[item.group] ||= []).push(item);
+    return groups;
+  }, {});
+
+  return (
+    <ManagementNavigationContext.Provider value={{ activeSection, setActiveSection, menuItems, setMenuItems }}>
+      <SidebarProvider defaultOpen className="min-h-screen bg-[#0b0b0b] text-white">
+        <Sidebar collapsible="offcanvas" className="border-neutral-800 bg-[#111111] text-white [&_[data-sidebar=sidebar-inner]]:bg-[#111111]">
+          <SidebarHeader className="border-b border-neutral-800 px-3 py-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-base font-black tracking-[0.12em]" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Navegação do painel</p>
+              </div>
+              <SidebarTrigger className="shrink-0 text-neutral-300 hover:bg-white/10 hover:text-white" />
+            </div>
+          </SidebarHeader>
+          <SidebarContent className="px-2 py-3">
+            {Object.entries(groupedItems).map(([group, items]) => (
+              <SidebarGroup key={group} className="p-1">
+                <SidebarGroupLabel className="px-2 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 group-data-[collapsible=icon]:hidden">{group}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {items.map((item) => <ManagementNavButton key={item.value} item={item} />)}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+          <SidebarSeparator className="bg-neutral-800" />
+          <SidebarFooter className="gap-3 p-3">
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+              <span className="truncate text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300 group-data-[collapsible=icon]:hidden">Painel online</span>
+            </div>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton type="button" className="text-neutral-300 hover:bg-red-950/40 hover:text-red-300" onClick={onLogout}>
+                  <LogOut className="h-4 w-4" />
+                  <span>Sair da conta</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset className="min-w-0 bg-[#0b0b0b]">
+          <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between border-b border-neutral-800 bg-[#111111]/95 px-4 py-3 backdrop-blur sm:px-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <SidebarTrigger className="text-neutral-300 hover:bg-white/10 hover:text-white" />
+              <div className="min-w-0">
+                <p className="truncate text-base font-black tracking-[0.12em] sm:text-xl" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
+                <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Área de {user.role === "moderator" ? "moderador" : "revendedor"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="hidden text-sm text-neutral-300 sm:inline">Olá, <strong className="text-white">{user.username}</strong></span>
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-950/30 px-2 py-1 text-[10px] font-bold uppercase text-emerald-300">Online</span>
+            </div>
+          </header>
+          {securityHidden && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] p-6 text-center">
+              <div><Shield className="mx-auto mb-3 h-10 w-10 text-red-500" /><p className="text-lg font-bold text-white">Conteúdo protegido</p><p className="mt-1 text-sm text-neutral-400">Retorne a esta janela para continuar visualizando o painel.</p></div>
+            </div>
+          )}
+          <main className="w-full p-4 sm:p-8">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </ManagementNavigationContext.Provider>
+  );
 }
 
 export default function Home() {
@@ -240,6 +434,23 @@ export default function Home() {
     );
   }
 
+  if (user.role === "moderator" || user.role === "reseller") {
+    return (
+      <ManagementShell
+        user={{
+          username: user.username,
+          role: user.role,
+          brandName: user.brandName,
+          brandColor: user.brandColor,
+        }}
+        securityHidden={securityHidden}
+        onLogout={() => logoutMutation.mutate()}
+      >
+        {user.role === "moderator" ? <ModeratorDashboard /> : <ResellerDashboard />}
+      </ManagementShell>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-white font-sans flex flex-col">
       <header className="border-b border-neutral-800 bg-[#111] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
@@ -272,6 +483,7 @@ export default function Home() {
 }
 
 function ModeratorDashboard() {
+  const { activeSection, setActiveSection } = useManagementNavigation();
   const { data: stats } = trpc.moderator.dashboardStats.useQuery();
   const { data: resellers, refetch: refetchResellers } = trpc.moderator.listResellers.useQuery();
   const { data: directClientBanner, refetch: refetchDirectClientBanner } = trpc.moderator.getDirectClientBanner.useQuery();
@@ -730,8 +942,8 @@ function ModeratorDashboard() {
         return <Card className="bg-[#141414] border-neutral-800 text-white"><CardContent className="p-4"><div className="flex items-start gap-3"><KeyRound className="w-6 h-6 text-amber-400 mt-0.5 shrink-0" /><div className="w-full"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-black text-lg text-white">Estoque disponível de Keys</p>{lowStock.length > 0 && <Badge className="bg-red-900/70 border-red-600 text-red-100"><AlertTriangle className="w-3 h-3 mr-1" /> {lowStock.length} tipo(s) em estoque baixo</Badge>}</div><p className="text-xs text-neutral-400 mt-1">Quantidade atual de Keys ativas, não usadas e não banidas.</p><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mt-3">{Object.entries(stockLabels).map(([type, label]) => { const count = Number((stats?.stock as any)?.[type] || 0); const isLow = count <= 3; return <div key={type} className={`rounded-md border px-3 py-2 ${isLow ? "border-red-600 bg-red-950/60" : "border-neutral-700 bg-[#202020]"}`}><p className={`text-xs font-bold ${isLow ? "text-red-200" : "text-neutral-300"}`}>{label}</p><p className={`text-lg font-black ${isLow ? "text-red-400" : "text-emerald-400"}`}>{count} Keys disponíveis</p></div>; })}</div>{lowStock.length > 0 && <p className="text-xs font-bold text-red-300 mt-3"><AlertTriangle className="w-3 h-3 inline mr-1" /> Atenção: {lowStockTotal} Keys somadas estão em tipos com estoque de 3 ou menos. Reponha o estoque.</p>}</div></div></CardContent></Card>;
       })()}
 
-      <Tabs defaultValue="resellers" className="space-y-4">
-        <div className="overflow-x-auto pb-2">
+      <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
+        <div className="sr-only">
           <div className="mb-2"><h2 className="text-sm font-black uppercase tracking-wider text-white">Centro de Controle do Moderador</h2><p className="text-xs text-neutral-500">Gerencie usuários, painéis, estoque, conteúdo e auditoria em seções separadas.</p></div>
           <TabsList className="bg-[#141414] border border-neutral-800 p-2 flex flex-wrap items-center gap-1 w-full h-auto">
             <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Operação</span>
@@ -1685,6 +1897,7 @@ function ModeratorDashboard() {
 }
 
 function ResellerDashboard() {
+  const { activeSection, setActiveSection, setMenuItems } = useManagementNavigation();
   const { data, refetch } = trpc.reseller.dashboard.useQuery();
   const { data: subResellers, refetch: refetchSubResellers } = trpc.moderator.listResellers.useQuery(undefined, {
     enabled: !!data?.isPremium
@@ -1708,6 +1921,19 @@ function ResellerDashboard() {
     { value: "panel_android", label: "Painel Android" },
     { value: "ios_ipa", label: "Proxy iOS IPA" },
   ].filter((product) => canUseProduct(product.value));
+  useEffect(() => {
+    const allowedProductTypes = new Set(enabledResellerProducts);
+    const visibleItems = resellerNavigationItems.filter((item) => {
+      if (item.value === "clients") return true;
+      if (item.value === "subresellers") return Boolean(data?.isPremium);
+      if (item.value === "androidPanel") return allowedProductTypes.has("panel_android");
+      if (item.value === "proxyAndroidClientesPanel") return allowedProductTypes.has("proxy_android_clientes");
+      if (item.value === "iosIpaPanel") return allowedProductTypes.has("ios_ipa");
+      return false;
+    });
+    setMenuItems(visibleItems);
+    if (!visibleItems.some((item) => item.value === activeSection)) setActiveSection("clients");
+  }, [activeSection, data?.isPremium, enabledResellerProducts.join(","), setActiveSection, setMenuItems]);
   const normalizeRenewalType = (type: string | null | undefined) => {
     const normalized = type === "ios_basic" || type === "ios_advanced" ? "ios" : type;
     return resellerProductOptions.some((product) => product.value === normalized) ? normalized : (resellerProductOptions[0]?.value || "advanced");
@@ -1821,8 +2047,8 @@ function ResellerDashboard() {
         </Card>
       </div>
 
-      <Tabs defaultValue="clients" className="space-y-4">
-                  <TabsList className="bg-[#141414] border border-neutral-800 p-1">
+      <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
+                  <TabsList className="sr-only">
           <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-white">Seus Clientes</TabsTrigger>
           {canUseProduct("panel_android") && <TabsTrigger value="androidPanel" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-white">Painel Android</TabsTrigger>}
           {canUseProduct("proxy_android_clientes") && <TabsTrigger value="proxyAndroidClientesPanel" className="data-[state=active]:bg-lime-600 data-[state=active]:text-white text-white">Proxy Android Clientes</TabsTrigger>}

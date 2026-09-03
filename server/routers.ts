@@ -1665,7 +1665,20 @@ export const appRouter = router({
     dashboard: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "client") throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
-      if (!db) return { username: ctx.user.username, keyValue: "N/A", downloads: [], brandName: "SHELBY PANEL", discordUrl: "https://discord.gg/YYBZxhhm", brandColor: "#dc2626", bannerUrl: null, bannerVideoUrl: null, renewalCount: 0 };
+      if (!db) return {
+        username: ctx.user.username,
+        keyValue: "N/A",
+        downloads: [],
+        tutorials: [],
+        announcements: [],
+        latestContentUpdate: null,
+        brandName: "SHELBY PANEL",
+        discordUrl: "https://discord.gg/YYBZxhhm",
+        brandColor: "#dc2626",
+        bannerUrl: null,
+        bannerVideoUrl: null,
+        renewalCount: 0,
+      };
 
       const clientRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const client = clientRes[0];
@@ -1725,6 +1738,33 @@ export const appRouter = router({
 
       const filteredDownloads = allDownloads.filter(d => targetTypes.includes(d.type || "advanced"));
       const filteredTutorials = allTutorials.filter(t => targetTypes.includes(t.type || "advanced"));
+      const latestContent = [
+        ...filteredDownloads.map((download) => ({
+          kind: "download" as const,
+          id: download.id,
+          title: download.title,
+          version: download.version,
+          timestamp: download.updatedAt || download.createdAt,
+          fingerprint: `${download.title}:${download.version}:${download.fileUrl}`,
+        })),
+        ...filteredTutorials.map((tutorial) => ({
+          kind: "tutorial" as const,
+          id: tutorial.id,
+          title: tutorial.title,
+          version: null,
+          timestamp: tutorial.updatedAt || tutorial.createdAt,
+          fingerprint: `${tutorial.title}:${tutorial.videoUrl}`,
+        })),
+      ].sort((a, b) => {
+        const timestampDifference = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        return timestampDifference !== 0 ? timestampDifference : b.id - a.id;
+      })[0];
+      const latestContentUpdate = latestContent ? {
+        key: `${latestContent.kind}:${latestContent.id}:${new Date(latestContent.timestamp).getTime()}:${latestContent.fingerprint}`,
+        title: latestContent.title,
+        kind: latestContent.kind,
+        version: latestContent.version,
+      } : null;
       const resolvedTutorials = await Promise.all(filteredTutorials.map(async (tutorial) => ({
         ...tutorial,
         videoUrl: await resolveMediaFireUrl(tutorial.videoUrl),
@@ -1745,6 +1785,7 @@ export const appRouter = router({
         downloads: filteredDownloads,
         tutorials: resolvedTutorials,
         announcements: activeAnnouncements.filter(a => a.productType === "all" || a.productType === keyType),
+        latestContentUpdate,
       };
     }),
   }),

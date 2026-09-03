@@ -69,6 +69,7 @@ export const downloads = mysqlTable("downloads", {
   fileUrl: text("fileUrl").notNull(),
   type: varchar("type", { length: 50 }).default("advanced").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const tutorials = mysqlTable("tutorials", {
@@ -78,6 +79,7 @@ export const tutorials = mysqlTable("tutorials", {
   videoUrl: text("videoUrl").notNull(),
   type: varchar("type", { length: 50 }).default("advanced").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const announcements = mysqlTable("announcements", {

@@ -2071,9 +2071,22 @@ function ClientDashboard() {
   const [renewalNoticeOpen, setRenewalNoticeOpen] = useState(false);
   const [renewalNoticeSeconds, setRenewalNoticeSeconds] = useState(4);
   const [bannerVideoFailed, setBannerVideoFailed] = useState(false);
+  const [contentUpdateOpen, setContentUpdateOpen] = useState(false);
+  const latestContentUpdate = data?.latestContentUpdate;
   useEffect(() => {
     setBannerVideoFailed(false);
   }, [data?.bannerVideoUrl]);
+  useEffect(() => {
+    if (!data?.username || !latestContentUpdate?.key) return;
+    const storageKey = `shelby-content-update-seen:${data.username}`;
+    try {
+      if (window.localStorage.getItem(storageKey) === latestContentUpdate.key) return;
+      window.localStorage.setItem(storageKey, latestContentUpdate.key);
+    } catch {
+      // Se o armazenamento do navegador estiver indisponível, o estado da sessão ainda evita repetição.
+    }
+    setContentUpdateOpen(true);
+  }, [data?.username, latestContentUpdate?.key]);
   useEffect(() => {
     if (!data || Number(data.renewalCount || 0) <= 2) {
       setRenewalNoticeOpen(false);
@@ -2133,6 +2146,59 @@ function ClientDashboard() {
   }, [data?.expiresAt]);
 
     const isExpired = data?.expiresAt ? new Date().getTime() > new Date(data.expiresAt).getTime() : false;
+  const contentUpdateNotice = latestContentUpdate ? (
+    <Dialog open={contentUpdateOpen} onOpenChange={setContentUpdateOpen}>
+      <DialogContent className="z-[120] max-w-2xl border-red-600/60 bg-[#111111]/[0.99] p-0 text-white shadow-2xl shadow-red-950/50">
+        <div className="relative overflow-hidden rounded-lg">
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-red-600" style={{ backgroundColor: brandColor }} />
+          <div className="absolute -right-20 -top-20 h-48 w-48 rounded-full bg-red-600/10 blur-3xl" style={{ backgroundColor: `${brandColor}22` }} />
+          <DialogHeader className="relative space-y-4 p-8 pb-5 text-center sm:text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-red-500/30 bg-red-950/50 shadow-lg shadow-red-950/30" style={{ borderColor: `${brandColor}66`, backgroundColor: `${brandColor}22` }}>
+              {latestContentUpdate.kind === "download" ? <DownloadIcon className="h-10 w-10" style={{ color: brandColor }} /> : <BookOpen className="h-10 w-10" style={{ color: brandColor }} />}
+            </div>
+            <DialogTitle className="text-center text-3xl font-black uppercase tracking-[0.08em] text-white sm:text-4xl" style={{ color: brandColor }}>
+              NOVA ATUALIZAÇÃO DISPONÍVEL
+            </DialogTitle>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-neutral-400">
+              Confira o novo conteúdo antes de continuar
+            </p>
+          </DialogHeader>
+          <div className="relative space-y-5 px-8 pb-8 text-center">
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5 text-left">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: brandColor }}>
+                {latestContentUpdate.kind === "download" ? "Novo download" : "Novo tutorial"}
+              </p>
+              <p className="mt-2 text-xl font-black text-white">{latestContentUpdate.title}</p>
+              {latestContentUpdate.version && <p className="mt-1 text-sm text-neutral-400">Versão {latestContentUpdate.version}</p>}
+            </div>
+            <p className="text-sm leading-6 text-neutral-300">
+              Uma atualização foi publicada para o seu produto. Acesse os downloads e os tutoriais para baixar o conteúdo correto e conferir as instruções de uso.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                className="flex-1 font-black text-white shadow-lg"
+                style={{ backgroundColor: brandColor }}
+                onClick={() => {
+                  setContentUpdateOpen(false);
+                  window.setTimeout(() => {
+                    const target = document.getElementById(latestContentUpdate.kind === "download" ? "downloads-section" : "tutorials-section");
+                    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 120);
+                }}
+              >
+                {latestContentUpdate.kind === "download" ? <DownloadIcon className="mr-2 h-4 w-4" /> : <BookOpen className="mr-2 h-4 w-4" />}
+                Ver atualização
+              </Button>
+              <Button type="button" variant="outline" className="flex-1 border-neutral-700 bg-transparent font-bold text-white hover:bg-neutral-800" onClick={() => setContentUpdateOpen(false)}>
+                Continuar no painel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  ) : null;
   const renewalNotice = (
     <Dialog
       open={renewalNoticeOpen}
@@ -2225,6 +2291,7 @@ function ClientDashboard() {
           </a>
         </div>
         </div>
+        {contentUpdateNotice}
         {renewalNotice}
       </>
     );
@@ -2326,7 +2393,7 @@ function ClientDashboard() {
 
 
       {/* DOWNLOADS */}
-      <Card className="bg-[#141414] border-neutral-800 text-white">
+      <Card id="downloads-section" className="bg-[#141414] border-neutral-800 text-white">
         <CardHeader><CardTitle className="text-white flex items-center gap-2"><FileDown className="w-5 h-5 text-red-600" /> Downloads Disponíveis</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -2355,7 +2422,7 @@ function ClientDashboard() {
       </Card>
 
       {/* TUTORIAIS */}
-      <Card className="bg-[#141414] border-neutral-800 text-white">
+      <Card id="tutorials-section" className="bg-[#141414] border-neutral-800 text-white">
         <CardHeader><CardTitle className="text-white flex items-center gap-2"><BookOpen className="w-5 h-5 text-red-600" /> Tutoriais e Vídeos Explicativos</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -2379,6 +2446,7 @@ function ClientDashboard() {
           </div>
         </CardContent>
       </Card>
+      {contentUpdateNotice}
       {renewalNotice}
     </div>
   </>

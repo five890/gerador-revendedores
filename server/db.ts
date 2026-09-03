@@ -88,7 +88,9 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE \`keys\` ADD COLUMN isBanned BOOLEAN DEFAULT FALSE",
       "ALTER TABLE \`keys\` ADD COLUMN createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
       "ALTER TABLE downloads ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
+      "ALTER TABLE downloads ADD COLUMN updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
       "ALTER TABLE tutorials ADD COLUMN type VARCHAR(32) DEFAULT 'advanced'",
+      "ALTER TABLE tutorials ADD COLUMN updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
       "ALTER TABLE announcements ADD COLUMN productType VARCHAR(50) DEFAULT 'all'",
       "ALTER TABLE announcements ADD COLUMN durationSeconds INT DEFAULT 5",
       "ALTER TABLE announcements ADD COLUMN isActive BOOLEAN DEFAULT TRUE",
@@ -139,7 +141,8 @@ async function ensureTables(dbUrl: string) {
         version VARCHAR(50) NOT NULL,
         fileUrl TEXT NOT NULL,
         type VARCHAR(32) DEFAULT 'basic' NOT NULL,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
       )
     `);
     await connection.query(`
@@ -149,7 +152,8 @@ async function ensureTables(dbUrl: string) {
         description TEXT,
         videoUrl TEXT NOT NULL,
         type VARCHAR(32) DEFAULT 'basic' NOT NULL,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
       )
     `);
     await connection.query(`

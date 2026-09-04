@@ -2160,11 +2160,7 @@ function ResellerDashboard() {
             <div>
               <label className="text-xs text-white font-semibold block mb-1">Tipo de Gerador</label>
               <select className="w-full bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={newClientType} onChange={(e: any) => setNewClientType(e.target.value)}>
-                <option value="advanced">Android Advanced</option>
-                <option value="panel_ios">Painel iOS</option>
-                <option value="panel_android">Painel Android</option>
-                <option value="proxy_android_clientes">Proxy Android Clientes</option>
-                <option value="ios_ipa">Proxy iOS IPA</option>
+                {resellerProductOptions.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}
               </select>
             </div>
             <div>

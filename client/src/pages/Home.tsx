@@ -303,6 +303,19 @@ export default function Home() {
     onError: (err) => toast.error(err.message),
   });
 
+  useEffect(() => {
+    if (user || authLoading) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem("saved_store_login") || "null");
+      if (!saved?.username || !saved?.password) return;
+      const deviceIdentifier = localStorage.getItem("device_id") || Math.random().toString(36).substring(2);
+      localStorage.setItem("device_id", deviceIdentifier);
+      setUsername(saved.username);
+      setPassword(saved.password);
+      loginMutation.mutate({ username: saved.username, password: saved.password, deviceIdentifier });
+    } catch { localStorage.removeItem("saved_store_login"); }
+  }, [user, authLoading]);
+
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       toast.success("Sessão encerrada.");

@@ -416,6 +416,15 @@ export const appRouter = router({
       if (!transactionData?.qr_code || !transactionData?.qr_code_base64) throw new TRPCError({ code: "BAD_GATEWAY", message: "O Mercado Pago não retornou os dados do Pix." });
       return { paymentId: String(payment.id), qrCode: transactionData.qr_code, qrCodeBase64: transactionData.qr_code_base64, status: payment.status };
     }),
+    paymentStatus: publicProcedure.input(z.object({ paymentId: z.string().min(1) })).query(async ({ input }) => {
+      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const rows = await db.select().from(storeOrders).where(eq(storeOrders.paymentId, input.paymentId)).limit(1);
+      if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado." });
+      const order = rows[0];
+      if (order.status !== "approved") return { status: order.status, approved: false, credentials: null };
+      const credentials = revealCredentials(order.credentialPayload);
+      return { status: order.status, approved: true, credentials };
+    }),
     listAdminProducts: protectedProcedure.query(async ({ ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); return db ? db.select().from(storeProducts).orderBy(desc(storeProducts.id)) : []; }),
     salesDashboard: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });

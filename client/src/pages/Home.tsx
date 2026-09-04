@@ -141,7 +141,7 @@ function ManagementNavButton({ item }: { item: ManagementNavItem }) {
         type="button"
         isActive={activeSection === item.value}
         tooltip={item.label}
-        className="text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300"
+        className="h-9 w-full text-left text-xs text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300"
         onClick={() => {
           setActiveSection(item.value);
           if (isMobile) setOpenMobile(false);
@@ -166,8 +166,8 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
   return (
     <ManagementNavigationContext.Provider value={{ activeSection, setActiveSection, menuItems, setMenuItems }}>
       <SidebarProvider defaultOpen className="min-h-screen bg-[#0b0b0b] text-white">
-        <Sidebar collapsible="offcanvas" className="border-neutral-800 bg-[#111111] text-white [&_[data-sidebar=sidebar-inner]]:bg-[#111111]">
-          <SidebarHeader className="border-b border-neutral-800 px-3 py-4">
+        <Sidebar collapsible="offcanvas" className="z-[60] border-neutral-800 bg-[#111111] text-white [&_[data-sidebar=sidebar-inner]]:bg-[#111111] [&_[data-sidebar=sidebar-inner]]:shadow-2xl">
+          <SidebarHeader className="shrink-0 border-b border-neutral-800 bg-[#111111] px-3 py-4">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-base font-black tracking-[0.12em]" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
@@ -176,9 +176,9 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
               <SidebarTrigger className="shrink-0 text-neutral-300 hover:bg-white/10 hover:text-white" />
             </div>
           </SidebarHeader>
-          <SidebarContent className="px-2 py-3">
+          <SidebarContent className="min-h-0 overflow-y-auto px-2 py-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700">
             {Object.entries(groupedItems).map(([group, items]) => (
-              <SidebarGroup key={group} className="p-1">
+              <SidebarGroup key={group} className="mb-2 p-1">
                 <SidebarGroupLabel className="px-2 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 group-data-[collapsible=icon]:hidden">{group}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
@@ -189,7 +189,7 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
             ))}
           </SidebarContent>
           <SidebarSeparator className="bg-neutral-800" />
-          <SidebarFooter className="gap-3 p-3">
+          <SidebarFooter className="shrink-0 gap-3 border-t border-neutral-800 bg-[#111111] p-3">
             <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
               <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
               <span className="truncate text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300 group-data-[collapsible=icon]:hidden">Painel online</span>
@@ -205,7 +205,7 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="min-w-0 bg-[#0b0b0b]">
-          <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between border-b border-neutral-800 bg-[#111111]/95 px-4 py-3 backdrop-blur sm:px-6">
+          <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between border-b border-neutral-800 bg-[#111111]/95 px-3 py-3 backdrop-blur sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <SidebarTrigger className="text-neutral-300 hover:bg-white/10 hover:text-white" />
               <div className="min-w-0">
@@ -223,7 +223,7 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
               <div><Shield className="mx-auto mb-3 h-10 w-10 text-red-500" /><p className="text-lg font-bold text-white">Conteúdo protegido</p><p className="mt-1 text-sm text-neutral-400">Retorne a esta janela para continuar visualizando o painel.</p></div>
             </div>
           )}
-          <main className="w-full p-4 sm:p-8">
+          <main className="w-full overflow-x-hidden p-3 sm:p-8">
             <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>
         </SidebarInset>

@@ -398,8 +398,10 @@ export const appRouter = router({
       if (!token) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O pagamento ainda não foi configurado pelo administrador." });
       const reference = `store_${randomBytes(12).toString("hex")}`;
       await db.insert(storeOrders).values({ externalReference: reference, productId: input.productId, username: input.username, credentialPayload: protectCredentials({ username: input.username, password: input.password }) });
-      const origin = (process.env.PUBLIC_APP_URL || `${ctx.req.protocol}://${ctx.req.get("host")}`).replace(/\/$/, "");
-      if (!/^https:\/\//i.test(origin)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configure PUBLIC_APP_URL com a URL HTTPS pública do site antes de vender." });
+      const forwardedHost = ctx.req.get("x-forwarded-host") || ctx.req.get("host");
+      const forwardedProto = ctx.req.get("x-forwarded-proto") || "https";
+      const origin = (process.env.PUBLIC_APP_URL || `${forwardedProto}://${forwardedHost}`).replace(/\/$/, "");
+      if (!/^https:\/\//i.test(origin) || !forwardedHost) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O site precisa estar publicado com uma URL HTTPS pública para aceitar pagamentos." });
       const response = await fetch("https://api.mercadopago.com/checkout/preferences", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ id: String(productRows[0].id), title: productRows[0].name, description: productRows[0].description, quantity: 1, currency_id: "BRL", unit_price: Number(productRows[0].price) }], external_reference: reference, notification_url: `${origin}/api/mercadopago/webhook`, back_urls: { success: `${origin}/?payment=success`, failure: `${origin}/?payment=failure`, pending: `${origin}/?payment=pending` }, auto_return: "approved" }) });
       if (!response.ok) {
         let details = "";

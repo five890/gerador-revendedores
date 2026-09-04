@@ -420,12 +420,19 @@ export const appRouter = router({
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const rows = await db.select().from(storeOrders).where(eq(storeOrders.paymentId, input.paymentId)).limit(1);
       if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado." });
-      try { await processMercadoPagoNotification(input.paymentId); } catch (error) { console.error("Payment status check error:", error); }
+      const settings = await db.select().from(storeSettings).limit(1);
+      const token = settings[0]?.mercadoPagoToken || process.env.MERCADOPAGO_ACCESS_TOKEN;
+      if (!token) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Mercado Pago não configurado." });
+      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(input.paymentId)}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!mpResponse.ok) throw new TRPCError({ code: "BAD_GATEWAY", message: `Não foi possível consultar o Mercado Pago (HTTP ${mpResponse.status}).` });
+      const payment: any = await mpResponse.json();
+      let processingError = "";
+      if (payment.status === "approved") { try { await processMercadoPagoNotification(input.paymentId); } catch (error: any) { processingError = error?.message || "Não foi possível liberar o produto."; } }
       const refreshedRows = await db.select().from(storeOrders).where(eq(storeOrders.paymentId, input.paymentId)).limit(1);
       const order = refreshedRows[0] || rows[0];
-      if (order.status !== "approved") return { status: order.status, approved: false, credentials: null };
+      if (order.status !== "approved") return { status: order.status, mercadoPagoStatus: payment.status, approved: false, credentials: null, message: processingError || (payment.status === "approved" ? "Pagamento aprovado. Aguardando uma Key disponível no estoque." : "Pagamento ainda não aprovado.") };
       const credentials = revealCredentials(order.credentialPayload);
-      return { status: order.status, approved: true, credentials };
+      return { status: order.status, mercadoPagoStatus: payment.status, approved: true, credentials, message: "Pagamento aprovado." };
     }),
     listAdminProducts: protectedProcedure.query(async ({ ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); return db ? db.select().from(storeProducts).orderBy(desc(storeProducts.id)) : []; }),
     salesDashboard: protectedProcedure.query(async ({ ctx }) => {

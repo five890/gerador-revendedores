@@ -418,6 +418,9 @@ export default function Home() {
               <Link href="/loja" className="flex h-11 w-full items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-950/30 text-sm font-black text-emerald-300 transition hover:bg-emerald-900/50 hover:text-white">
                 Quero comprar um produto
               </Link>
+              <Link href="/seja-revendedor" className="flex h-11 w-full items-center justify-center rounded-md border border-amber-500/40 bg-amber-950/30 text-sm font-black text-amber-300 transition hover:bg-amber-900/50 hover:text-white">
+                Quero ser revendedor
+              </Link>
               {deviceLimitError && (
                 <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-950/30 p-4 text-left">
                   <div>

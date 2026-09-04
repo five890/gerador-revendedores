@@ -79,7 +79,7 @@ export async function processMercadoPagoNotification(paymentId: string) {
     throw new Error(`Estoque esgotado para ${productRows[0].type}`);
   }
   const keyId = keyRows[0]?.id || null;
-  if (keyId) await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: new Date() }).where(eq(keys.id, keyId));
+  if (keyId) await db.update(keys).set({ isUsed: true, isBanned: true, isActive: false, usedAt: new Date() }).where(eq(keys.id, keyId));
   await db.insert(users).values({ openId: credentials.username, role: "client", passwordHash: hashPassword(credentials.password) as any, keyId, enabledProducts: JSON.stringify([productRows[0].type]), isActive: true, maxDevices: 1 });
   const created = await db.select({ id: users.id }).from(users).where(eq(users.openId, credentials.username)).limit(1);
   await db.update(storeOrders).set({ status: "approved", paymentId: String(payment.id), createdUserId: created[0]?.id || null }).where(eq(storeOrders.id, order.id));
@@ -451,7 +451,8 @@ export const appRouter = router({
       const clients = [];
       for (const order of orders) {
         const user = order.createdUserId ? (await db.select().from(users).where(eq(users.id, order.createdUserId)).limit(1))[0] : null;
-        clients.push({ ...order, productName: productMap.get(order.productId)?.name || "Produto removido", productType: productMap.get(order.productId)?.type || "", client: user ? { id: user.id, username: user.openId, isActive: user.isActive, expiresAt: user.expiresAt, createdAt: user.createdAt } : null });
+        const key = user?.keyId ? (await db.select({ keyValue: keys.keyValue, type: keys.type, isUsed: keys.isUsed, isActive: keys.isActive }).from(keys).where(eq(keys.id, user.keyId)).limit(1))[0] : null;
+        clients.push({ ...order, productName: productMap.get(order.productId)?.name || "Produto removido", productType: productMap.get(order.productId)?.type || "", key: key || null, client: user ? { id: user.id, username: user.openId, isActive: user.isActive, expiresAt: user.expiresAt, createdAt: user.createdAt } : null });
       }
       return { stats: { total: orders.length, approved: orders.filter((order) => order.status === "approved").length, pending: orders.filter((order) => ["pending", "out_of_stock"].includes(order.status)).length, revenue: orders.filter((order) => order.status === "approved").reduce((sum, order) => sum + Number(productMap.get(order.productId)?.price || 0), 0) }, clients };
     }),

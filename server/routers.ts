@@ -414,8 +414,9 @@ export const appRouter = router({
       const db = await getDb(); if (!db) return [];
       const products = await db.select().from(storeProducts).where(eq(storeProducts.isActive, true)).orderBy(desc(storeProducts.id));
       const stock = await db.select({ type: keys.type }).from(keys).where(and(eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false)));
-      const available = new Set(stock.map((key) => key.type));
-      return products.map((product) => ({ ...product, stockAvailable: available.has(product.type) }));
+      const stockCount = new Map<string, number>();
+      for (const key of stock) stockCount.set(key.type, (stockCount.get(key.type) || 0) + 1);
+      return products.map((product) => ({ ...product, stockCount: stockCount.get(product.type) || 0, stockAvailable: (stockCount.get(product.type) || 0) > 0 }));
     }),
     createCheckout: publicProcedure.input(z.object({ productId: z.number(), username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/), password: z.string().min(4).max(128), email: z.string().email() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });

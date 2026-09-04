@@ -412,12 +412,17 @@ export default function Home() {
               <Button type="submit" className="h-11 w-full bg-red-600 font-bold text-white shadow-lg shadow-red-950/40 transition-all hover:bg-red-700 hover:shadow-red-900/50" disabled={loginMutation.isPending || resetSessionWithCodeMutation.isPending}>
                 {loginMutation.isPending ? "Entrando..." : "Entrar na Plataforma"}
               </Button>
-              <Link href="/loja" className="flex h-11 w-full items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-950/30 text-sm font-black text-emerald-300 transition hover:bg-emerald-900/50 hover:text-white">
-                Quero comprar um produto
-              </Link>
-              <Link href="/seja-revendedor" className="flex h-11 w-full items-center justify-center rounded-md border border-amber-500/40 bg-amber-950/30 text-sm font-black text-amber-300 transition hover:bg-amber-900/50 hover:text-white">
-                Quero ser revendedor
-              </Link>
+              <div className="mt-2 space-y-2 rounded-xl border border-white/10 bg-black/25 p-3">
+                <p className="text-center text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Ainda não tem acesso?</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Link href="/loja" className="flex min-h-11 items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-3 text-center text-xs font-black text-emerald-300 transition hover:bg-emerald-900/50 hover:text-white">
+                    Comprar um produto
+                  </Link>
+                  <Link href="/seja-revendedor" className="flex min-h-11 items-center justify-center rounded-lg border border-amber-500/40 bg-amber-950/30 px-3 text-center text-xs font-black text-amber-300 transition hover:bg-amber-900/50 hover:text-white">
+                    Quero ser revendedor
+                  </Link>
+                </div>
+              </div>
               {deviceLimitError && (
                 <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-950/30 p-4 text-left">
                   <div>

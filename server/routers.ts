@@ -66,6 +66,11 @@ export async function processMercadoPagoNotification(paymentId: string) {
   const existing = await db.select().from(users).where(eq(users.openId, credentials.username)).limit(1);
   if (existing.length) { await db.update(storeOrders).set({ status: "approved", paymentId: String(payment.id), createdUserId: existing[0].id }).where(eq(storeOrders.id, order.id)); return; }
   const keyRows = await db.select().from(keys).where(and(eq(keys.type, productRows[0].type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+  if (!keyRows.length) {
+    await db.update(storeOrders).set({ status: "out_of_stock", paymentId: String(payment.id) }).where(eq(storeOrders.id, order.id));
+    await db.insert(logs).values({ action: "STORE_ORDER_OUT_OF_STOCK", details: `Pedido ${reference} aprovado, mas sem Key disponível para o tipo ${productRows[0].type}.` });
+    throw new Error(`Estoque esgotado para ${productRows[0].type}`);
+  }
   const keyId = keyRows[0]?.id || null;
   if (keyId) await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: new Date() }).where(eq(keys.id, keyId));
   await db.insert(users).values({ openId: credentials.username, role: "client", passwordHash: hashPassword(credentials.password) as any, keyId, enabledProducts: JSON.stringify([productRows[0].type]), isActive: true, maxDevices: 1 });

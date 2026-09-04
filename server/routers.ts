@@ -416,7 +416,7 @@ export const appRouter = router({
       const stock = await db.select({ type: keys.type }).from(keys).where(and(eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false)));
       const stockCount = new Map<string, number>();
       for (const key of stock) stockCount.set(key.type, (stockCount.get(key.type) || 0) + 1);
-      return products.map((product) => ({ ...product, stockCount: stockCount.get(product.type) || 0, stockAvailable: (stockCount.get(product.type) || 0) > 0 }));
+      return products.map(({ groupLinkUrl: _groupLinkUrl, ...product }) => ({ ...product, stockCount: stockCount.get(product.type) || 0, stockAvailable: (stockCount.get(product.type) || 0) > 0 }));
     }),
     createCheckout: publicProcedure.input(z.object({ productId: z.number(), username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/), password: z.string().min(4).max(128), email: z.string().email() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
@@ -516,7 +516,7 @@ export const appRouter = router({
       }
       return { stats: { total: orders.length, approved: orders.filter((order) => order.status === "approved").length, pending: orders.filter((order) => ["pending", "out_of_stock"].includes(order.status)).length, revenue: orders.filter((order) => order.status === "approved").reduce((sum, order) => sum + Number(productMap.get(order.productId)?.price || 0), 0) }, clients };
     }),
-    saveProduct: protectedProcedure.input(z.object({ id: z.number().optional(), name: z.string().trim().min(2).max(120), type: storeProductTypeSchema, category: z.string().trim().min(2).max(80), description: z.string().trim().min(2), imageUrl: z.string().trim().url().or(z.literal("")), demoType: z.enum(["none", "image", "video"]).default("none"), demoUrl: z.string().trim().url().or(z.literal("")), price: z.number().positive(), isActive: z.boolean().default(true) })).mutation(async ({ input, ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const duplicate = await db.select({ id: storeProducts.id }).from(storeProducts).where(eq(storeProducts.type, input.type)).limit(2); if (duplicate.some((product) => product.id !== input.id)) throw new TRPCError({ code: "CONFLICT", message: "Esse tipo de login já está cadastrado na loja. Edite o produto existente em vez de criar outro." }); const values = { name: input.name, type: input.type, category: input.category, description: input.description, imageUrl: input.imageUrl || null, demoType: input.demoType, demoUrl: input.demoUrl || null, price: input.price.toFixed(2), isActive: input.isActive }; if (input.id) await db.update(storeProducts).set(values).where(eq(storeProducts.id, input.id)); else await db.insert(storeProducts).values(values); return { success: true }; }),
+    saveProduct: protectedProcedure.input(z.object({ id: z.number().optional(), name: z.string().trim().min(2).max(120), type: storeProductTypeSchema, category: z.string().trim().min(2).max(80), description: z.string().trim().min(2), imageUrl: z.string().trim().url().or(z.literal("")), demoType: z.enum(["none", "image", "video"]).default("none"), demoUrl: z.string().trim().url().or(z.literal("")), groupLinkUrl: z.string().trim().url().or(z.literal("")), price: z.number().positive(), isActive: z.boolean().default(true) })).mutation(async ({ input, ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const duplicate = await db.select({ id: storeProducts.id }).from(storeProducts).where(eq(storeProducts.type, input.type)).limit(2); if (duplicate.some((product) => product.id !== input.id)) throw new TRPCError({ code: "CONFLICT", message: "Esse tipo de login já está cadastrado na loja. Edite o produto existente em vez de criar outro." }); const values = { name: input.name, type: input.type, category: input.category, description: input.description, imageUrl: input.imageUrl || null, demoType: input.demoType, demoUrl: input.demoUrl || null, groupLinkUrl: input.groupLinkUrl || null, price: input.price.toFixed(2), isActive: input.isActive }; if (input.id) await db.update(storeProducts).set(values).where(eq(storeProducts.id, input.id)); else await db.insert(storeProducts).values(values); return { success: true }; }),
     deleteProduct: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (db) await db.delete(storeProducts).where(eq(storeProducts.id, input.id)); return { success: true }; }),
     saveSettings: protectedProcedure.input(z.object({ mercadoPagoToken: z.string().trim().min(20) })).mutation(async ({ input, ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const current = await db.select({ id: storeSettings.id }).from(storeSettings).limit(1); if (current.length) await db.update(storeSettings).set({ mercadoPagoToken: input.mercadoPagoToken }).where(eq(storeSettings.id, current[0].id)); else await db.insert(storeSettings).values({ mercadoPagoToken: input.mercadoPagoToken }); return { success: true }; }),
   }),
@@ -1878,10 +1878,15 @@ export const appRouter = router({
         bannerUrl: null,
         bannerVideoUrl: null,
         renewalCount: 0,
+        purchasedGroups: [],
       };
 
       const clientRes = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const client = clientRes[0];
+      const purchasedOrders = await db.select({ productId: storeOrders.productId }).from(storeOrders).where(and(eq(storeOrders.createdUserId, ctx.user.id), eq(storeOrders.status, "approved")));
+      const purchasedProductIds = Array.from(new Set(purchasedOrders.map((order) => order.productId)));
+      const purchasedProducts = purchasedProductIds.length ? await db.select({ id: storeProducts.id, name: storeProducts.name, groupLinkUrl: storeProducts.groupLinkUrl }).from(storeProducts) : [];
+      const purchasedGroups = purchasedProducts.filter((product) => product.groupLinkUrl?.trim()).map((product) => ({ productId: product.id, productName: product.name, url: product.groupLinkUrl!.trim() }));
       let brandName = "SHELBY PANEL";
       let discordUrl = "https://discord.gg/YYBZxhhm";
       let brandColor = "#dc2626";
@@ -1978,6 +1983,7 @@ export const appRouter = router({
         bannerUrl,
         bannerVideoUrl,
         renewalCount,
+        purchasedGroups,
         keyValue,
         keyType,
         keyUsedAt,

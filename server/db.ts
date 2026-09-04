@@ -101,7 +101,8 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE products ADD COLUMN tutorialUrl TEXT",
       "ALTER TABLE products ADD COLUMN type VARCHAR(50) DEFAULT 'advanced'",
       "ALTER TABLE store_products ADD COLUMN demoType VARCHAR(20) DEFAULT 'none'",
-      "ALTER TABLE store_products ADD COLUMN demoUrl TEXT"
+      "ALTER TABLE store_products ADD COLUMN demoUrl TEXT",
+      "ALTER TABLE store_products ADD COLUMN groupLinkUrl TEXT"
     ];
     for (const aq of alterQueries) {
       try {
@@ -202,6 +203,7 @@ async function ensureTables(dbUrl: string) {
         imageUrl TEXT NULL,
         demoType VARCHAR(20) DEFAULT 'none' NOT NULL,
         demoUrl TEXT NULL,
+        groupLinkUrl TEXT NULL,
         price VARCHAR(32) NOT NULL,
         isActive BOOLEAN DEFAULT TRUE NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,

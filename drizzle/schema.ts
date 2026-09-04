@@ -120,6 +120,7 @@ export const storeProducts = mysqlTable("store_products", {
   imageUrl: text("imageUrl"),
   demoType: varchar("demoType", { length: 20 }).default("none").notNull(),
   demoUrl: text("demoUrl"),
+  groupLinkUrl: text("groupLinkUrl"),
   price: varchar("price", { length: 32 }).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

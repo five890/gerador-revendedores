@@ -1526,6 +1526,9 @@ export const appRouter = router({
         let globallyVisibleProducts: Record<string, boolean> = {};
         try { globallyVisibleProducts = resellerStoreSettings[0]?.resellerVisibleProducts ? JSON.parse(resellerStoreSettings[0].resellerVisibleProducts) : {}; } catch {}
         const effectiveEnabledProducts = getEnabledProducts(reseller.enabledProducts).filter((product) => globallyVisibleProducts[product] !== false);
+        let globalCreditProducts: Record<string, boolean> = {};
+        try { globalCreditProducts = resellerStoreSettings[0]?.resellerCreditProducts ? JSON.parse(resellerStoreSettings[0].resellerCreditProducts) : {}; } catch {}
+        const effectiveCreditProducts = ACTIVE_PRODUCT_TYPES.filter((product) => globalCreditProducts[product] !== false);
         return {
           resellerId: reseller.id,
           credits: {
@@ -1539,6 +1542,7 @@ export const appRouter = router({
           ios_ipa: reseller.creditsIosIpa || 0,
         },
         enabledProducts: effectiveEnabledProducts,
+        creditProducts: effectiveCreditProducts,
         isPremium,
         clientsCount: clientsFormatted.length,
         clients: clientsFormatted,

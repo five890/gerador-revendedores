@@ -465,9 +465,9 @@ export const appRouter = router({
     }),
     listResellerPlans: publicProcedure.query(async () => {
       const db = await getDb(); if (!db) return [];
-      let plans = await db.select().from(resellerPlans).where(eq(resellerPlans.isActive, true)).orderBy(resellerPlans.id);
-      if (!plans.length) { await db.insert(resellerPlans).values([{ name: "Revendedor Basic", price: "49.90", initialCredits: 10, isPremium: false, isActive: true }, { name: "Revendedor Premium", price: "99.90", initialCredits: 30, isPremium: true, isActive: true }]); plans = await db.select().from(resellerPlans).where(eq(resellerPlans.isActive, true)).orderBy(resellerPlans.id); }
-      return plans;
+      let plans = await db.select().from(resellerPlans).where(and(eq(resellerPlans.isActive, true), eq(resellerPlans.isPremium, false))).orderBy(resellerPlans.id);
+      if (!plans.length) { await db.insert(resellerPlans).values({ name: "Revendedor", price: "49.90", initialCredits: 10, isPremium: false, isActive: true }); plans = await db.select().from(resellerPlans).where(and(eq(resellerPlans.isActive, true), eq(resellerPlans.isPremium, false))).orderBy(resellerPlans.id); }
+      return plans.map((plan) => ({ ...plan, name: "Revendedor" }));
     }),
     resellerSignupCheckout: publicProcedure.input(z.object({ planId: z.number(), email: z.string().email() })).mutation(async ({ input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });

@@ -118,6 +118,8 @@ export const storeProducts = mysqlTable("store_products", {
   category: varchar("category", { length: 80 }).notNull(),
   description: text("description").notNull(),
   imageUrl: text("imageUrl"),
+  demoType: varchar("demoType", { length: 20 }).default("none").notNull(),
+  demoUrl: text("demoUrl"),
   price: varchar("price", { length: 32 }).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

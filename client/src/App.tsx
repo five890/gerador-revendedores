@@ -12,7 +12,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
-      <Route path={"/loja"} component={import.meta.env.VITE_STORE_ENABLED === "true" ? Store : NotFound} />
+      <Route path={"/loja"} component={Store} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

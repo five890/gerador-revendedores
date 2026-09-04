@@ -243,7 +243,6 @@ export default function Home() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [entryChoice, setEntryChoice] = useState<"choice" | "login">("choice");
   const [deviceLimitError, setDeviceLimitError] = useState(false);
   const [resetCode, setResetCode] = useState("");
   const [resetCodeHint, setResetCodeHint] = useState("");
@@ -314,7 +313,6 @@ export default function Home() {
       localStorage.setItem("device_id", deviceIdentifier);
       setUsername(saved.username);
       setPassword(saved.password);
-      setEntryChoice("login");
       loginMutation.mutate({ username: saved.username, password: saved.password, deviceIdentifier });
     } catch { localStorage.removeItem("saved_store_login"); }
   }, [user, authLoading]);
@@ -348,7 +346,6 @@ export default function Home() {
   }
 
   if (!user) {
-    if (entryChoice === "choice") return <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070707] px-4 py-8 font-sans text-white"><div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(127,29,29,0.35),transparent_55%)]" /><Card className="relative z-10 w-full max-w-md border-white/15 bg-black/70 text-white shadow-2xl backdrop-blur-xl"><CardHeader className="text-center"><p className="text-[10px] font-bold uppercase tracking-[0.24em] text-red-400">SHELBY PANEL</p><CardTitle className="mt-2 text-2xl">Você já é cliente da loja?</CardTitle><p className="text-sm text-neutral-400">Escolha uma opção para continuar.</p></CardHeader><CardContent className="grid gap-3"><Button className="h-12 bg-red-600 font-bold hover:bg-red-700" onClick={() => setEntryChoice("login")}>Sim, entrar com meu login</Button><Link href="/loja" className="flex h-12 items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-950/30 text-sm font-bold text-emerald-300 transition hover:bg-emerald-900/50 hover:text-white">Não, quero adquirir um produto</Link><Link href="/seja-revendedor" className="flex h-12 items-center justify-center rounded-md border border-amber-500/40 bg-amber-950/20 text-sm font-bold text-amber-300 transition hover:bg-amber-900/40 hover:text-white">Quero ser revendedor</Link></CardContent></Card></div>;
     return (
       <div className="relative min-h-screen overflow-hidden bg-[#070707] text-white flex items-center justify-center px-4 py-8 font-sans">
         <div className="absolute inset-0 overflow-hidden" aria-hidden="true">

@@ -596,6 +596,7 @@ function ModeratorDashboard() {
   const [keyAuditSearch, setKeyAuditSearch] = useState("");
   const [keyAuditFrom, setKeyAuditFrom] = useState("");
   const [keyAuditTo, setKeyAuditTo] = useState("");
+  const [resellerPreviewPlans, setResellerPreviewPlans] = useState([{ name: "Revendedor Basic", price: "49,90", credits: 10 }, { name: "Revendedor Premium", price: "99,90", credits: 30 }]);
 
 
   const deleteExpiredKeysMutation = trpc.moderator.deleteExpiredKeys.useMutation({
@@ -1045,6 +1046,7 @@ function ModeratorDashboard() {
 
         {/* REVENDEDORES */}
         <TabsContent value="resellers" className="space-y-4">
+          <Card className="border-amber-700/50 bg-amber-950/20 text-white"><CardHeader><div className="flex flex-wrap items-center justify-between gap-2"><div><CardTitle className="text-white">Prévia: Quero ser revendedor</CardTitle><p className="mt-1 text-xs text-amber-200">Modo desenvolvimento — não aparece para clientes e não processa pagamentos ainda.</p></div><Badge className="border-amber-700 bg-amber-900/40 text-amber-300">DESATIVADO</Badge></div></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 md:grid-cols-2">{resellerPreviewPlans.map((plan, index) => <div key={plan.name} className="rounded-lg border border-neutral-700 bg-[#171717] p-4"><p className="mb-3 font-bold text-white">{plan.name}</p><div className="grid gap-2 sm:grid-cols-2"><Input value={plan.price} onChange={(e) => setResellerPreviewPlans((current) => current.map((item, i) => i === index ? { ...item, price: e.target.value } : item))} placeholder="Preço (R$)" className="border-neutral-700 bg-[#222] text-white" /><Input type="number" min={0} value={plan.credits} onChange={(e) => setResellerPreviewPlans((current) => current.map((item, i) => i === index ? { ...item, credits: Number(e.target.value) } : item))} placeholder="Créditos iniciais" className="border-neutral-700 bg-[#222] text-white" /></div><p className="mt-3 text-xs text-neutral-400">Após a aprovação, a ideia é liberar usuário, senha, créditos iniciais e Discord opcional.</p></div>)}</div><div className="flex flex-wrap gap-2"><Button variant="outline" className="border-amber-700 bg-transparent text-amber-300" onClick={() => toast.success("Prévia atualizada localmente. A publicação está desativada.")}>Salvar ajustes da prévia</Button><Button disabled className="bg-neutral-700 text-neutral-400">Comprar plano (em breve)</Button></div><div className="rounded-md border border-neutral-800 bg-[#101010] p-3 text-xs text-neutral-400"><strong className="text-white">Fluxo planejado:</strong> cliente escolhe um plano, informa usuário, senha e Discord opcional; após o pagamento aprovado, o sistema cria o revendedor, lança os créditos automaticamente e mostra o painel com tabela de créditos. O moderador continuará podendo alterar preços, créditos, produtos, Discord e status na gestão abaixo.</div></CardContent></Card>
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">Criar Novo Revendedor</CardTitle></CardHeader>
             <CardContent>

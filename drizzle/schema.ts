@@ -142,6 +142,7 @@ export const storeSettings = mysqlTable("store_settings", {
   mercadoPagoToken: text("mercadoPagoToken"),
   resellerCreditValues: text("resellerCreditValues"),
   resellerVisibleProducts: text("resellerVisibleProducts"),
+  resellerCreditProducts: text("resellerCreditProducts"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 

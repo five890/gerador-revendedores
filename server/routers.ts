@@ -54,6 +54,18 @@ async function sendApprovedProductEmail(email: string, productName: string, user
   if (!response.ok) throw new Error(`E-mail não enviado (HTTP ${response.status})`);
 }
 
+async function notifyWaitingStock(productType: string, db: Awaited<ReturnType<typeof getDb>>) {
+  if (!db) return;
+  const products = await db.select().from(storeProducts).where(eq(storeProducts.type, productType));
+  const productIds = new Set(products.map((product) => product.id));
+  const waiting = await db.select().from(storeOrders).where(eq(storeOrders.status, "waiting_stock"));
+  for (const order of waiting.filter((item) => productIds.has(item.productId))) {
+    const credentials = revealCredentials(order.credentialPayload);
+    if (credentials.email) { try { await sendApprovedProductEmail(credentials.email, "Estoque reposto", credentials.username, "O produto escolhido já possui estoque disponível. Acesse a loja para concluir a compra."); } catch (error) { console.error("[Store] Falha ao avisar reposição:", error); } }
+    await db.update(storeOrders).set({ status: "stock_notified" }).where(eq(storeOrders.id, order.id));
+  }
+}
+
 export async function processMercadoPagoNotification(paymentId: string) {
   const db = await getDb(); if (!db) throw new Error("Database not available");
   const settings = await db.select().from(storeSettings).limit(1);
@@ -410,7 +422,10 @@ export const appRouter = router({
       const productRows = await db.select().from(storeProducts).where(and(eq(storeProducts.id, input.productId), eq(storeProducts.isActive, true))).limit(1);
       if (!productRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado." });
       const stockRows = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.type, productRows[0].type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).limit(1);
-      if (!stockRows.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Produto sem estoque no momento. Aguarde a reposição para comprar." });
+      if (!stockRows.length) {
+        await db.insert(storeOrders).values({ externalReference: `wait_${randomBytes(12).toString("hex")}`, productId: input.productId, username: input.username, credentialPayload: protectCredentials({ username: input.username, password: input.password, email: input.email }), status: "waiting_stock" });
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Produto sem estoque. Avisaremos no seu e-mail quando houver reposição." });
+      }
       const settings = await db.select().from(storeSettings).limit(1);
       const token = settings[0]?.mercadoPagoToken || process.env.MERCADOPAGO_ACCESS_TOKEN;
       if (!token) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O pagamento ainda não foi configurado pelo administrador." });
@@ -1101,6 +1116,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "CONFLICT", message: `Esta Key já está cadastrada como ${existing[0].type || "outro produto"}.` });
         }
         await db.insert(keys).values({ keyValue, type: input.type, isActive: true, isUsed: false, isBanned: false, usedAt: null });
+        await notifyWaitingStock(input.type, db);
         return { success: true };
       }),
 
@@ -1127,6 +1143,7 @@ export const appRouter = router({
           await db.insert(keys).values({ keyValue: trimmed, type: input.type, isActive: true, isUsed: false, isBanned: false, usedAt: null });
           added++;
         }
+        if (added > 0) await notifyWaitingStock(input.type, db);
         return { success: true, added, skipped, received: normalizedKeys.length };
       }),
 

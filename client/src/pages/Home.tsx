@@ -1988,16 +1988,14 @@ function ResellerDashboard() {
   const enabledResellerProducts = data?.enabledProducts || allResellerProducts;
   const canUseProduct = (type: string) => enabledResellerProducts.includes(type);
   const resellerProductOptions = [
-    { value: "advanced", label: "Android Advanced" },
-    { value: "panel_ios", label: "Painel iOS" },
-    { value: "panel_android", label: "Painel Android" },
-    { value: "ios_ipa", label: "Proxy iOS IPA" },
+    { value: "advanced", label: "Proxy" }, { value: "ios", label: "Proxy iOS" }, { value: "ios_ipa", label: "Proxy iOS IPA" }, { value: "panel_ios", label: "Painel iOS" }, { value: "panel_android", label: "Painel Android" }, { value: "proxy_android_clientes", label: "Proxy Android Clientes" },
   ].filter((product) => canUseProduct(product.value));
   const creditProductOptions = [
     { value: "advanced", label: "Proxy" }, { value: "ios", label: "Proxy iOS" }, { value: "ios_ipa", label: "Proxy iOS IPA" }, { value: "panel_ios", label: "Painel iOS" }, { value: "panel_android", label: "Painel Android" }, { value: "proxy_android_clientes", label: "Proxy Android Clientes" },
   ].filter((product) => (data?.creditProducts || [...ACTIVE_PRODUCT_TYPES]).includes(product.value as ActiveProductType));
   useEffect(() => {
     if (creditProductOptions.length && !creditProductOptions.some((product) => product.value === creditType)) setCreditType(creditProductOptions[0].value);
+    if (resellerProductOptions.length && !resellerProductOptions.some((product) => product.value === newClientType)) setNewClientType(resellerProductOptions[0].value as ActiveProductType);
     const allowedProductTypes = new Set(enabledResellerProducts);
     const visibleItems = resellerNavigationItems.filter((item) => {
       if (item.value === "clients") return true;

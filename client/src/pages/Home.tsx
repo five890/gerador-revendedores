@@ -2658,6 +2658,14 @@ function ClientDashboard() {
               >
                 Entrar no Discord
               </a>
+              <a
+                href="https://wa.me/5515996945451?text=Quero%20suporte%20no%20Shelby%20Panel"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#1ebe5d]"
+              >
+                Quero suporte no WhatsApp
+              </a>
             </div>
           </div>
         </CardContent>

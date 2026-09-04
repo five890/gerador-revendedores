@@ -94,6 +94,8 @@ async function ensureTables(dbUrl: string) {
       "ALTER TABLE announcements ADD COLUMN productType VARCHAR(50) DEFAULT 'all'",
       "ALTER TABLE announcements ADD COLUMN durationSeconds INT DEFAULT 5",
       "ALTER TABLE announcements ADD COLUMN isActive BOOLEAN DEFAULT TRUE",
+      "ALTER TABLE store_settings ADD COLUMN resellerCreditValues TEXT NULL",
+      "ALTER TABLE store_settings ADD COLUMN resellerVisibleProducts TEXT NULL",
       "ALTER TABLE products ADD COLUMN link TEXT",
       "ALTER TABLE products ADD COLUMN tutorialUrl TEXT",
       "ALTER TABLE products ADD COLUMN type VARCHAR(50) DEFAULT 'advanced'"
@@ -219,6 +221,8 @@ async function ensureTables(dbUrl: string) {
       CREATE TABLE IF NOT EXISTS store_settings (
         id INT AUTO_INCREMENT PRIMARY KEY,
         mercadoPagoToken TEXT NULL,
+        resellerCreditValues TEXT NULL,
+        resellerVisibleProducts TEXT NULL,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
       )
     `);

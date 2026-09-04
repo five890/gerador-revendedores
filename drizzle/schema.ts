@@ -140,6 +140,8 @@ export const storeOrders = mysqlTable("store_orders", {
 export const storeSettings = mysqlTable("store_settings", {
   id: int("id").autoincrement().primaryKey(),
   mercadoPagoToken: text("mercadoPagoToken"),
+  resellerCreditValues: text("resellerCreditValues"),
+  resellerVisibleProducts: text("resellerVisibleProducts"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 

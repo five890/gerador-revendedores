@@ -519,6 +519,12 @@ export const appRouter = router({
   }),
 
   moderator: router({
+    getResellerConfig: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) return { creditValues: {}, visibleProducts: {} }; const row = (await db.select().from(storeSettings).limit(1))[0]; let creditValues: Record<string, string> = {}; let visibleProducts: Record<string, boolean> = {}; try { creditValues = row?.resellerCreditValues ? JSON.parse(row.resellerCreditValues) : {}; } catch {} try { visibleProducts = row?.resellerVisibleProducts ? JSON.parse(row.resellerVisibleProducts) : {}; } catch {} return { creditValues, visibleProducts };
+    }),
+    saveResellerConfig: protectedProcedure.input(z.object({ creditValues: z.record(z.string(), z.string()), visibleProducts: z.record(z.string(), z.boolean()) })).mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const current = await db.select({ id: storeSettings.id }).from(storeSettings).limit(1); const values = { resellerCreditValues: JSON.stringify(input.creditValues), resellerVisibleProducts: JSON.stringify(input.visibleProducts) }; if (current.length) await db.update(storeSettings).set(values).where(eq(storeSettings.id, current[0].id)); else await db.insert(storeSettings).values(values); return { success: true };
+    }),
     saveResellerPlan: protectedProcedure.input(z.object({ id: z.number().optional(), name: z.string().trim().min(2).max(120), price: z.number().positive(), initialCredits: z.number().int().min(0), isPremium: z.boolean(), isActive: z.boolean() })).mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const values = { name: input.name, price: input.price.toFixed(2), initialCredits: input.initialCredits, isPremium: input.isPremium, isActive: input.isActive }; if (input.id) await db.update(resellerPlans).set(values).where(eq(resellerPlans.id, input.id)); else await db.insert(resellerPlans).values(values); return { success: true };
     }),

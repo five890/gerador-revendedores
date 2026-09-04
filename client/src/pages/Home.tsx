@@ -1637,8 +1637,8 @@ function ModeratorDashboard() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div><CardTitle className="text-white">Keys - Painel iOS</CardTitle><p className="text-xs text-neutral-400 mt-1">Controle separado das Keys disponíveis e já usadas pelo Painel iOS.</p></div>
               <Button size="sm" className="bg-blue-800 hover:bg-blue-700 text-white" onClick={() => {
-                const available = (keysList || []).filter(k => k.type === "panel_ios" && !k.isUsed && !k.isBanned).map(k => k.keyValue).join("\\n");
-                const used = (keysList || []).filter(k => k.type === "panel_ios" && (k.isUsed || k.isBanned)).map(k => k.keyValue).join("\\n");
+                const available = (keysList || []).filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && !k.isUsed && !k.isBanned).map(k => k.keyValue).join("\\n");
+                const used = (keysList || []).filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && (k.isUsed || k.isBanned)).map(k => k.keyValue).join("\\n");
                 const text = `PAINEL IOS - DISPONIVEIS\\n${available}\\n\\nPAINEL IOS - USADAS\\n${used}`;
                 const url = URL.createObjectURL(new Blob([text], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = "keys_painel_ios.txt"; a.click(); URL.revokeObjectURL(url);
               }}>Exportar Painel iOS</Button>
@@ -1671,7 +1671,7 @@ function ModeratorDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {keysList?.filter(k => keyMatches(k, keyGlobalSearch) && k.isBanned || (k.isUsed && k.type !== 'ios')).map((k) => (
+                  {keysList?.filter(k => keyMatches(k, keyGlobalSearch) && (k.isBanned || (k.isUsed && k.type !== 'ios'))).map((k) => (
                     <TableRow key={k.id} className="border-neutral-800">
                       <TableCell className="font-mono text-white">#{k.id}</TableCell>
                       <TableCell className="font-mono text-amber-400 font-bold">
@@ -1692,7 +1692,7 @@ function ModeratorDashboard() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {(!keysList || keysList.filter(k => k.isBanned || (k.isUsed && k.type !== 'ios')).length === 0) && (
+                  {(!keysList || keysList.filter(k => keyMatches(k, keyGlobalSearch) && (k.isBanned || (k.isUsed && k.type !== 'ios'))).length === 0) && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-neutral-500 py-6">
                         Nenhuma chave banida/usada no momento.

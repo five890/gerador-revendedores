@@ -1522,6 +1522,10 @@ export const appRouter = router({
         });
       }
 
+        const resellerStoreSettings = await db.select().from(storeSettings).limit(1);
+        let globallyVisibleProducts: Record<string, boolean> = {};
+        try { globallyVisibleProducts = resellerStoreSettings[0]?.resellerVisibleProducts ? JSON.parse(resellerStoreSettings[0].resellerVisibleProducts) : {}; } catch {}
+        const effectiveEnabledProducts = getEnabledProducts(reseller.enabledProducts).filter((product) => globallyVisibleProducts[product] !== false);
         return {
           resellerId: reseller.id,
           credits: {
@@ -1534,7 +1538,7 @@ export const appRouter = router({
           proxy_android_clientes: reseller.creditsProxyAndroidClientes || 0,
           ios_ipa: reseller.creditsIosIpa || 0,
         },
-        enabledProducts: getEnabledProducts(reseller.enabledProducts),
+        enabledProducts: effectiveEnabledProducts,
         isPremium,
         clientsCount: clientsFormatted.length,
         clients: clientsFormatted,

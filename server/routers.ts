@@ -36,15 +36,22 @@ function getEnabledProducts(value: unknown): string[] {
 const STORE_PRODUCT_TYPES = ["advanced", "ios", "ios_ipa", "panel_ios", "panel_android", "proxy_android_clientes"] as const;
 const storeProductTypeSchema = z.enum(STORE_PRODUCT_TYPES);
 const storeKey = () => createHash("sha256").update(process.env.JWT_SECRET || "store-secret-change-me").digest();
-function protectCredentials(value: { username: string; password: string }) {
+function protectCredentials(value: { username: string; password: string; email: string }) {
   const iv = randomBytes(12); const cipher = createCipheriv("aes-256-gcm", storeKey(), iv);
   const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
   return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString("base64");
 }
-function revealCredentials(payload: string): { username: string; password: string } {
+function revealCredentials(payload: string): { username: string; password: string; email: string } {
   const raw = Buffer.from(payload, "base64"); const decipher = createDecipheriv("aes-256-gcm", storeKey(), raw.subarray(0, 12));
   decipher.setAuthTag(raw.subarray(12, 28));
   return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString("utf8"));
+}
+
+async function sendApprovedProductEmail(email: string, productName: string, username: string, password: string) {
+  const apiKey = process.env.RESEND_API_KEY; const from = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !from) { console.warn("[Store] E-mail pós-aprovação não configurado."); return; }
+  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to: [email], subject: `Pagamento aprovado — ${productName}`, html: `<div style="font-family:Arial,sans-serif;line-height:1.6"><h2>Pagamento aprovado</h2><p>Seu produto <strong>${productName}</strong> foi liberado.</p><p><strong>Usuário:</strong> ${username}<br><strong>Senha:</strong> ${password}</p></div>` }) });
+  if (!response.ok) throw new Error(`E-mail não enviado (HTTP ${response.status})`);
 }
 
 export async function processMercadoPagoNotification(paymentId: string) {
@@ -64,7 +71,7 @@ export async function processMercadoPagoNotification(paymentId: string) {
   if (!productRows.length) throw new Error("Produto do pedido não encontrado");
   const credentials = revealCredentials(order.credentialPayload);
   const existing = await db.select().from(users).where(eq(users.openId, credentials.username)).limit(1);
-  if (existing.length) { await db.update(storeOrders).set({ status: "approved", paymentId: String(payment.id), createdUserId: existing[0].id }).where(eq(storeOrders.id, order.id)); return; }
+  if (existing.length) { await db.update(storeOrders).set({ status: "approved", paymentId: String(payment.id), createdUserId: existing[0].id }).where(eq(storeOrders.id, order.id)); if (credentials.email) { try { await sendApprovedProductEmail(credentials.email, productRows[0].name, credentials.username, credentials.password); } catch (error) { console.error("[Store] Falha ao enviar e-mail pós-aprovação:", error); } } return; }
   const keyRows = await db.select().from(keys).where(and(eq(keys.type, productRows[0].type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
   if (!keyRows.length) {
     await db.update(storeOrders).set({ status: "out_of_stock", paymentId: String(payment.id) }).where(eq(storeOrders.id, order.id));
@@ -76,6 +83,7 @@ export async function processMercadoPagoNotification(paymentId: string) {
   await db.insert(users).values({ openId: credentials.username, role: "client", passwordHash: hashPassword(credentials.password) as any, keyId, enabledProducts: JSON.stringify([productRows[0].type]), isActive: true, maxDevices: 1 });
   const created = await db.select({ id: users.id }).from(users).where(eq(users.openId, credentials.username)).limit(1);
   await db.update(storeOrders).set({ status: "approved", paymentId: String(payment.id), createdUserId: created[0]?.id || null }).where(eq(storeOrders.id, order.id));
+  if (credentials.email) { try { await sendApprovedProductEmail(credentials.email, productRows[0].name, credentials.username, credentials.password); } catch (error) { console.error("[Store] Falha ao enviar e-mail pós-aprovação:", error); } }
 }
 
 function validateDiscordUrl(value: string): string | null {
@@ -402,7 +410,7 @@ export const appRouter = router({
       const token = settings[0]?.mercadoPagoToken || process.env.MERCADOPAGO_ACCESS_TOKEN;
       if (!token) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O pagamento ainda não foi configurado pelo administrador." });
       const reference = `store_${randomBytes(12).toString("hex")}`;
-      await db.insert(storeOrders).values({ externalReference: reference, productId: input.productId, username: input.username, credentialPayload: protectCredentials({ username: input.username, password: input.password }) });
+      await db.insert(storeOrders).values({ externalReference: reference, productId: input.productId, username: input.username, credentialPayload: protectCredentials({ username: input.username, password: input.password, email: input.email }) });
       const response = await fetch("https://api.mercadopago.com/v1/payments", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-Idempotency-Key": reference }, body: JSON.stringify({ transaction_amount: Number(productRows[0].price), description: productRows[0].name, payment_method_id: "pix", external_reference: reference, payer: { email: input.email } }) });
       if (!response.ok) {
         let details = "";

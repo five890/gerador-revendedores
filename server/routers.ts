@@ -420,7 +420,9 @@ export const appRouter = router({
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const rows = await db.select().from(storeOrders).where(eq(storeOrders.paymentId, input.paymentId)).limit(1);
       if (!rows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado." });
-      const order = rows[0];
+      try { await processMercadoPagoNotification(input.paymentId); } catch (error) { console.error("Payment status check error:", error); }
+      const refreshedRows = await db.select().from(storeOrders).where(eq(storeOrders.paymentId, input.paymentId)).limit(1);
+      const order = refreshedRows[0] || rows[0];
       if (order.status !== "approved") return { status: order.status, approved: false, credentials: null };
       const credentials = revealCredentials(order.credentialPayload);
       return { status: order.status, approved: true, credentials };

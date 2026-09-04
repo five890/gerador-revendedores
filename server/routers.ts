@@ -400,12 +400,17 @@ export const appRouter = router({
   store: router({
     listProducts: publicProcedure.query(async () => {
       const db = await getDb(); if (!db) return [];
-      return db.select().from(storeProducts).where(eq(storeProducts.isActive, true)).orderBy(desc(storeProducts.id));
+      const products = await db.select().from(storeProducts).where(eq(storeProducts.isActive, true)).orderBy(desc(storeProducts.id));
+      const stock = await db.select({ type: keys.type }).from(keys).where(and(eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false)));
+      const available = new Set(stock.map((key) => key.type));
+      return products.map((product) => ({ ...product, stockAvailable: available.has(product.type) }));
     }),
     createCheckout: publicProcedure.input(z.object({ productId: z.number(), username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/), password: z.string().min(4).max(128), email: z.string().email() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
       const productRows = await db.select().from(storeProducts).where(and(eq(storeProducts.id, input.productId), eq(storeProducts.isActive, true))).limit(1);
       if (!productRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado." });
+      const stockRows = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.type, productRows[0].type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).limit(1);
+      if (!stockRows.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Produto sem estoque no momento. Aguarde a reposição para comprar." });
       const settings = await db.select().from(storeSettings).limit(1);
       const token = settings[0]?.mercadoPagoToken || process.env.MERCADOPAGO_ACCESS_TOKEN;
       if (!token) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O pagamento ainda não foi configurado pelo administrador." });

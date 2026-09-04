@@ -143,6 +143,42 @@ export const storeSettings = mysqlTable("store_settings", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const resellerPlans = mysqlTable("reseller_plans", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  price: varchar("price", { length: 32 }).notNull(),
+  initialCredits: int("initialCredits").default(0).notNull(),
+  isPremium: boolean("isPremium").default(false).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const resellerCreditOrders = mysqlTable("reseller_credit_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  externalReference: varchar("externalReference", { length: 80 }).notNull().unique(),
+  resellerId: int("resellerId").notNull(),
+  productType: varchar("productType", { length: 50 }).notNull(),
+  quantity: int("quantity").notNull(),
+  unitPrice: varchar("unitPrice", { length: 32 }).notNull(),
+  paymentId: varchar("paymentId", { length: 80 }),
+  status: varchar("status", { length: 30 }).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const resellerSignupOrders = mysqlTable("reseller_signup_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  externalReference: varchar("externalReference", { length: 80 }).notNull().unique(),
+  planId: int("planId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  paymentId: varchar("paymentId", { length: 80 }),
+  status: varchar("status", { length: 30 }).default("pending").notNull(),
+  createdUserId: int("createdUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 
 
 export type User = typeof users.$inferSelect;

@@ -222,6 +222,45 @@ async function ensureTables(dbUrl: string) {
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
       )
     `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS reseller_plans (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        price VARCHAR(32) NOT NULL,
+        initialCredits INT DEFAULT 0 NOT NULL,
+        isPremium BOOLEAN DEFAULT FALSE NOT NULL,
+        isActive BOOLEAN DEFAULT TRUE NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS reseller_credit_orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        externalReference VARCHAR(80) NOT NULL UNIQUE,
+        resellerId INT NOT NULL,
+        productType VARCHAR(50) NOT NULL,
+        quantity INT NOT NULL,
+        unitPrice VARCHAR(32) NOT NULL,
+        paymentId VARCHAR(80) NULL,
+        status VARCHAR(30) DEFAULT 'pending' NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS reseller_signup_orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        externalReference VARCHAR(80) NOT NULL UNIQUE,
+        planId INT NOT NULL,
+        email VARCHAR(320) NOT NULL,
+        paymentId VARCHAR(80) NULL,
+        status VARCHAR(30) DEFAULT 'pending' NOT NULL,
+        createdUserId INT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
 
     await connection.end();
     console.log("[Database] Tables and columns verified and ensured successfully.");
@@ -297,4 +336,3 @@ export async function createLog(userId: number | null, action: string, details?:
     console.error("[Database] Failed to create log:", err);
   }
 }
-

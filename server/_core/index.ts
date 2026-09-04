@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { setupVite, serveStatic } from "./vite";
 import { createContext } from "./context";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../routers";
+import { appRouter, processMercadoPagoNotification } from "../routers";
 import { sdk } from "./sdk";
 import { getDb } from "../db";
 import { users, keys, sessions, logs } from "../../drizzle/schema";
@@ -20,6 +20,13 @@ async function startServer() {
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+  app.post("/api/mercadopago/webhook", async (req, res) => {
+    const paymentId = String(req.body?.data?.id || req.body?.id || req.query?.id || "");
+    if (!paymentId) return res.status(200).json({ ok: true });
+    try { await processMercadoPagoNotification(paymentId); res.status(200).json({ ok: true }); }
+    catch (error) { console.error("Mercado Pago webhook error:", error); res.status(500).json({ ok: false }); }
+  });
 
   // tRPC API
   app.use(

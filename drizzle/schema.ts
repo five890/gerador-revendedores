@@ -111,6 +111,38 @@ export const logs = mysqlTable("logs", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const storeProducts = mysqlTable("store_products", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  category: varchar("category", { length: 80 }).notNull(),
+  description: text("description").notNull(),
+  imageUrl: text("imageUrl"),
+  price: varchar("price", { length: 32 }).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const storeOrders = mysqlTable("store_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  externalReference: varchar("externalReference", { length: 80 }).notNull().unique(),
+  productId: int("productId").notNull(),
+  username: varchar("username", { length: 64 }).notNull(),
+  credentialPayload: text("credentialPayload").notNull(),
+  paymentId: varchar("paymentId", { length: 80 }),
+  status: varchar("status", { length: 30 }).default("pending").notNull(),
+  createdUserId: int("createdUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const storeSettings = mysqlTable("store_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  mercadoPagoToken: text("mercadoPagoToken"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 
 
 export type User = typeof users.$inferSelect;
@@ -121,4 +153,5 @@ export type Tutorial = typeof tutorials.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Log = typeof logs.$inferSelect;
-
+export type StoreProduct = typeof storeProducts.$inferSelect;
+export type StoreOrder = typeof storeOrders.$inferSelect;

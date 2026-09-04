@@ -187,6 +187,41 @@ async function ensureTables(dbUrl: string) {
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
       )
     `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS store_products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        category VARCHAR(80) NOT NULL,
+        description TEXT NOT NULL,
+        imageUrl TEXT NULL,
+        price VARCHAR(32) NOT NULL,
+        isActive BOOLEAN DEFAULT TRUE NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS store_orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        externalReference VARCHAR(80) NOT NULL UNIQUE,
+        productId INT NOT NULL,
+        username VARCHAR(64) NOT NULL,
+        credentialPayload TEXT NOT NULL,
+        paymentId VARCHAR(80) NULL,
+        status VARCHAR(30) DEFAULT 'pending' NOT NULL,
+        createdUserId INT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS store_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mercadoPagoToken TEXT NULL,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
 
     await connection.end();
     console.log("[Database] Tables and columns verified and ensured successfully.");
@@ -262,5 +297,4 @@ export async function createLog(userId: number | null, action: string, details?:
     console.error("[Database] Failed to create log:", err);
   }
 }
-
 

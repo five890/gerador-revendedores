@@ -4,12 +4,12 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
-import { users, keys, downloads, tutorials, sessions, logs, announcements } from "../drizzle/schema";
+import { users, keys, downloads, tutorials, sessions, logs, announcements, storeProducts, storeOrders, storeSettings } from "../drizzle/schema";
 import { eq, and, desc, sql, isNull } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createCipheriv, createDecipheriv, createHash } from "node:crypto";
 
 const ALL_PRODUCT_TYPES = ["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"] as const;
 // Os formulários do painel continuam oferecendo estes produtos; o backend deve aceitar os mesmos tipos.
@@ -31,6 +31,46 @@ function getEnabledProducts(value: unknown): string[] {
   } catch {
     return [...ACTIVE_PRODUCT_TYPES];
   }
+}
+
+const STORE_PRODUCT_TYPES = ["advanced", "ios", "ios_ipa", "panel_ios", "panel_android", "proxy_android_clientes"] as const;
+const storeProductTypeSchema = z.enum(STORE_PRODUCT_TYPES);
+const storeKey = () => createHash("sha256").update(process.env.JWT_SECRET || "store-secret-change-me").digest();
+function protectCredentials(value: { username: string; password: string }) {
+  const iv = randomBytes(12); const cipher = createCipheriv("aes-256-gcm", storeKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString("base64");
+}
+function revealCredentials(payload: string): { username: string; password: string } {
+  const raw = Buffer.from(payload, "base64"); const decipher = createDecipheriv("aes-256-gcm", storeKey(), raw.subarray(0, 12));
+  decipher.setAuthTag(raw.subarray(12, 28));
+  return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString("utf8"));
+}
+
+export async function processMercadoPagoNotification(paymentId: string) {
+  const db = await getDb(); if (!db) throw new Error("Database not available");
+  const settings = await db.select().from(storeSettings).limit(1);
+  const token = settings[0]?.mercadoPagoToken || process.env.MERCADOPAGO_ACCESS_TOKEN;
+  if (!token) throw new Error("Mercado Pago não configurado");
+  const response = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) throw new Error(`Mercado Pago respondeu ${response.status}`);
+  const payment: any = await response.json(); const reference = String(payment.external_reference || "");
+  if (!reference) return;
+  const orderRows = await db.select().from(storeOrders).where(eq(storeOrders.externalReference, reference)).limit(1);
+  if (!orderRows.length || orderRows[0].status === "approved") return;
+  const order = orderRows[0];
+  if (payment.status !== "approved") { await db.update(storeOrders).set({ status: payment.status || "rejected", paymentId: String(payment.id) }).where(eq(storeOrders.id, order.id)); return; }
+  const productRows = await db.select().from(storeProducts).where(eq(storeProducts.id, order.productId)).limit(1);
+  if (!productRows.length) throw new Error("Produto do pedido não encontrado");
+  const credentials = revealCredentials(order.credentialPayload);
+  const existing = await db.select().from(users).where(eq(users.openId, credentials.username)).limit(1);
+  if (existing.length) { await db.update(storeOrders).set({ status: "approved", paymentId: String(payment.id), createdUserId: existing[0].id }).where(eq(storeOrders.id, order.id)); return; }
+  const keyRows = await db.select().from(keys).where(and(eq(keys.type, productRows[0].type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).orderBy(keys.id).limit(1);
+  const keyId = keyRows[0]?.id || null;
+  if (keyId) await db.update(keys).set({ isUsed: true, isBanned: true, usedAt: new Date() }).where(eq(keys.id, keyId));
+  await db.insert(users).values({ openId: credentials.username, role: "client", passwordHash: hashPassword(credentials.password) as any, keyId, enabledProducts: JSON.stringify([productRows[0].type]), isActive: true, maxDevices: 1 });
+  const created = await db.select({ id: users.id }).from(users).where(eq(users.openId, credentials.username)).limit(1);
+  await db.update(storeOrders).set({ status: "approved", paymentId: String(payment.id), createdUserId: created[0]?.id || null }).where(eq(storeOrders.id, order.id));
 }
 
 function validateDiscordUrl(value: string): string | null {
@@ -342,6 +382,31 @@ export const appRouter = router({
         }
         return { success: true };
       }),
+  }),
+
+  store: router({
+    listProducts: publicProcedure.query(async () => {
+      const db = await getDb(); if (!db) return [];
+      return db.select().from(storeProducts).where(eq(storeProducts.isActive, true)).orderBy(desc(storeProducts.id));
+    }),
+    createCheckout: publicProcedure.input(z.object({ productId: z.number(), username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/), password: z.string().min(4).max(128) })).mutation(async ({ input, ctx }) => {
+      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
+      const productRows = await db.select().from(storeProducts).where(and(eq(storeProducts.id, input.productId), eq(storeProducts.isActive, true))).limit(1);
+      if (!productRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado." });
+      const settings = await db.select().from(storeSettings).limit(1);
+      const token = settings[0]?.mercadoPagoToken || process.env.MERCADOPAGO_ACCESS_TOKEN;
+      if (!token) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O pagamento ainda não foi configurado pelo administrador." });
+      const reference = `store_${randomBytes(12).toString("hex")}`;
+      await db.insert(storeOrders).values({ externalReference: reference, productId: input.productId, username: input.username, credentialPayload: protectCredentials({ username: input.username, password: input.password }) });
+      const origin = `${ctx.req.protocol}://${ctx.req.get("host")}`;
+      const response = await fetch("https://api.mercadopago.com/checkout/preferences", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ id: String(productRows[0].id), title: productRows[0].name, description: productRows[0].description, quantity: 1, currency_id: "BRL", unit_price: Number(productRows[0].price) }], external_reference: reference, notification_url: `${origin}/api/mercadopago/webhook`, back_urls: { success: `${origin}/?payment=success`, failure: `${origin}/?payment=failure`, pending: `${origin}/?payment=pending` }, auto_return: "approved" }) });
+      if (!response.ok) throw new TRPCError({ code: "BAD_GATEWAY", message: "Não foi possível criar o checkout no Mercado Pago." });
+      const preference: any = await response.json(); return { checkoutUrl: preference.init_point || preference.sandbox_init_point };
+    }),
+    listAdminProducts: protectedProcedure.query(async ({ ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); return db ? db.select().from(storeProducts).orderBy(desc(storeProducts.id)) : []; }),
+    saveProduct: protectedProcedure.input(z.object({ id: z.number().optional(), name: z.string().trim().min(2).max(120), type: storeProductTypeSchema, category: z.string().trim().min(2).max(80), description: z.string().trim().min(2), imageUrl: z.string().trim().url().or(z.literal("")), price: z.number().positive(), isActive: z.boolean().default(true) })).mutation(async ({ input, ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const values = { name: input.name, type: input.type, category: input.category, description: input.description, imageUrl: input.imageUrl || null, price: input.price.toFixed(2), isActive: input.isActive }; if (input.id) await db.update(storeProducts).set(values).where(eq(storeProducts.id, input.id)); else await db.insert(storeProducts).values(values); return { success: true }; }),
+    deleteProduct: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (db) await db.delete(storeProducts).where(eq(storeProducts.id, input.id)); return { success: true }; }),
+    saveSettings: protectedProcedure.input(z.object({ mercadoPagoToken: z.string().trim().min(20) })).mutation(async ({ input, ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const current = await db.select({ id: storeSettings.id }).from(storeSettings).limit(1); if (current.length) await db.update(storeSettings).set({ mercadoPagoToken: input.mercadoPagoToken }).where(eq(storeSettings.id, current[0].id)); else await db.insert(storeSettings).values({ mercadoPagoToken: input.mercadoPagoToken }); return { success: true }; }),
   }),
 
   moderator: router({

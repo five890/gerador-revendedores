@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { Link } from "wouter";
 import {
   Lock,
   Unlock,
@@ -28,6 +29,7 @@ import {
   Video,
   History,
   PanelTop,
+  ShoppingBag,
 } from "lucide-react";
 import {
   Sidebar,
@@ -101,6 +103,7 @@ function useManagementNavigation() {
 }
 
 const moderatorNavigationItems: ManagementNavItem[] = [
+  { value: "store", label: "Loja / Produtos", group: "Vendas", icon: ShoppingBag },
   { value: "resellers", label: "Revendedores", group: "Operação", icon: Users },
   { value: "clients", label: "Clientes", group: "Operação", icon: UserPlus },
   { value: "iosPanel", label: "Painel iOS", group: "Painéis", icon: PanelTop },
@@ -395,6 +398,9 @@ export default function Home() {
               <Button type="submit" className="h-11 w-full bg-red-600 font-bold text-white shadow-lg shadow-red-950/40 transition-all hover:bg-red-700 hover:shadow-red-900/50" disabled={loginMutation.isPending || resetSessionWithCodeMutation.isPending}>
                 {loginMutation.isPending ? "Entrando..." : "Entrar na Plataforma"}
               </Button>
+              {import.meta.env.VITE_STORE_ENABLED === "true" && <Link href="/loja" className="flex h-11 w-full items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-950/30 text-sm font-black text-emerald-300 transition hover:bg-emerald-900/50 hover:text-white">
+                Quero comprar um produto
+              </Link>}
               {deviceLimitError && (
                 <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-950/30 p-4 text-left">
                   <div>
@@ -480,6 +486,21 @@ export default function Home() {
       </main>
     </div>
   );
+}
+
+function StoreAdmin() {
+  const utils = trpc.useUtils();
+  const { data: products } = trpc.store.listAdminProducts.useQuery();
+  const [token, setToken] = useState("");
+  const [form, setForm] = useState<{ name: string; type: "advanced" | "ios" | "ios_ipa" | "panel_ios" | "panel_android" | "proxy_android_clientes"; category: string; description: string; imageUrl: string; price: string; isActive: boolean }>({ name: "", type: "advanced", category: "Proxy", description: "", imageUrl: "", price: "", isActive: true });
+  const save = trpc.store.saveProduct.useMutation({ onSuccess: () => { toast.success("Produto salvo."); utils.store.listAdminProducts.invalidate(); setForm({ name: "", type: "advanced", category: "Proxy", description: "", imageUrl: "", price: "", isActive: true }); }, onError: (e) => toast.error(e.message) });
+  const remove = trpc.store.deleteProduct.useMutation({ onSuccess: () => utils.store.listAdminProducts.invalidate() });
+  const saveSettings = trpc.store.saveSettings.useMutation({ onSuccess: () => { toast.success("Token do Mercado Pago salvo com segurança."); setToken(""); }, onError: (e) => toast.error(e.message) });
+  const field = (key: keyof typeof form, placeholder: string) => <Input value={String(form[key])} placeholder={placeholder} onChange={(e) => setForm((current) => ({ ...current, [key]: e.target.value }))} className="border-neutral-700 bg-[#202020] text-white" />;
+  return <div className="space-y-5">
+    <Card className="border-emerald-800 bg-[#141414] text-white"><CardHeader><CardTitle className="text-white">Configurar Mercado Pago</CardTitle></CardHeader><CardContent><p className="mb-3 text-sm text-neutral-400">Cole o Access Token no painel. Ele não é exibido novamente nem enviado ao navegador.</p><div className="flex flex-col gap-3 sm:flex-row"><Input type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="APP_USR-..." className="border-neutral-700 bg-[#202020] text-white" /><Button disabled={saveSettings.isPending || token.length < 20} className="bg-emerald-600 hover:bg-emerald-700" onClick={() => saveSettings.mutate({ mercadoPagoToken: token })}>Salvar token</Button></div></CardContent></Card>
+    <Card className="border-red-800 bg-[#141414] text-white"><CardHeader><CardTitle className="text-white">Vitrine de produtos</CardTitle></CardHeader><CardContent><p className="mb-4 text-sm text-neutral-400">Cadastre somente produtos que já existem no gerador. A vitrine permanece oculta até ativação.</p><div className="grid gap-3 md:grid-cols-2">{field("name", "Nome do produto")}<select value={form.type} onChange={(e) => setForm((current) => ({ ...current, type: e.target.value as typeof current.type }))} className="h-10 rounded-md border border-neutral-700 bg-[#202020] px-3 text-sm text-white"><option value="advanced">Proxy</option><option value="ios">Proxy iOS</option><option value="ios_ipa">Proxy iOS IPA</option><option value="panel_ios">Painel iOS</option><option value="panel_android">Painel Android</option><option value="proxy_android_clientes">Proxy Android Clientes</option></select>{field("category", "Categoria")}{field("price", "Preço em reais (ex.: 19.90)")}{field("imageUrl", "URL HTTPS da imagem")}</div><textarea value={form.description} placeholder="Descrição do produto" onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))} className="mt-3 min-h-24 w-full rounded-md border border-neutral-700 bg-[#202020] p-3 text-sm text-white placeholder:text-neutral-500" /><div className="mt-3 flex gap-3"><Button className="bg-red-600 hover:bg-red-700" disabled={save.isPending} onClick={() => save.mutate({ ...form, price: Number(form.price) })}>Adicionar produto</Button></div><div className="mt-6 space-y-2">{products?.map((product: any) => <div key={product.id} className="flex flex-col justify-between gap-3 rounded-md border border-neutral-800 bg-[#202020] p-3 sm:flex-row sm:items-center"><div><p className="font-bold text-white">{product.name} <span className="ml-2 text-xs font-normal text-emerald-400">R$ {Number(product.price).toFixed(2)}</span></p><p className="text-xs text-neutral-500">{product.category} · {product.type} · {product.isActive ? "Ativo" : "Oculto"}</p></div><Button variant="outline" className="border-red-800 bg-transparent text-red-300 hover:bg-red-950" onClick={() => remove.mutate({ id: product.id })}>Excluir</Button></div>)}</div></CardContent></Card>
+  </div>;
 }
 
 function ModeratorDashboard() {
@@ -943,6 +964,7 @@ function ModeratorDashboard() {
       })()}
 
       <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
+        <TabsContent value="store" className="space-y-4"><StoreAdmin /></TabsContent>
         <div className="sr-only">
           <div className="mb-2"><h2 className="text-sm font-black uppercase tracking-wider text-white">Centro de Controle do Moderador</h2><p className="text-xs text-neutral-500">Gerencie usuários, painéis, estoque, conteúdo e auditoria em seções separadas.</p></div>
           <TabsList className="bg-[#141414] border border-neutral-800 p-2 flex flex-wrap items-center gap-1 w-full h-auto">

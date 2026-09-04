@@ -394,7 +394,7 @@ export const appRouter = router({
       const db = await getDb(); if (!db) return [];
       return db.select().from(storeProducts).where(eq(storeProducts.isActive, true)).orderBy(desc(storeProducts.id));
     }),
-    createCheckout: publicProcedure.input(z.object({ productId: z.number(), username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/), password: z.string().min(4).max(128) })).mutation(async ({ input, ctx }) => {
+    createCheckout: publicProcedure.input(z.object({ productId: z.number(), username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/), password: z.string().min(4).max(128), email: z.string().email() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
       const productRows = await db.select().from(storeProducts).where(and(eq(storeProducts.id, input.productId), eq(storeProducts.isActive, true))).limit(1);
       if (!productRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado." });
@@ -403,18 +403,18 @@ export const appRouter = router({
       if (!token) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O pagamento ainda não foi configurado pelo administrador." });
       const reference = `store_${randomBytes(12).toString("hex")}`;
       await db.insert(storeOrders).values({ externalReference: reference, productId: input.productId, username: input.username, credentialPayload: protectCredentials({ username: input.username, password: input.password }) });
-      const forwardedHost = ctx.req.get("x-forwarded-host") || ctx.req.get("host");
-      const forwardedProto = ctx.req.get("x-forwarded-proto") || "https";
-      const origin = (process.env.PUBLIC_APP_URL || `${forwardedProto}://${forwardedHost}`).replace(/\/$/, "");
-      if (!/^https:\/\//i.test(origin) || !forwardedHost) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "O site precisa estar publicado com uma URL HTTPS pública para aceitar pagamentos." });
-      const response = await fetch("https://api.mercadopago.com/checkout/preferences", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ id: String(productRows[0].id), title: productRows[0].name, description: productRows[0].description, quantity: 1, currency_id: "BRL", unit_price: Number(productRows[0].price) }], external_reference: reference, notification_url: `${origin}/api/mercadopago/webhook`, back_urls: { success: `${origin}/?payment=success`, failure: `${origin}/?payment=failure`, pending: `${origin}/?payment=pending` }, auto_return: "approved" }) });
+      const response = await fetch("https://api.mercadopago.com/v1/payments", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-Idempotency-Key": reference }, body: JSON.stringify({ transaction_amount: Number(productRows[0].price), description: productRows[0].name, payment_method_id: "pix", external_reference: reference, payer: { email: input.email } }) });
       if (!response.ok) {
         let details = "";
         try { const errorBody: any = await response.json(); details = errorBody?.message || errorBody?.error || errorBody?.cause?.[0]?.description || ""; } catch { /* resposta sem JSON */ }
         await db.update(storeOrders).set({ status: "checkout_failed" }).where(eq(storeOrders.externalReference, reference));
         throw new TRPCError({ code: "BAD_GATEWAY", message: `Mercado Pago recusou o checkout${details ? `: ${details}` : ` (HTTP ${response.status})`}. Verifique se o Access Token é de produção e pertence à conta vendedora.` });
       }
-      const preference: any = await response.json(); return { checkoutUrl: preference.init_point || preference.sandbox_init_point };
+      const payment: any = await response.json();
+      await db.update(storeOrders).set({ paymentId: String(payment.id), status: payment.status || "pending" }).where(eq(storeOrders.externalReference, reference));
+      const transactionData = payment.point_of_interaction?.transaction_data;
+      if (!transactionData?.qr_code || !transactionData?.qr_code_base64) throw new TRPCError({ code: "BAD_GATEWAY", message: "O Mercado Pago não retornou os dados do Pix." });
+      return { paymentId: String(payment.id), qrCode: transactionData.qr_code, qrCodeBase64: transactionData.qr_code_base64, status: payment.status };
     }),
     listAdminProducts: protectedProcedure.query(async ({ ctx }) => { if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" }); const db = await getDb(); return db ? db.select().from(storeProducts).orderBy(desc(storeProducts.id)) : []; }),
     salesDashboard: protectedProcedure.query(async ({ ctx }) => {

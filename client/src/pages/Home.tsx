@@ -141,13 +141,14 @@ function ManagementNavButton({ item }: { item: ManagementNavItem }) {
         type="button"
         isActive={activeSection === item.value}
         tooltip={item.label}
-        className="h-9 w-full text-left text-xs text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300"
+        aria-label={item.label}
+        className="min-h-11 w-full touch-manipulation px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300 md:h-9 md:min-h-0 md:px-2 md:py-2 md:text-xs"
         onClick={() => {
           setActiveSection(item.value);
           if (isMobile) setOpenMobile(false);
         }}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="h-5 w-5 shrink-0 md:h-4 md:w-4" />
         <span>{item.label}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -158,6 +159,7 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
   const [activeSection, setActiveSection] = useState(user.role === "moderator" ? "resellers" : "clients");
   const [menuItems, setMenuItems] = useState<ManagementNavItem[]>(user.role === "moderator" ? moderatorNavigationItems : resellerNavigationItems);
   const brandColor = user.brandColor || "#dc2626";
+  const activeItem = menuItems.find((item) => item.value === activeSection);
   const groupedItems = menuItems.reduce<Record<string, ManagementNavItem[]>>((groups, item) => {
     (groups[item.group] ||= []).push(item);
     return groups;
@@ -167,21 +169,21 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
     <ManagementNavigationContext.Provider value={{ activeSection, setActiveSection, menuItems, setMenuItems }}>
       <SidebarProvider defaultOpen className="min-h-screen bg-[#0b0b0b] text-white">
         <Sidebar collapsible="offcanvas" className="z-[60] border-neutral-800 bg-[#111111] text-white [&_[data-sidebar=sidebar-inner]]:bg-[#111111] [&_[data-sidebar=sidebar-inner]]:shadow-2xl">
-          <SidebarHeader className="shrink-0 border-b border-neutral-800 bg-[#111111] px-3 py-4">
-            <div className="flex items-center justify-between gap-2">
+          <SidebarHeader className="shrink-0 border-b border-neutral-800 bg-[#111111] px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-base font-black tracking-[0.12em]" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Navegação do painel</p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Menu do painel</p>
               </div>
-              <SidebarTrigger className="shrink-0 text-neutral-300 hover:bg-white/10 hover:text-white" />
+              <SidebarTrigger aria-label="Fechar menu" title="Fechar menu" className="size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
             </div>
           </SidebarHeader>
           <SidebarContent className="min-h-0 overflow-y-auto px-2 py-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700">
             {Object.entries(groupedItems).map(([group, items]) => (
-              <SidebarGroup key={group} className="mb-2 p-1">
-                <SidebarGroupLabel className="px-2 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 group-data-[collapsible=icon]:hidden">{group}</SidebarGroupLabel>
+              <SidebarGroup key={group} className="mb-3 p-1">
+                <SidebarGroupLabel className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 group-data-[collapsible=icon]:hidden">{group}</SidebarGroupLabel>
                 <SidebarGroupContent>
-                  <SidebarMenu>
+                  <SidebarMenu className="gap-1.5 md:gap-1">
                     {items.map((item) => <ManagementNavButton key={item.value} item={item} />)}
                   </SidebarMenu>
                 </SidebarGroupContent>
@@ -207,10 +209,11 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
         <SidebarInset className="min-w-0 bg-[#0b0b0b]">
           <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between border-b border-neutral-800 bg-[#111111]/95 px-3 py-3 backdrop-blur sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <SidebarTrigger className="text-neutral-300 hover:bg-white/10 hover:text-white" />
+              <SidebarTrigger aria-label="Abrir menu" title="Abrir menu" className="size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
               <div className="min-w-0">
                 <p className="truncate text-base font-black tracking-[0.12em] sm:text-xl" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
                 <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Área de {user.role === "moderator" ? "moderador" : "revendedor"}</p>
+                <p className="mt-1 truncate text-[11px] font-bold text-red-300 sm:hidden">{activeItem?.label || "Menu"}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">

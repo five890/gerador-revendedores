@@ -442,8 +442,10 @@ export const appRouter = router({
       const payment: any = await response.json();
       await db.update(storeOrders).set({ paymentId: String(payment.id), status: payment.status || "pending" }).where(eq(storeOrders.externalReference, reference));
       const transactionData = payment.point_of_interaction?.transaction_data;
-      if (!transactionData?.qr_code || !transactionData?.qr_code_base64) throw new TRPCError({ code: "BAD_GATEWAY", message: "O Mercado Pago não retornou os dados do Pix." });
-      return { paymentId: String(payment.id), qrCode: transactionData.qr_code, qrCodeBase64: transactionData.qr_code_base64, status: payment.status };
+      const qrCode = typeof transactionData?.qr_code === "string" ? transactionData.qr_code.trim() : "";
+      const qrCodeBase64 = typeof transactionData?.qr_code_base64 === "string" ? transactionData.qr_code_base64.trim() : "";
+      if (!qrCode || !qrCodeBase64) throw new TRPCError({ code: "BAD_GATEWAY", message: "O Mercado Pago não retornou os dados do Pix." });
+      return { paymentId: String(payment.id), qrCode, qrCodeBase64, status: payment.status };
     }),
     paymentStatus: publicProcedure.input(z.object({ paymentId: z.string().min(1) })).query(async ({ input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -1101,7 +1103,7 @@ export const appRouter = router({
       }),
 
     resetUserPassword: protectedProcedure
-      .input(z.object({ userId: z.number(), newPassword: z.string() }))
+      .input(z.object({ userId: z.number(), newPassword: z.string().trim().min(4).max(128) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         const db = await getDb();
@@ -1109,14 +1111,36 @@ export const appRouter = router({
 
         const passHash = hashPassword(input.newPassword);
         await db.update(users).set({ passwordHash: passHash as any }).where(eq(users.id, input.userId));
+        await db.delete(sessions).where(eq(sessions.userId, input.userId));
 
         await db.insert(logs).values({
           userId: ctx.user.id,
           action: "RESET_PASSWORD",
-          details: `Moderador resetou a senha do usuário ID ${input.userId}.`,
+          details: `Moderador resetou a senha e as sessões do usuário ID ${input.userId}.`,
         });
 
         return { success: true };
+      }),
+
+    updatePurchasedClientUsername: protectedProcedure
+      .input(z.object({ userId: z.number(), newUsername: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const client = (await db.select({ id: users.id, openId: users.openId, role: users.role }).from(users).where(and(eq(users.id, input.userId), eq(users.role, "client"))).limit(1))[0];
+        if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "Cliente comprado no site não encontrado." });
+        const purchased = await db.select({ id: storeOrders.id }).from(storeOrders).where(and(eq(storeOrders.createdUserId, input.userId), eq(storeOrders.status, "approved"))).limit(1);
+        if (!purchased.length) throw new TRPCError({ code: "FORBIDDEN", message: "Este cliente não foi criado por uma compra aprovada no site." });
+        const duplicate = (await db.select({ id: users.id }).from(users).where(eq(users.openId, input.newUsername)).limit(1))[0];
+        if (duplicate && duplicate.id !== input.userId) throw new TRPCError({ code: "CONFLICT", message: "Esse nome de usuário já está em uso." });
+
+        await db.update(users).set({ openId: input.newUsername }).where(eq(users.id, input.userId));
+        await db.update(storeOrders).set({ username: input.newUsername }).where(eq(storeOrders.createdUserId, input.userId));
+        await db.delete(sessions).where(eq(sessions.userId, input.userId));
+        await db.insert(logs).values({ userId: ctx.user.id, action: "UPDATE_PURCHASED_CLIENT_USERNAME", details: `Moderador alterou o usuário comprado ${client.openId} para ${input.newUsername}.` });
+        return { success: true, username: input.newUsername };
       }),
 
     deleteUser: protectedProcedure

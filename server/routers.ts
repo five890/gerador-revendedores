@@ -1254,6 +1254,21 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    deleteKeysBulk: protectedProcedure
+      .input(z.object({ keyIds: z.array(z.number().int().positive()).min(1).max(200) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const uniqueIds = Array.from(new Set(input.keyIds));
+        const existing = await db.select({ id: keys.id }).from(keys);
+        const existingIds = new Set(existing.map((key) => key.id));
+        const idsToDelete = uniqueIds.filter((id) => existingIds.has(id));
+        if (!idsToDelete.length) throw new TRPCError({ code: "NOT_FOUND", message: "Nenhuma Key selecionada foi encontrada." });
+        for (const keyId of idsToDelete) await db.delete(keys).where(eq(keys.id, keyId));
+        return { success: true, deletedCount: idsToDelete.length };
+      }),
+
     deleteAndroidKey: protectedProcedure
       .input(z.object({ keyId: z.number() }))
       .mutation(async ({ input, ctx }) => {

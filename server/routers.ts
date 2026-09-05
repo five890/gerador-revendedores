@@ -422,6 +422,10 @@ export const appRouter = router({
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
       const productRows = await db.select().from(storeProducts).where(and(eq(storeProducts.id, input.productId), eq(storeProducts.isActive, true))).limit(1);
       if (!productRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Produto não encontrado." });
+      const existingUser = await db.select({ id: users.id }).from(users).where(eq(users.openId, input.username)).limit(1);
+      if (existingUser.length) throw new TRPCError({ code: "CONFLICT", message: "Esse nome de usuário já está em uso. Escolha outro nome exclusivo." });
+      const activeOrder = await db.select({ id: storeOrders.id }).from(storeOrders).where(and(eq(storeOrders.username, input.username), sql`${storeOrders.status} IN ('pending', 'approved', 'waiting_stock', 'stock_notified')`)).limit(1);
+      if (activeOrder.length) throw new TRPCError({ code: "CONFLICT", message: "Esse nome de usuário já está reservado em outra compra. Escolha outro nome exclusivo." });
       const stockRows = await db.select({ id: keys.id }).from(keys).where(and(eq(keys.type, productRows[0].type), eq(keys.isActive, true), eq(keys.isUsed, false), eq(keys.isBanned, false))).limit(1);
       if (!stockRows.length) {
         await db.insert(storeOrders).values({ externalReference: `wait_${randomBytes(12).toString("hex")}`, productId: input.productId, username: input.username, credentialPayload: protectCredentials({ username: input.username, password: input.password, email: input.email }), status: "waiting_stock" });

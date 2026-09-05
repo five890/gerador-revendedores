@@ -606,7 +606,9 @@ function ModeratorDashboard() {
   const [modClientMaxDevices, setModClientMaxDevices] = useState(1);
   const [keysRevealed, setKeysRevealed] = useState(false);
   const [keyGlobalSearch, setKeyGlobalSearch] = useState("");
+  const [keyProductFilter, setKeyProductFilter] = useState<"all" | ActiveProductType>("all");
   const keyMatches = (key: any, query: string) => { const search = query.trim().toLowerCase(); return !search || `${key.id} ${key.keyValue} ${key.type} ${key.isUsed ? "usada" : "disponivel"} ${key.isBanned ? "banida" : "ativa"}`.toLowerCase().includes(search); };
+  const manageKeys = (keysList || []).filter((key: any) => keyProductFilter === "all" || key.type === keyProductFilter);
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
   const [modBulkQuantity, setModBulkQuantity] = useState(1);
   const [modBulkCredentials, setModBulkCredentials] = useState<Array<{ username: string; password: string }>>([]);
@@ -1532,7 +1534,7 @@ function ModeratorDashboard() {
           <div className="flex flex-wrap justify-between items-center gap-3 mb-2 bg-[#141414] border border-neutral-800 p-4 rounded-lg">
             <div>
               <h3 className="text-sm font-bold text-white">Segurança e Gestão de Chaves</h3>
-              <p className="text-xs text-neutral-400">As chaves aparecem mascaradas por padrão. Você também pode remover todas as chaves expiradas (&gt;24h de uso).</p><Input value={keyGlobalSearch} onChange={(e) => setKeyGlobalSearch(e.target.value)} placeholder="Pesquisar Key, tipo, ID ou status" className="mt-3 w-full border-neutral-700 bg-[#222] text-white sm:max-w-md" />
+              <p className="text-xs text-neutral-400">As chaves aparecem mascaradas por padrão. Você também pode remover todas as chaves expiradas (&gt;24h de uso).</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><Input value={keyGlobalSearch} onChange={(e) => setKeyGlobalSearch(e.target.value)} placeholder="Pesquisar Key, tipo, ID ou status" className="w-full border-neutral-700 bg-[#222] text-white" /><select value={keyProductFilter} onChange={(e) => setKeyProductFilter(e.target.value as "all" | ActiveProductType)} className="h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white"><option value="all">Todos os produtos</option>{ACTIVE_PRODUCT_TYPES.map((type) => <option key={type} value={type}>{PRODUCT_LABELS[type]}</option>)}</select></div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="destructive" size="sm" onClick={() => {
@@ -1620,77 +1622,11 @@ function ModeratorDashboard() {
 
           <div className="space-y-6">
             <Card className="bg-[#141414] border-neutral-800 text-white">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white">Keys - Proxy Advanced</CardTitle>
-                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => {
-                  if (!keysList) return;
-                  const text = keysList.filter(k => k.type === "advanced").map((k) => k.keyValue).join("\n");
-                  const blob = new Blob([text], { type: "text/plain" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "keys_advanced.txt";
-                  a.click();
-                }}>
-                  Exportar Advanced (.txt)
-                </Button>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div><CardTitle className="text-white">Keys filtradas: {keyProductFilter === "all" ? "Todos os produtos" : PRODUCT_LABELS[keyProductFilter]}</CardTitle><p className="text-xs text-neutral-400">A lista abaixo respeita o produto escolhido e a pesquisa acima.</p></div>
+                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => { const text = manageKeys.filter((key) => keyMatches(key, keyGlobalSearch)).map((key) => key.keyValue).join("\n"); const url = URL.createObjectURL(new Blob([text], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = `keys_${keyProductFilter}.txt`; a.click(); URL.revokeObjectURL(url); }}>Exportar filtro (.txt)</Button>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto"><Table>
-                  <TableHeader>
-                    <TableRow className="border-neutral-800">
-                      <TableHead className="text-white font-bold">ID</TableHead>
-                      <TableHead className="text-white font-bold">Key Value</TableHead>
-                      <TableHead className="text-white font-bold">Status Uso</TableHead>
-                      <TableHead className="text-white font-bold">Estado Ativação</TableHead>
-                      <TableHead className="text-white font-bold text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {keysList?.filter(k => keyMatches(k, keyGlobalSearch) && k.type === "advanced" && !k.isBanned && !k.isUsed).map((k) => (
-                      <TableRow key={k.id} className="border-neutral-800">
-                        <TableCell className="font-mono text-white">#{k.id}</TableCell>
-                        <TableCell className="font-mono text-amber-400 font-bold">{keysRevealed ? k.keyValue : "••••••••••••••••"}</TableCell>
-                        <TableCell>
-                          <Badge className={k.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>
-                            {k.isUsed ? "Usada" : "Disponível"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={k.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-red-950 text-red-400 border-red-800"}>
-                            {k.isActive ? "Ativa" : "Desativada"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-1">
-                          <Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}>
-                            <Power className="w-3 h-3" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table></div>
-              </CardContent>
-            </Card>
-
-          <Card className="bg-[#141414] border-blue-800 text-white">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div><CardTitle className="text-white">Keys - Painel iOS</CardTitle><p className="text-xs text-neutral-400 mt-1">Controle separado das Keys disponíveis e já usadas pelo Painel iOS.</p></div>
-              <Button size="sm" className="bg-blue-800 hover:bg-blue-700 text-white" onClick={() => {
-                const available = (keysList || []).filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && !k.isUsed && !k.isBanned).map(k => k.keyValue).join("\\n");
-                const used = (keysList || []).filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && (k.isUsed || k.isBanned)).map(k => k.keyValue).join("\\n");
-                const text = `PAINEL IOS - DISPONIVEIS\\n${available}\\n\\nPAINEL IOS - USADAS\\n${used}`;
-                const url = URL.createObjectURL(new Blob([text], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = "keys_painel_ios.txt"; a.click(); URL.revokeObjectURL(url);
-              }}>Exportar Painel iOS</Button>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3"><Card className="bg-emerald-950/30 border-emerald-800"><CardContent className="p-4"><p className="text-xs text-emerald-300 uppercase font-bold">Disponíveis</p><p className="text-2xl text-emerald-400 font-black">{keysList?.filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && !k.isUsed && !k.isBanned).length || 0}</p></CardContent></Card><Card className="bg-amber-950/30 border-amber-800"><CardContent className="p-4"><p className="text-xs text-amber-300 uppercase font-bold">Já usadas</p><p className="text-2xl text-amber-400 font-black">{keysList?.filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && (k.isUsed || k.isBanned)).length || 0}</p></CardContent></Card></div>
-              <div><h4 className="text-sm text-emerald-400 font-bold mb-2">Keys disponíveis</h4><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white">ID</TableHead><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Estado</TableHead><TableHead className="text-white text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{keysList?.filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && !k.isUsed && !k.isBanned).map(k => <TableRow key={k.id} className="border-neutral-800"><TableCell>#{k.id}</TableCell><TableCell className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className="bg-emerald-950 text-emerald-400 border-emerald-800">Disponível</Badge></TableCell><TableCell className="text-right space-x-1"><Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white" onClick={() => toggleKeyMutation.mutate({ keyId: k.id })}><Power className="w-3 h-3" /></Button><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></div>
-              <div><h4 className="text-sm text-amber-400 font-bold mb-2">Keys já usadas</h4><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white">ID</TableHead><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Estado</TableHead><TableHead className="text-white">Usada em</TableHead><TableHead className="text-white text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{keysList?.filter(k => keyMatches(k, keyGlobalSearch) && k.type === "panel_ios" && (k.isUsed || k.isBanned)).map(k => <TableRow key={k.id} className="border-neutral-800"><TableCell>#{k.id}</TableCell><TableCell className="font-mono text-cyan-300">{keysRevealed ? k.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className="bg-amber-950 text-amber-400 border-amber-800">Usada</Badge></TableCell><TableCell className="text-xs text-neutral-400">{k.usedAt ? new Date(k.usedAt).toLocaleString() : "—"}</TableCell><TableCell className="text-right"><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: k.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></div>
-            </CardContent>
+              <CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">ID</TableHead><TableHead className="text-white font-bold">Produto</TableHead><TableHead className="text-white font-bold">Key</TableHead><TableHead className="text-white font-bold">Status</TableHead><TableHead className="text-white font-bold">Ativação</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{manageKeys.filter((key) => keyMatches(key, keyGlobalSearch)).map((key) => <TableRow key={key.id} className="border-neutral-800"><TableCell className="font-mono text-white">#{key.id}</TableCell><TableCell className="text-xs text-blue-300">{PRODUCT_LABELS[key.type] || key.type}</TableCell><TableCell className="break-all font-mono text-cyan-300">{keysRevealed ? key.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className={key.isBanned ? "bg-red-950 text-red-400 border-red-800" : key.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{key.isBanned ? "Banida" : key.isUsed ? "Usada" : "Disponível"}</Badge></TableCell><TableCell><Badge className={key.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-neutral-800 text-neutral-300 border-neutral-700"}>{key.isActive ? "Ativa" : "Desativada"}</Badge></TableCell><TableCell className="text-right space-x-1"><Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: key.id })}><Power className="w-3 h-3" /></Button><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: key.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent>
             </Card>
           </div>
         </TabsContent>

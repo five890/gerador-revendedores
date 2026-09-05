@@ -1020,7 +1020,7 @@ function ModeratorDashboard() {
 
       <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
         <TabsContent value="store" className="space-y-4"><StoreAdmin /></TabsContent>
-        <div className="sr-only">
+        <div className="hidden md:block rounded-xl border border-neutral-800 bg-[#111111] p-3">
           <div className="mb-2"><h2 className="text-sm font-black uppercase tracking-wider text-white">Centro de Controle do Moderador</h2><p className="text-xs text-neutral-500">Gerencie usuários, painéis, estoque, conteúdo e auditoria em seções separadas.</p></div>
           <TabsList className="bg-[#141414] border border-neutral-800 p-2 flex flex-wrap items-center gap-1 w-full h-auto">
             <span className="px-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Operação</span>

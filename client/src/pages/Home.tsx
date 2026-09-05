@@ -143,7 +143,7 @@ function ManagementNavButton({ item }: { item: ManagementNavItem }) {
         isActive={activeSection === item.value}
         tooltip={item.label}
         aria-label={item.label}
-        className="min-h-12 w-full touch-manipulation whitespace-normal px-3 py-3 text-left text-[13px] leading-tight text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300 md:h-9 md:min-h-0 md:whitespace-nowrap md:px-2 md:py-2 md:text-xs"
+        className="relative z-10 min-h-[52px] w-full touch-manipulation break-words whitespace-normal px-3 py-3 text-left text-[13px] leading-snug text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300 md:h-9 md:min-h-0 md:whitespace-nowrap md:px-2 md:py-2 md:text-xs"
         onClick={() => {
           setActiveSection(item.value);
           if (isMobile) setOpenMobile(false);
@@ -179,9 +179,9 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
               <SidebarTrigger aria-label="Fechar menu" title="Fechar menu" className="size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
             </div>
           </SidebarHeader>
-          <SidebarContent className="min-h-0 overflow-y-auto px-2 py-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700">
+          <SidebarContent className="min-h-0 overflow-y-auto px-3 py-4 pb-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700">
             {Object.entries(groupedItems).map(([group, items]) => (
-              <SidebarGroup key={group} className="mb-3 p-1">
+              <SidebarGroup key={group} className="mb-4 p-0">
                 <SidebarGroupLabel className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 group-data-[collapsible=icon]:hidden">{group}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu className="gap-1.5 md:gap-1">
@@ -607,8 +607,11 @@ function ModeratorDashboard() {
   const [keysRevealed, setKeysRevealed] = useState(false);
   const [keyGlobalSearch, setKeyGlobalSearch] = useState("");
   const [keyProductFilter, setKeyProductFilter] = useState<"all" | ActiveProductType>("all");
+  const [keyStatusFilter, setKeyStatusFilter] = useState<"all" | "available" | "used" | "banned">("all");
+  const [selectedKeyIds, setSelectedKeyIds] = useState<number[]>([]);
   const keyMatches = (key: any, query: string) => { const search = query.trim().toLowerCase(); return !search || `${key.id} ${key.keyValue} ${key.type} ${key.isUsed ? "usada" : "disponivel"} ${key.isBanned ? "banida" : "ativa"}`.toLowerCase().includes(search); };
   const manageKeys = (keysList || []).filter((key: any) => keyProductFilter === "all" || key.type === keyProductFilter);
+  const filteredManageKeys = manageKeys.filter((key: any) => keyMatches(key, keyGlobalSearch) && (keyStatusFilter === "all" || (keyStatusFilter === "available" && key.isActive && !key.isUsed && !key.isBanned) || (keyStatusFilter === "used" && key.isUsed) || (keyStatusFilter === "banned" && key.isBanned)));
   const [modCreatedCredentials, setModCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
   const [modBulkQuantity, setModBulkQuantity] = useState(1);
   const [modBulkCredentials, setModBulkCredentials] = useState<Array<{ username: string; password: string }>>([]);
@@ -825,6 +828,16 @@ function ModeratorDashboard() {
       toast.success("Key excluída!");
       refetchKeys();
     },
+  });
+
+  const deleteKeysBulkMutation = trpc.moderator.deleteKeysBulk.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.deletedCount} Key(s) excluída(s)!`);
+      setSelectedKeyIds([]);
+      refetchKeys();
+      utils.moderator.dashboardStats.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const deleteAndroidKeyMutation = trpc.moderator.deleteAndroidKey.useMutation({
@@ -1534,9 +1547,10 @@ function ModeratorDashboard() {
           <div className="flex flex-wrap justify-between items-center gap-3 mb-2 bg-[#141414] border border-neutral-800 p-4 rounded-lg">
             <div>
               <h3 className="text-sm font-bold text-white">Segurança e Gestão de Chaves</h3>
-              <p className="text-xs text-neutral-400">As chaves aparecem mascaradas por padrão. Você também pode remover todas as chaves expiradas (&gt;24h de uso).</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><Input value={keyGlobalSearch} onChange={(e) => setKeyGlobalSearch(e.target.value)} placeholder="Pesquisar Key, tipo, ID ou status" className="w-full border-neutral-700 bg-[#222] text-white" /><select value={keyProductFilter} onChange={(e) => setKeyProductFilter(e.target.value as "all" | ActiveProductType)} className="h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white"><option value="all">Todos os produtos</option>{ACTIVE_PRODUCT_TYPES.map((type) => <option key={type} value={type}>{PRODUCT_LABELS[type]}</option>)}</select></div>
+              <p className="text-xs text-neutral-400">As chaves aparecem mascaradas por padrão. Você também pode remover todas as chaves expiradas (&gt;24h de uso).</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><Input value={keyGlobalSearch} onChange={(e) => setKeyGlobalSearch(e.target.value)} placeholder="Pesquisar Key, tipo, ID ou status" className="w-full border-neutral-700 bg-[#222] text-white" /><select value={keyProductFilter} onChange={(e) => { setKeyProductFilter(e.target.value as "all" | ActiveProductType); setSelectedKeyIds([]); }} className="h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white"><option value="all">Todos os produtos</option>{ACTIVE_PRODUCT_TYPES.map((type) => <option key={type} value={type}>{PRODUCT_LABELS[type]}</option>)}</select><select value={keyStatusFilter} onChange={(e) => { setKeyStatusFilter(e.target.value as "all" | "available" | "used" | "banned"); setSelectedKeyIds([]); }} className="h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white"><option value="all">Todos os status</option><option value="available">Disponíveis</option><option value="used">Usadas por login</option><option value="banned">Banidas</option></select></div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="destructive" size="sm" disabled={!selectedKeyIds.length || deleteKeysBulkMutation.isPending} onClick={() => { if (confirm(`Excluir ${selectedKeyIds.length} Key(s) selecionada(s)? Keys usadas ou banidas podem deixar de aparecer no histórico.`)) deleteKeysBulkMutation.mutate({ keyIds: selectedKeyIds }); }}>Excluir selecionadas ({selectedKeyIds.length})</Button>
               <Button variant="destructive" size="sm" onClick={() => {
                 if (confirm("Deseja realmente excluir todas as chaves expiradas (mais de 24h de uso)?")) {
                   deleteExpiredKeysMutation.mutate();
@@ -1552,7 +1566,7 @@ function ModeratorDashboard() {
           <Card className="bg-[#141414] border-neutral-800 text-white">
             <CardHeader><CardTitle className="text-white">Resumo por produto e logins sem primeiro acesso</CardTitle><p className="text-xs text-neutral-400">As Keys vinculadas a clientes aparecem separadas do estoque livre. “Ainda não entrou” significa que o login nunca registrou um acesso.</p></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{ACTIVE_PRODUCT_TYPES.map((type) => { const productKeys = manageKeys.filter((key) => key.type === type && keyMatches(key, keyGlobalSearch)); const pendingLogins = clients?.filter((client) => (keyProductFilter === "all" || client.keyType === keyProductFilter) && client.keyType === type && !client.hasLoggedIn && client.keyValue !== "Nenhuma") || []; return <div key={type} className="rounded-lg border border-neutral-800 bg-[#202020] p-3"><p className="text-xs font-bold text-neutral-300">{PRODUCT_LABELS[type]}</p><p className="mt-1 text-xl font-black text-cyan-300">{productKeys.length}</p><p className="text-[11px] text-neutral-500">Keys cadastradas</p><p className="mt-2 text-sm font-bold text-amber-300">{pendingLogins.length} sem primeiro acesso</p></div>; })}</div>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{ACTIVE_PRODUCT_TYPES.map((type) => { const productKeys = filteredManageKeys.filter((key) => key.type === type); const pendingLogins = clients?.filter((client) => (keyProductFilter === "all" || client.keyType === keyProductFilter) && client.keyType === type && !client.hasLoggedIn && client.keyValue !== "Nenhuma") || []; return <div key={type} className="rounded-lg border border-neutral-800 bg-[#202020] p-3"><p className="text-xs font-bold text-neutral-300">{PRODUCT_LABELS[type]}</p><p className="mt-1 text-xl font-black text-cyan-300">{productKeys.length}</p><p className="text-[11px] text-neutral-500">Keys cadastradas</p><p className="mt-2 text-sm font-bold text-amber-300">{pendingLogins.length} sem primeiro acesso</p></div>; })}</div>
               <div><h4 className="mb-2 text-sm font-bold text-amber-300">Keys vinculadas a logins que ainda não entraram</h4><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white">Login</TableHead><TableHead className="text-white">Produto</TableHead><TableHead className="text-white">Key</TableHead><TableHead className="text-white">Status</TableHead></TableRow></TableHeader><TableBody>{clients?.filter((client) => (keyProductFilter === "all" || client.keyType === keyProductFilter) && !client.hasLoggedIn && client.keyValue !== "Nenhuma" && ACTIVE_PRODUCT_TYPES.includes(client.keyType as ActiveProductType)).map((client) => <TableRow key={client.id} className="border-neutral-800"><TableCell className="font-bold text-white">{client.username}</TableCell><TableCell className="text-xs text-blue-300">{PRODUCT_LABELS[client.keyType] || client.keyType}</TableCell><TableCell className="break-all font-mono text-xs text-cyan-300">{keysRevealed ? client.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className="border-amber-800 bg-amber-950 text-amber-300">Ainda não entrou</Badge></TableCell></TableRow>)}</TableBody></Table></div></div>
             </CardContent>
           </Card>
@@ -1624,9 +1638,9 @@ function ModeratorDashboard() {
             <Card className="bg-[#141414] border-neutral-800 text-white">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div><CardTitle className="text-white">Keys filtradas: {keyProductFilter === "all" ? "Todos os produtos" : PRODUCT_LABELS[keyProductFilter]}</CardTitle><p className="text-xs text-neutral-400">A lista abaixo respeita o produto escolhido e a pesquisa acima.</p></div>
-                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => { const text = manageKeys.filter((key) => keyMatches(key, keyGlobalSearch)).map((key) => key.keyValue).join("\n"); const url = URL.createObjectURL(new Blob([text], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = `keys_${keyProductFilter}.txt`; a.click(); URL.revokeObjectURL(url); }}>Exportar filtro (.txt)</Button>
+                <Button size="sm" className="bg-neutral-800 hover:bg-neutral-700 text-white" onClick={() => { const text = filteredManageKeys.map((key) => key.keyValue).join("\n"); const url = URL.createObjectURL(new Blob([text], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = `keys_${keyProductFilter}.txt`; a.click(); URL.revokeObjectURL(url); }}>Exportar filtro (.txt)</Button>
               </CardHeader>
-              <CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="text-white font-bold">ID</TableHead><TableHead className="text-white font-bold">Produto</TableHead><TableHead className="text-white font-bold">Key</TableHead><TableHead className="text-white font-bold">Status</TableHead><TableHead className="text-white font-bold">Ativação</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{manageKeys.filter((key) => keyMatches(key, keyGlobalSearch)).map((key) => <TableRow key={key.id} className="border-neutral-800"><TableCell className="font-mono text-white">#{key.id}</TableCell><TableCell className="text-xs text-blue-300">{PRODUCT_LABELS[key.type] || key.type}</TableCell><TableCell className="break-all font-mono text-cyan-300">{keysRevealed ? key.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className={key.isBanned ? "bg-red-950 text-red-400 border-red-800" : key.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{key.isBanned ? "Banida" : key.isUsed ? "Usada" : "Disponível"}</Badge></TableCell><TableCell><Badge className={key.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-neutral-800 text-neutral-300 border-neutral-700"}>{key.isActive ? "Ativa" : "Desativada"}</Badge></TableCell><TableCell className="text-right space-x-1"><Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: key.id })}><Power className="w-3 h-3" /></Button><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: key.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent>
+              <CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-neutral-800"><TableHead className="w-10 text-white font-bold"><input type="checkbox" aria-label="Selecionar todas as Keys visíveis" checked={filteredManageKeys.length > 0 && filteredManageKeys.every((key) => selectedKeyIds.includes(key.id))} onChange={(event) => setSelectedKeyIds(event.target.checked ? filteredManageKeys.map((key) => key.id) : [])} className="h-4 w-4 accent-red-600" /></TableHead><TableHead className="text-white font-bold">ID</TableHead><TableHead className="text-white font-bold">Produto</TableHead><TableHead className="text-white font-bold">Key</TableHead><TableHead className="text-white font-bold">Status</TableHead><TableHead className="text-white font-bold">Ativação</TableHead><TableHead className="text-white font-bold text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{filteredManageKeys.map((key) => <TableRow key={key.id} className="border-neutral-800"><TableCell><input type="checkbox" aria-label={`Selecionar Key ${key.id}`} checked={selectedKeyIds.includes(key.id)} onChange={(event) => setSelectedKeyIds((current) => event.target.checked ? Array.from(new Set([...current, key.id])) : current.filter((id) => id !== key.id))} className="h-4 w-4 accent-red-600" /></TableCell><TableCell className="font-mono text-white">#{key.id}</TableCell><TableCell className="text-xs text-blue-300">{PRODUCT_LABELS[key.type] || key.type}</TableCell><TableCell className="break-all font-mono text-cyan-300">{keysRevealed ? key.keyValue : "••••••••••••"}</TableCell><TableCell><Badge className={key.isBanned ? "bg-red-950 text-red-400 border-red-800" : key.isUsed ? "bg-amber-950 text-amber-400 border-amber-800" : "bg-emerald-950 text-emerald-400 border-emerald-800"}>{key.isBanned ? "Banida" : key.isUsed ? "Usada" : "Disponível"}</Badge></TableCell><TableCell><Badge className={key.isActive ? "bg-emerald-950 text-emerald-400 border-emerald-800" : "bg-neutral-800 text-neutral-300 border-neutral-700"}>{key.isActive ? "Ativa" : "Desativada"}</Badge></TableCell><TableCell className="text-right space-x-1"><Button size="sm" variant="outline" className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800" onClick={() => toggleKeyMutation.mutate({ keyId: key.id })}><Power className="w-3 h-3" /></Button><Button size="sm" variant="destructive" onClick={() => deleteKeyMutation.mutate({ keyId: key.id })}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody></Table></div></CardContent>
             </Card>
           </div>
         </TabsContent>

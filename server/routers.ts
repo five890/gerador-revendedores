@@ -514,11 +514,14 @@ export const appRouter = router({
       const db = await getDb(); if (!db) return { stats: { total: 0, approved: 0, pending: 0, revenue: 0 }, clients: [] };
       const orders = await db.select().from(storeOrders).orderBy(desc(storeOrders.id));
       const products = await db.select().from(storeProducts); const productMap = new Map(products.map((product) => [product.id, product]));
+      const loginRows = await db.select({ userId: logs.userId, createdAt: logs.createdAt }).from(logs).where(eq(logs.action, "LOGIN")).orderBy(desc(logs.createdAt));
+      const lastLoginByUser = new Map<number, Date>();
+      for (const row of loginRows) if (row.userId && !lastLoginByUser.has(row.userId)) lastLoginByUser.set(row.userId, new Date(row.createdAt));
       const clients = [];
       for (const order of orders) {
         const user = order.createdUserId ? (await db.select().from(users).where(eq(users.id, order.createdUserId)).limit(1))[0] : null;
         const key = user?.keyId ? (await db.select({ keyValue: keys.keyValue, type: keys.type, isUsed: keys.isUsed, isActive: keys.isActive }).from(keys).where(eq(keys.id, user.keyId)).limit(1))[0] : null;
-        clients.push({ ...order, productName: productMap.get(order.productId)?.name || "Produto removido", productType: productMap.get(order.productId)?.type || "", key: key || null, client: user ? { id: user.id, username: user.openId, isActive: user.isActive, expiresAt: user.expiresAt, createdAt: user.createdAt } : null });
+        clients.push({ ...order, productName: productMap.get(order.productId)?.name || "Produto removido", productType: productMap.get(order.productId)?.type || "", key: key || null, client: user ? { id: user.id, username: user.openId, isActive: user.isActive, expiresAt: user.expiresAt, createdAt: user.createdAt, hasLoggedIn: lastLoginByUser.has(user.id), lastLoginAt: lastLoginByUser.get(user.id)?.getTime() || null } : null });
       }
       return { stats: { total: orders.length, approved: orders.filter((order) => order.status === "approved").length, pending: orders.filter((order) => ["pending", "out_of_stock"].includes(order.status)).length, revenue: orders.filter((order) => order.status === "approved").reduce((sum, order) => sum + Number(productMap.get(order.productId)?.price || 0), 0) }, clients };
     }),

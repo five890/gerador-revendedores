@@ -666,7 +666,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]), maxDevices: z.number().default(1), keyId: z.number().int().positive().optional() }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Moderador pode usar esta rota." });
         assertProductAvailable(input.type);
@@ -678,7 +678,18 @@ export const appRouter = router({
         const now = new Date();
         let keyId: number | null = null;
         let keyValue = "";
-        if (input.type === "ios") {
+        if (input.keyId) {
+          const manualKeyRows = await db.select().from(keys).where(eq(keys.id, input.keyId)).limit(1);
+          const manualKey = manualKeyRows[0];
+          if (!manualKey) throw new TRPCError({ code: "NOT_FOUND", message: "A Key informada não foi encontrada." });
+          if (manualKey.type !== input.type) throw new TRPCError({ code: "BAD_REQUEST", message: `A Key selecionada é do tipo ${manualKey.type}, mas o login está configurado como ${input.type}.` });
+          if (!manualKey.isActive || manualKey.isUsed || manualKey.isBanned) throw new TRPCError({ code: "BAD_REQUEST", message: "A Key selecionada não está disponível. Escolha uma Key ativa, não usada e não banida." });
+          keyId = manualKey.id;
+          keyValue = manualKey.keyValue;
+          if (input.type === "ios") await db.update(keys).set({ usedAt: now }).where(eq(keys.id, keyId));
+          else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
+          else await db.update(keys).set({ isUsed: true, isBanned: true, isActive: false, usedAt: now }).where(eq(keys.id, keyId));
+        } else if (input.type === "ios") {
           const found = await db.select().from(keys).where(and(eq(keys.type, "ios"), eq(keys.isActive, true))).orderBy(desc(keys.id)).limit(1);
           if (!found.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Cadastre uma Key ativa do Proxy iOS." });
           keyId = found[0].id; keyValue = found[0].keyValue;
@@ -1599,7 +1610,7 @@ export const appRouter = router({
     }),
 
     createClient: protectedProcedure
-      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]), maxDevices: z.number().default(1) }))
+      .input(z.object({ username: z.string(), password: z.string(), type: z.enum(["basic", "advanced", "ios", "panel_ios", "panel_legitimo", "panel_android", "proxy_android_clientes", "ios_ipa"]), maxDevices: z.number().default(1), keyId: z.number().int().positive().optional() }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "reseller" && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
         assertProductAvailable(input.type);
@@ -1632,13 +1643,25 @@ export const appRouter = router({
             throw new TRPCError({ code: "BAD_REQUEST", message: `Créditos insuficientes de ${input.type.toUpperCase()}.` });
           }
         }
+        if (input.keyId && ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o moderador pode escolher uma Key manualmente." });
 
         let keyId: number | null = null;
         let keyValueUsed = "DEFAULT-KEY-" + input.type.toUpperCase();
 
         const now = new Date();
 
-        if (input.type === "ios") {
+        if (input.keyId) {
+          const manualKeyRows = await db.select().from(keys).where(eq(keys.id, input.keyId)).limit(1);
+          const manualKey = manualKeyRows[0];
+          if (!manualKey) throw new TRPCError({ code: "NOT_FOUND", message: "A Key informada não foi encontrada." });
+          if (manualKey.type !== input.type) throw new TRPCError({ code: "BAD_REQUEST", message: `A Key selecionada é do tipo ${manualKey.type}, mas o login está configurado como ${input.type}.` });
+          if (!manualKey.isActive || manualKey.isUsed || manualKey.isBanned) throw new TRPCError({ code: "BAD_REQUEST", message: "A Key selecionada não está disponível. Escolha uma Key ativa, não usada e não banida." });
+          keyId = manualKey.id;
+          keyValueUsed = manualKey.keyValue;
+          if (input.type === "ios") await db.update(keys).set({ usedAt: now }).where(eq(keys.id, keyId));
+          else if (input.type === "panel_ios" || input.type === "panel_legitimo" || input.type === "panel_android") await db.update(keys).set({ isUsed: true, usedAt: now }).where(eq(keys.id, keyId));
+          else await db.update(keys).set({ isUsed: true, isBanned: true, isActive: false, usedAt: now }).where(eq(keys.id, keyId));
+        } else if (input.type === "ios") {
           // Proxy iOS comum usa a última Key ativa cadastrada.
           const latestProxyKey = await db.select().from(keys).where(and(eq(keys.isActive, true), eq(keys.type, "ios"))).orderBy(desc(keys.id)).limit(1);
           if (latestProxyKey.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Não há Key ativa do Proxy iOS cadastrada." });

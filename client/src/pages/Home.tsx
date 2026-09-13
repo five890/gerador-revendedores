@@ -144,7 +144,7 @@ function ManagementNavButton({ item }: { item: ManagementNavItem }) {
         isActive={activeSection === item.value}
         tooltip={item.label}
         aria-label={item.label}
-        className="relative z-10 min-h-12 w-full touch-manipulation rounded-xl border border-transparent px-3 py-3 text-left text-[13px] font-medium leading-snug text-neutral-300 transition-colors hover:border-white/10 hover:bg-white/[0.06] hover:text-white data-[active=true]:border-red-500/30 data-[active=true]:bg-red-600/15 data-[active=true]:font-bold data-[active=true]:text-red-200 md:min-h-11 md:px-3 md:py-2.5 md:text-sm"
+        className="relative z-10 min-h-12 w-full touch-manipulation rounded-xl border border-transparent px-3 py-3 text-left text-[13px] font-medium leading-snug text-neutral-300 transition-colors hover:border-white/10 hover:bg-white/[0.06] hover:text-white data-[active=true]:border-red-500/30 data-[active=true]:bg-red-600/15 data-[active=true]:font-bold data-[active=true]:text-red-200 md:min-h-12 md:px-3 md:py-3 md:text-sm"
         onClick={() => {
           setActiveSection(item.value);
           if (isMobile) setOpenMobile(false);
@@ -182,10 +182,10 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
           </SidebarHeader>
           <SidebarContent className="min-h-0 overflow-y-auto px-2 py-4 pb-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700 md:px-3">
             {Object.entries(groupedItems).map(([group, items]) => (
-              <SidebarGroup key={group} className="mb-5 p-0">
+              <SidebarGroup key={group} className="mb-6 p-0">
                 <SidebarGroupLabel className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 group-data-[collapsible=icon]:hidden">{group}</SidebarGroupLabel>
                 <SidebarGroupContent>
-                  <SidebarMenu className="gap-2.5 md:gap-2">
+                  <SidebarMenu className="gap-3 md:gap-3">
                     {items.map((item) => <ManagementNavButton key={item.value} item={item} />)}
                   </SidebarMenu>
                 </SidebarGroupContent>

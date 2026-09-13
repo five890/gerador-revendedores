@@ -1300,10 +1300,10 @@ function ModeratorDashboard() {
                 <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
                   <div>Usuário: <strong className="text-white">{modCreatedCredentials.username}</strong></div>
                   <div>Senha: <strong className="text-white">{modCreatedCredentials.password}</strong></div>
-                  <div>Link de ativação: <strong className="text-blue-400">https://shelbys-production.up.railway.app</strong></div>
+                  <div>Link de ativação: <strong className="text-blue-400">https://shelbys.up.railway.app</strong></div>
                 </div>
                 <Button className="bg-red-600 hover:bg-red-700 text-white mt-2" onClick={() => {
-                  navigator.clipboard.writeText(`Usuário: ${modCreatedCredentials.username}\nSenha: ${modCreatedCredentials.password}\nLink de ativação: https://shelbys-production.up.railway.app`);
+                  navigator.clipboard.writeText(`Usuário: ${modCreatedCredentials.username}\nSenha: ${modCreatedCredentials.password}\nLink de ativação: https://shelbys.up.railway.app`);
                   toast.success("Credenciais copiadas!");
                 }}>
                   <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais Completas
@@ -1411,8 +1411,8 @@ function ModeratorDashboard() {
                 </Button>
               </div>
               {modBulkCredentials.length > 0 && <div className="space-y-2 rounded border border-neutral-700 bg-black/30 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-bold text-lime-300">Logins gerados</p><Button size="sm" variant="outline" className="border-lime-700 text-lime-300" onClick={() => { navigator.clipboard.writeText(modBulkCredentials.map((credential) => `Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`).join("\n\n")); toast.success("Todos os logins foram copiados!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar todos</Button></div>
-                <div className="max-h-72 overflow-y-auto space-y-2">{modBulkCredentials.map((credential) => <div key={`${credential.username}-${credential.password}`} className="rounded border border-neutral-800 bg-[#1b1b1b] p-2 font-mono text-xs"><div>Usuário: <strong className="text-white">{credential.username}</strong></div><div>Senha: <strong className="text-white">{credential.password}</strong></div><div>Link: <span className="text-blue-400">https://shelbys-production.up.railway.app</span></div><Button size="sm" variant="outline" className="mt-2 border-neutral-700 text-neutral-200" onClick={() => { navigator.clipboard.writeText(`Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys-production.up.railway.app`); toast.success("Login copiado!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar</Button></div>)}</div>
+                <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-bold text-lime-300">Logins gerados</p><Button size="sm" variant="outline" className="border-lime-700 text-lime-300" onClick={() => { navigator.clipboard.writeText(modBulkCredentials.map((credential) => `Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys.up.railway.app`).join("\n\n")); toast.success("Todos os logins foram copiados!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar todos</Button></div>
+                <div className="max-h-72 overflow-y-auto space-y-2">{modBulkCredentials.map((credential) => <div key={`${credential.username}-${credential.password}`} className="rounded border border-neutral-800 bg-[#1b1b1b] p-2 font-mono text-xs"><div>Usuário: <strong className="text-white">{credential.username}</strong></div><div>Senha: <strong className="text-white">{credential.password}</strong></div><div>Link: <span className="text-blue-400">https://shelbys.up.railway.app</span></div><Button size="sm" variant="outline" className="mt-2 border-neutral-700 text-neutral-200" onClick={() => { navigator.clipboard.writeText(`Usuário: ${credential.username}\nSenha: ${credential.password}\nLink de ativação: https://shelbys.up.railway.app`); toast.success("Login copiado!"); }}><Copy className="w-3 h-3 mr-1" /> Copiar</Button></div>)}</div>
               </div>}
             </CardContent>
           </Card>
@@ -2192,10 +2192,10 @@ function ResellerDashboard() {
             <div className="bg-black/60 p-3 rounded font-mono text-sm space-y-1">
               <div>Usuário: <strong className="text-white">{createdCredentials.username}</strong></div>
               <div>Senha: <strong className="text-white">{createdCredentials.password}</strong></div>
-              <div>Link de ativação: <strong className="text-blue-400">https://shelbys-production.up.railway.app</strong></div>
+              <div>Link de ativação: <strong className="text-blue-400">https://shelbys.up.railway.app</strong></div>
             </div>
             <Button className="bg-red-600 hover:bg-red-700 text-white mt-2" onClick={() => {
-              navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}\nLink de ativação: https://shelbys-production.up.railway.app`);
+              navigator.clipboard.writeText(`Usuário: ${createdCredentials.username}\nSenha: ${createdCredentials.password}\nLink de ativação: https://shelbys.up.railway.app`);
               toast.success("Credenciais copiadas!");
             }}>
               <Copy className="w-4 h-4 mr-2" /> Copiar Credenciais Completas

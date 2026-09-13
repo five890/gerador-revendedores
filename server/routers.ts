@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { getDb } from "./db";
 import { users, keys, downloads, tutorials, sessions, logs, announcements, storeProducts, storeOrders, storeSettings, resellerPlans, resellerCreditOrders, resellerSignupOrders } from "../drizzle/schema";
-import { eq, and, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import { hashPassword, verifyPassword, signJwt } from "./auth";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
@@ -1183,6 +1183,36 @@ export const appRouter = router({
         });
 
         return { success: true };
+      }),
+
+    deleteUsersBulk: protectedProcedure
+      .input(z.object({ userIds: z.array(z.number().int().positive()).min(1).max(200) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "moderator") throw new TRPCError({ code: "FORBIDDEN" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const uniqueIds = Array.from(new Set(input.userIds)).filter((id) => id !== ctx.user.id);
+        if (!uniqueIds.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Selecione pelo menos um cliente válido." });
+        const selectedClients = await db.select({ id: users.id, keyId: users.keyId })
+          .from(users)
+          .where(and(eq(users.role, "client"), inArray(users.id, uniqueIds)));
+        if (!selectedClients.length) throw new TRPCError({ code: "NOT_FOUND", message: "Nenhum cliente selecionado foi encontrado." });
+
+        const keyIds = selectedClients.map((client) => client.keyId).filter((id): id is number => Boolean(id));
+        if (keyIds.length) {
+          await db.update(keys).set({ isUsed: false, isBanned: false, isActive: true, usedAt: null })
+            .where(inArray(keys.id, keyIds));
+        }
+        const clientIds = selectedClients.map((client) => client.id);
+        await db.delete(sessions).where(inArray(sessions.userId, clientIds));
+        await db.delete(users).where(inArray(users.id, clientIds));
+        await db.insert(logs).values({
+          userId: ctx.user.id,
+          action: "DELETE_USERS_BULK",
+          details: `Moderador excluiu ${clientIds.length} cliente(s) em lote.`,
+        });
+        return { success: true, deletedCount: clientIds.length };
       }),
 
     listKeys: protectedProcedure.query(async ({ ctx }) => {

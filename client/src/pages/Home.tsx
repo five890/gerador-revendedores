@@ -52,7 +52,8 @@ import {
 const REMOVED_PRODUCT_TYPES = new Set(["basic", "ios", "panel_legitimo"]);
 const ACTIVE_PRODUCT_TYPES = ["advanced", "panel_ios", "panel_android", "proxy_android_clientes", "ios_ipa"] as const;
 type ActiveProductType = typeof ACTIVE_PRODUCT_TYPES[number];
-const PRODUCT_LABELS: Record<string, string> = { advanced: "Android Advanced", panel_android: "Painel Android", proxy_android_clientes: "Proxy Android", ios_ipa: "Proxy iOS IPA", panel_ios: "Painel iOS", ios: "Proxy iOS" };
+const PRODUCT_LABELS: Record<string, string> = { basic: "Basic", advanced: "Android Advanced", panel_android: "Painel Android", proxy_android_clientes: "Proxy Android", ios_ipa: "Proxy iOS IPA", panel_ios: "Painel iOS", ios: "Proxy iOS", panel_legitimo: "Painel Legítimo" };
+const CONTENT_PRODUCT_OPTIONS = ["basic", "advanced", "ios", "panel_ios", "panel_android", "proxy_android_clientes", "ios_ipa"] as const;
 
 function getVideoEmbedUrl(rawUrl: string): { kind: "iframe" | "video"; url: string } | null {
   try {
@@ -176,7 +177,7 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
                 <p className="truncate text-base font-black tracking-[0.12em]" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Menu do painel</p>
               </div>
-              <SidebarTrigger aria-label="Fechar menu" title="Fechar menu" className="hidden md:inline-flex size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
+              <SidebarTrigger aria-label="Fechar menu" title="Fechar menu" className="inline-flex size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
             </div>
           </SidebarHeader>
           <SidebarContent className="min-h-0 overflow-y-auto px-3 py-4 pb-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700">
@@ -210,7 +211,7 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
         <SidebarInset className="min-w-0 bg-[#0b0b0b]">
           <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between border-b border-neutral-800 bg-[#111111]/95 px-3 py-3 backdrop-blur sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <SidebarTrigger aria-label="Abrir menu" title="Abrir menu" className="hidden md:inline-flex size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
+              <SidebarTrigger aria-label="Abrir menu" title="Abrir menu" className="inline-flex size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
               <div className="min-w-0">
                 <p className="truncate text-base font-black tracking-[0.12em] sm:text-xl" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
                 <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Área de {user.role === "moderator" ? "moderador" : "revendedor"}</p>
@@ -587,12 +588,14 @@ function ModeratorDashboard() {
   const [dlVersion, setDlVersion] = useState("1.0");
   const [dlUrl, setDlUrl] = useState("");
   const [dlType, setDlType] = useState<"basic" | "advanced">("advanced");
+  const [downloadProductFilter, setDownloadProductFilter] = useState("all");
   const [editingDownload, setEditingDownload] = useState<any | null>(null);
 
   const [tutTitle, setTutTitle] = useState("");
   const [tutDesc, setTutDesc] = useState("");
   const [tutUrl, setTutUrl] = useState("");
   const [tutType, setTutType] = useState<ActiveProductType>("advanced");
+  const [tutorialProductFilter, setTutorialProductFilter] = useState("all");
 
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -621,6 +624,10 @@ function ModeratorDashboard() {
   const [modRenewingClient, setModRenewingClient] = useState<{ id: number; username: string } | null>(null);
   const [modClientSearch, setModClientSearch] = useState("");
   const [modLoginFilter, setModLoginFilter] = useState<"all" | "logged" | "never">("all");
+  const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
+  const filteredClients = (clients || [])
+    .filter((client) => client.username.toLowerCase().includes(modClientSearch.toLowerCase()))
+    .filter((client) => modLoginFilter === "all" || (modLoginFilter === "logged" ? client.hasLoggedIn : !client.hasLoggedIn));
   const [keyAuditType, setKeyAuditType] = useState<"all" | "basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("all");
   const [keyAuditSearch, setKeyAuditSearch] = useState("");
   const [keyAuditFrom, setKeyAuditFrom] = useState("");
@@ -632,6 +639,8 @@ function ModeratorDashboard() {
   const [creditCalcQuantity, setCreditCalcQuantity] = useState(10);
   const [resellerVisibleProducts, setResellerVisibleProducts] = useState<Record<string, boolean>>({ advanced: true, ios: true, ios_ipa: true, panel_ios: true, panel_android: true, proxy_android_clientes: true });
   const [resellerCreditProducts, setResellerCreditProducts] = useState<Record<string, boolean>>({ advanced: true, ios: true, ios_ipa: true, panel_ios: true, panel_android: true, proxy_android_clientes: true });
+  const filteredDownloads = (downloadsList || []).filter((download) => downloadProductFilter === "all" || download.type === downloadProductFilter);
+  const filteredTutorials = (tutorialsList || []).filter((tutorial) => tutorialProductFilter === "all" || tutorial.type === tutorialProductFilter);
   useEffect(() => { if (resellerConfig?.creditValues && Object.keys(resellerConfig.creditValues).length) setCreditValues((current) => ({ ...current, ...resellerConfig.creditValues })); if (resellerConfig?.visibleProducts && Object.keys(resellerConfig.visibleProducts).length) setResellerVisibleProducts((current) => ({ ...current, ...resellerConfig.visibleProducts })); if (resellerConfig?.creditProducts && Object.keys(resellerConfig.creditProducts).length) setResellerCreditProducts((current) => ({ ...current, ...resellerConfig.creditProducts })); }, [resellerConfig]);
 
 
@@ -798,6 +807,16 @@ function ModeratorDashboard() {
       refetchResellers();
       refetchClients();
     },
+  });
+
+  const deleteUsersBulkMutation = trpc.moderator.deleteUsersBulk.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.deletedCount} login(s) excluído(s)!`);
+      setSelectedClientIds([]);
+      refetchClients();
+      refetchKeys();
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const addKeyMutation = trpc.moderator.addKey.useMutation({
@@ -1388,7 +1407,7 @@ function ModeratorDashboard() {
             </CardContent>
           </Card>
           <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-white">Todos os Clientes do Sistema</CardTitle>
               <div className="flex flex-wrap gap-2 items-center">
                 <select className="bg-[#222] border border-neutral-700 rounded p-2 text-white text-sm" value={modLoginFilter} onChange={(e) => setModLoginFilter(e.target.value as "all" | "logged" | "never")}>
@@ -1402,12 +1421,25 @@ function ModeratorDashboard() {
                   value={modClientSearch}
                   onChange={(e) => setModClientSearch(e.target.value)}
                 />
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={!selectedClientIds.length || deleteUsersBulkMutation.isPending}
+                  onClick={() => {
+                    if (confirm(`Excluir ${selectedClientIds.length} login(s) selecionado(s)? As keys vinculadas voltarão ao estoque disponível.`)) {
+                      deleteUsersBulkMutation.mutate({ userIds: selectedClientIds });
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-1 h-3 w-3" /> Excluir selecionados ({selectedClientIds.length})
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow className="border-neutral-800">
+                    <TableHead className="w-10 text-white font-bold"><input type="checkbox" aria-label="Selecionar todos os logins visíveis" checked={filteredClients.length > 0 && filteredClients.every((client) => selectedClientIds.includes(client.id))} onChange={(event) => setSelectedClientIds(event.target.checked ? filteredClients.map((client) => client.id) : [])} className="h-4 w-4 accent-red-600" /></TableHead>
                     <TableHead className="text-white font-bold">ID</TableHead>
                     <TableHead className="text-white font-bold">Usuário</TableHead>
                     <TableHead className="text-white font-bold">Key Atribuída</TableHead>
@@ -1418,11 +1450,9 @@ function ModeratorDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clients
-                    ?.filter((c) => c.username.toLowerCase().includes(modClientSearch.toLowerCase()))
-                    ?.filter((c) => modLoginFilter === "all" || (modLoginFilter === "logged" ? c.hasLoggedIn : !c.hasLoggedIn))
-                    ?.map((c) => (
+                  {filteredClients.map((c) => (
                     <TableRow key={c.id} className="border-neutral-800">
+                      <TableCell><input type="checkbox" aria-label={`Selecionar login ${c.username}`} checked={selectedClientIds.includes(c.id)} onChange={(event) => setSelectedClientIds((current) => event.target.checked ? Array.from(new Set([...current, c.id])) : current.filter((id) => id !== c.id))} className="h-4 w-4 accent-red-600" /></TableCell>
                       <TableCell className="font-mono text-white">#{c.id}</TableCell>
                       <TableCell className="font-bold text-white">{c.username}</TableCell>
                       <TableCell className="font-mono text-xs text-amber-400">{c.keyValue}</TableCell>
@@ -1748,7 +1778,16 @@ function ModeratorDashboard() {
           </Card>
 
           <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader><CardTitle className="text-white">Downloads Cadastrados</CardTitle></CardHeader>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-white">Downloads Cadastrados</CardTitle>
+                <p className="mt-1 text-xs text-neutral-400">Mostrando {filteredDownloads.length} download(s) pelo filtro selecionado.</p>
+              </div>
+              <select value={downloadProductFilter} onChange={(event) => setDownloadProductFilter(event.target.value)} className="h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white sm:w-64">
+                <option value="all">Todos os produtos</option>
+                {CONTENT_PRODUCT_OPTIONS.map((type) => <option key={type} value={type}>{PRODUCT_LABELS[type]}</option>)}
+              </select>
+            </CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
@@ -1761,10 +1800,10 @@ function ModeratorDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {downloadsList?.map((d) => (
+                  {filteredDownloads.map((d) => (
                     <TableRow key={d.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{d.title}</TableCell>
-                      <TableCell><Badge className={d.type === "advanced" ? "bg-amber-950 text-amber-400 border-amber-800" : d.type === "ios" ? "bg-blue-950 text-blue-400 border-blue-800" : "bg-neutral-800 text-white"}>{d.type === "advanced" ? "Advanced" : d.type === "ios" ? "iOS" : "Basic"}</Badge></TableCell>
+                      <TableCell><Badge className="border-cyan-800 bg-cyan-950 text-cyan-300">{PRODUCT_LABELS[d.type] || d.type}</Badge></TableCell>
                       <TableCell className="text-white">{d.version}</TableCell>
                       <TableCell className="text-blue-400 truncate max-w-xs">{d.fileUrl}</TableCell>
                       <TableCell className="text-right space-x-1">
@@ -1809,7 +1848,16 @@ function ModeratorDashboard() {
           </Card>
 
           <Card className="bg-[#141414] border-neutral-800 text-white">
-            <CardHeader><CardTitle className="text-white">Tutoriais Cadastrados</CardTitle></CardHeader>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-white">Tutoriais Cadastrados</CardTitle>
+                <p className="mt-1 text-xs text-neutral-400">Mostrando {filteredTutorials.length} tutorial(is) pelo filtro selecionado.</p>
+              </div>
+              <select value={tutorialProductFilter} onChange={(event) => setTutorialProductFilter(event.target.value)} className="h-10 w-full rounded-md border border-neutral-700 bg-[#222] px-3 text-sm text-white sm:w-64">
+                <option value="all">Todos os produtos</option>
+                {CONTENT_PRODUCT_OPTIONS.map((type) => <option key={type} value={type}>{PRODUCT_LABELS[type]}</option>)}
+              </select>
+            </CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table>
                 <TableHeader>
@@ -1821,9 +1869,10 @@ function ModeratorDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tutorialsList?.map((t) => (
+                  {filteredTutorials.map((t) => (
                     <TableRow key={t.id} className="border-neutral-800">
                       <TableCell className="font-bold text-white">{t.title}</TableCell>
+                      <TableCell><Badge className="border-cyan-800 bg-cyan-950 text-cyan-300">{PRODUCT_LABELS[t.type] || t.type}</Badge></TableCell>
                       <TableCell><a href={t.videoUrl} target="_blank" rel="noreferrer" className="text-blue-400 underline truncate max-w-xs block">{t.videoUrl}</a></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => deleteTutorialMutation.mutate({ tutorialId: t.id })}>

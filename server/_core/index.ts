@@ -14,7 +14,7 @@ import { eq, and, desc } from "drizzle-orm";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function startServer() {
+async function createApp() {
   const app = express();
   const server = createServer(app);
 
@@ -81,10 +81,21 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const port = process.env.PORT || 3000;
-  server.listen(Number(port), "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${port}/`);
-  });
+  return { app, server };
 }
 
-startServer().catch(console.error);
+const appPromise = createApp();
+
+export default async function handler(req: any, res: any) {
+  const { app } = await appPromise;
+  return app(req, res);
+}
+
+if (!process.env.VERCEL) {
+  appPromise.then(({ server }) => {
+    const port = process.env.PORT || 3000;
+    server.listen(Number(port), "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${port}/`);
+    });
+  }).catch(console.error);
+}

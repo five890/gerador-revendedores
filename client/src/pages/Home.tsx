@@ -138,7 +138,7 @@ function ManagementNavButton({ item }: { item: ManagementNavItem }) {
   const { isMobile, setOpenMobile } = useSidebar();
   const Icon = item.icon;
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem className="mb-2 md:mb-3 last:mb-0">
       <SidebarMenuButton
         type="button"
         isActive={activeSection === item.value}

@@ -628,6 +628,16 @@ function ModeratorDashboard() {
   const filteredClients = (clients || [])
     .filter((client) => client.username.toLowerCase().includes(modClientSearch.toLowerCase()))
     .filter((client) => modLoginFilter === "all" || (modLoginFilter === "logged" ? client.hasLoggedIn : !client.hasLoggedIn));
+  const pendingLoginKeys = (clients || []).filter((client) => !client.hasLoggedIn && client.keyValue !== "Nenhuma" && (keyProductFilter === "all" || client.keyType === keyProductFilter));
+  const availableStockKeys = filteredManageKeys.filter((key) => key.isActive && !key.isUsed && !key.isBanned);
+  const copyKeyValues = async (values: string[], label: string) => {
+    if (!values.length) {
+      toast.info(`Nenhuma Key ${label.toLowerCase()} encontrada.`);
+      return;
+    }
+    await navigator.clipboard.writeText(values.join("\n"));
+    toast.success(`${values.length} Key(s) ${label.toLowerCase()} copiadas!`);
+  };
   const [keyAuditType, setKeyAuditType] = useState<"all" | "basic" | "advanced" | "ios" | "panel_ios" | "panel_legitimo">("all");
   const [keyAuditSearch, setKeyAuditSearch] = useState("");
   const [keyAuditFrom, setKeyAuditFrom] = useState("");
@@ -1426,12 +1436,15 @@ function ModeratorDashboard() {
                   variant="destructive"
                   disabled={!selectedClientIds.length || deleteUsersBulkMutation.isPending}
                   onClick={() => {
-                    if (confirm(`Excluir ${selectedClientIds.length} login(s) selecionado(s)? As keys vinculadas voltarão ao estoque disponível.`)) {
+                    if (confirm(`Excluir ${selectedClientIds.length} login(s) selecionado(s)? As keys vinculadas continuarão com o status atual.`)) {
                       deleteUsersBulkMutation.mutate({ userIds: selectedClientIds });
                     }
                   }}
                 >
                   <Trash2 className="mr-1 h-3 w-3" /> Excluir selecionados ({selectedClientIds.length})
+                </Button>
+                <Button size="sm" variant="outline" className="border-amber-700 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50" onClick={() => copyKeyValues(pendingLoginKeys.map((client) => client.keyValue), "vinculadas sem acesso")}>
+                  <Copy className="mr-1 h-3 w-3" /> Copiar Keys sem acesso ({pendingLoginKeys.length})
                 </Button>
               </div>
             </CardHeader>
@@ -1602,6 +1615,9 @@ function ModeratorDashboard() {
               </Button>
               <Button className={keysRevealed ? "bg-amber-600 hover:bg-amber-700 text-white font-bold cursor-pointer" : "bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer"} onClick={() => setKeysRevealed(prev => !prev)}>
                 {keysRevealed ? "🔓 Ocultar Keys" : "🔒 Revelar Keys"}
+              </Button>
+              <Button size="sm" variant="outline" className="border-emerald-700 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50" onClick={() => copyKeyValues(availableStockKeys.map((key) => key.keyValue), "disponíveis do estoque")}>
+                <Copy className="mr-1 h-3 w-3" /> Copiar estoque ({availableStockKeys.length})
               </Button>
             </div>
           </div>

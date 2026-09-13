@@ -1168,11 +1168,6 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        const uRes = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
-        if (uRes.length > 0 && uRes[0].keyId) {
-          await db.update(keys).set({ isUsed: false }).where(eq(keys.id, uRes[0].keyId));
-        }
-
         await db.delete(sessions).where(eq(sessions.userId, input.userId));
         await db.delete(users).where(eq(users.id, input.userId));
 
@@ -1199,11 +1194,6 @@ export const appRouter = router({
           .where(and(eq(users.role, "client"), inArray(users.id, uniqueIds)));
         if (!selectedClients.length) throw new TRPCError({ code: "NOT_FOUND", message: "Nenhum cliente selecionado foi encontrado." });
 
-        const keyIds = selectedClients.map((client) => client.keyId).filter((id): id is number => Boolean(id));
-        if (keyIds.length) {
-          await db.update(keys).set({ isUsed: false, isBanned: false, isActive: true, usedAt: null })
-            .where(inArray(keys.id, keyIds));
-        }
         const clientIds = selectedClients.map((client) => client.id);
         await db.delete(sessions).where(inArray(sessions.userId, clientIds));
         await db.delete(users).where(inArray(users.id, clientIds));
@@ -1794,10 +1784,6 @@ export const appRouter = router({
           action: "RESELLER_DELETE_CLIENT",
           details: `clientId=${client.id}|clientUsername=${client.openId}|keyId=${client.keyId || "null"}|keyValue=${clientKey?.keyValue || "Nenhuma"}|keyType=${clientKey?.type || "unknown"}`,
         });
-        if (client.keyId) {
-          await db.update(keys).set({ isUsed: false }).where(eq(keys.id, client.keyId));
-        }
-
         await db.delete(sessions).where(eq(sessions.userId, client.id));
         await db.delete(users).where(eq(users.id, client.id));
 

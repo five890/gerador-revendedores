@@ -144,14 +144,14 @@ function ManagementNavButton({ item }: { item: ManagementNavItem }) {
         isActive={activeSection === item.value}
         tooltip={item.label}
         aria-label={item.label}
-        className="relative z-10 min-h-[52px] w-full touch-manipulation break-words whitespace-normal px-3 py-3 text-left text-[13px] leading-snug text-neutral-300 hover:bg-white/10 hover:text-white data-[active=true]:bg-red-600/20 data-[active=true]:font-bold data-[active=true]:text-red-300 md:h-auto md:min-h-10 md:whitespace-normal md:px-3 md:py-2 md:text-sm md:leading-snug md:[&>span:last-child]:truncate"
+        className="relative z-10 min-h-11 w-full touch-manipulation rounded-xl border border-transparent px-3 py-2.5 text-left text-[13px] font-medium leading-snug text-neutral-300 transition-colors hover:border-white/10 hover:bg-white/[0.06] hover:text-white data-[active=true]:border-red-500/30 data-[active=true]:bg-red-600/15 data-[active=true]:font-bold data-[active=true]:text-red-200 md:min-h-10 md:px-3 md:py-2 md:text-sm"
         onClick={() => {
           setActiveSection(item.value);
           if (isMobile) setOpenMobile(false);
         }}
       >
-        <Icon className="h-5 w-5 shrink-0 md:h-4 md:w-4" />
-        <span>{item.label}</span>
+        <Icon className="h-[18px] w-[18px] shrink-0 text-neutral-500 transition-colors group-data-[active=true]:text-red-300 md:h-4 md:w-4" />
+        <span className="min-w-0 flex-1 truncate">{item.label}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -170,8 +170,8 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
   return (
     <ManagementNavigationContext.Provider value={{ activeSection, setActiveSection, menuItems, setMenuItems }}>
       <SidebarProvider defaultOpen className="min-h-screen bg-[#0b0b0b] text-white">
-        <Sidebar collapsible="offcanvas" className="z-[60] border-neutral-800 bg-[#111111] text-white [&_[data-sidebar=sidebar-inner]]:bg-[#111111] [&_[data-sidebar=sidebar-inner]]:shadow-2xl">
-          <SidebarHeader className="shrink-0 border-b border-neutral-800 bg-[#111111] px-4 py-4">
+        <Sidebar collapsible="icon" className="z-[60] border-neutral-800 bg-[#111111] text-white [&_[data-sidebar=sidebar-inner]]:bg-[#111111] [&_[data-sidebar=sidebar-inner]]:shadow-2xl">
+          <SidebarHeader className="shrink-0 border-b border-neutral-800 bg-[#111111] px-3 py-4 md:px-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-base font-black tracking-[0.12em]" style={{ color: brandColor }}>{user.brandName || "SHELBY PANEL"}</p>
@@ -180,9 +180,9 @@ function ManagementShell({ user, securityHidden, onLogout, children }: { user: M
               <SidebarTrigger aria-label="Fechar menu" title="Fechar menu" className="inline-flex size-10 shrink-0 rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white md:size-7" />
             </div>
           </SidebarHeader>
-          <SidebarContent className="min-h-0 overflow-y-auto px-3 py-4 pb-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700">
+          <SidebarContent className="min-h-0 overflow-y-auto px-2 py-4 pb-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-700 md:px-3">
             {Object.entries(groupedItems).map(([group, items]) => (
-              <SidebarGroup key={group} className="mb-4 p-0">
+              <SidebarGroup key={group} className="mb-5 p-0">
                 <SidebarGroupLabel className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 group-data-[collapsible=icon]:hidden">{group}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu className="gap-1.5 md:gap-1">

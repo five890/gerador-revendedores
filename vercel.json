@@ -1,12 +1,13 @@
 {
   "version": 2,
   "buildCommand": "pnpm install --frozen-lockfile && pnpm build",
+  "outputDirectory": "dist/public",
   "functions": {
     "api/index.ts": {
       "includeFiles": "dist/public/**"
     }
   },
   "routes": [
-    { "src": "/(.*)", "dest": "/api/index.ts" }
+    { "src": "/api/(.*)", "dest": "/api/index.ts" }
   ]
 }
